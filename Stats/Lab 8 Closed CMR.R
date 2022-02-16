@@ -5,6 +5,9 @@
 ##install package once
 #install.packages("RMark")
 #requires MARK to be installed on your computer
+
+rm(list=ls())
+
 library(RMark)
 
 #### Load data from CMR study in an enclosure (Edwards and Eberhardt 1967)

@@ -81,8 +81,8 @@ abline(v = data$C, lwd = 3)
 nz <- 5
 yaug <- rbind(data$yobs, array(0, dim = c(nz, data$T)))
 win.data <- list(yaug = yaug, M = dim(yaug)[1], T = dim(yaug)[2])
-out5 <- bugs(win.data, inits, params, "model.txt", n.chains = nc, 
-             n.thin = nt, n.iter = ni, n.burnin = nb, debug = FALSE, bugs.directory = bugs.dir, working.directory = getwd())
+out5 <- jags(win.data, inits, params, "model.txt", n.chains = nc, 
+             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 print(out5, dig = 3)
 par(mfrow = c(3, 1))
 hist(out5$sims.list$N, nclass = 30, col = "gray", main = "Augmentation by 5", xlab = "Population size", las = 1, xlim = c(80, 140))
@@ -92,8 +92,8 @@ abline(v = mean(out5$sims.list$N), col = "blue", lwd = 3)
 nz <- 150
 yaug <- rbind(data$yobs, array(0, dim = c(nz, data$T)))
 win.data <- list(yaug = yaug, M = dim(yaug)[1], T = dim(yaug)[2])
-out150 <- bugs(win.data, inits, params, "model.txt", n.chains = nc, 
-               n.thin = nt, n.iter = ni, n.burnin = nb, debug = FALSE, bugs.directory = bugs.dir, working.directory = getwd())
+out150 <- jags(win.data, inits, params, "model.txt", n.chains = nc, 
+               n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 print(out150, dig = 3)
 hist(out$sims.list$N, nclass = 30, col = "gray", main = "Augmentation by 150", xlab = "Population size", las = 1, xlim = c(80, 140))
 abline(v = data$C, col = "black", lwd = 3)
@@ -102,8 +102,8 @@ abline(v = mean(out150$sims.list$N), col = "blue", lwd = 3)
 nz <- 1500
 yaug <- rbind(data$yobs, array(0, dim = c(nz, data$T)))
 win.data <- list(yaug = yaug, M = dim(yaug)[1], T = dim(yaug)[2])
-out1500 <- bugs(win.data, inits, params, "model.txt", n.chains = nc, 
-                n.thin = nt, n.iter = ni, n.burnin = nb, debug = FALSE, bugs.directory = bugs.dir, working.directory = getwd())
+out1500 <- jags(win.data, inits, params, "model.txt", n.chains = nc, 
+                n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 print(out1500, dig = 3)
 hist(out1500$sims.list$N, nclass = 30, col = "gray", main = "Augmentation by 1500", xlab = "Population size", las = 1, xlim = c(80, 140))
 abline(v = data$C, col = "black", lwd = 3)
@@ -174,13 +174,18 @@ nb <- 500
 nc <- 3
 
 # Call WinBUGS from R (BRT <1 min)
-out <- bugs(win.data, inits, params, "model.txt", n.chains = nc, 
-            n.thin = nt, n.iter = ni, n.burnin = nb, debug = TRUE, bugs.directory = bugs.dir, working.directory = getwd())
+out <- jags(win.data, inits, params, "model.txt", n.chains = nc, 
+            n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 # Summarize posteriors
 print(out, dig = 3)
+par(mfrow = c(1,1))
 hist(out$sims.list$N, nclass = 40, col = "gray", main = "", xlab = "Population size", las = 1, xlim = c(70, 150))
 abline(v = data$C, col = "black", lwd = 3)
+
+# TRY TO RUN THE MODEL M0 WITH THIS DATA, TO CHECK THAT THE UNCERTAINTY IN THE N
+# ESTIMATE IS LOWER WHEN THERE IS LESS PARAMETERS
+
 
 
 # 6.2.3. Behavioral or memory effects: model Mb
@@ -439,6 +444,7 @@ abline(v = data$C, col = "black", lwd = 3)
 
 # 6.3. Analysis of a real data set: model Mtbh for species richness estimation
 # Read in data and look at them
+setwd("D:/Stats/BPA course/BPA_book/Code_files")
 p610 <- read.table("p610.txt", header = TRUE)
 y <- p610[,5:9]                           # Grab counts
 y[y > 1] <- 1                             # Counts to det-nondetections
@@ -557,6 +563,7 @@ print(out0, dig = 3)
 
 # 6.4. Capture-recapture models with individual covariates: model Mt+X
 # 6.4.1. Individual covariate model for species richness estimation
+setwd("D:/Stats/BPA course/BPA_book/Code_files")
 p610 <- read.table("p610.txt", header = TRUE)
 y <- p610[,5:9]                         # Grab counts
 y[y > 1] <- 1                           # Convert to det-nondetections
@@ -642,6 +649,8 @@ plot(pred.wt, pred.p, type = "l", lwd = 3, col = "blue", las = 1, frame.plot = F
 
 # 6.4.2. Individual covariate model for population size estimation
 # Read in data and look at shell width distribution
+setwd("D:/Stats/BPA course/BPA_book/Code_files")
+
 pinna <- read.table("pinna.txt", header = TRUE)
 y <- cbind(pinna$d1, pinna$d2)
 size <- pinna$width
@@ -663,13 +672,13 @@ nb <- 500
 nc <- 3
 
 # Call WinBUGS from R (BRT 1 min)
-outXX <- bugs(win.data, inits, params, "M_t+X.txt", n.chains = nc, 
-              n.thin = nt, n.iter = ni, n.burnin = nb, debug = TRUE, bugs.directory = bugs.dir, working.directory = getwd())
+outXX <- jags(win.data, inits, params, "M_t+X.txt", n.chains = nc, 
+              n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 # Summarize posteriors
 print(outXX, dig = 2)
 
-Plot posterior for N and prediction of p
+#Plot posterior for N and prediction of p
 par(mfrow = c(1,2), mar = c(4.5, 4, 2, 1))
 hist(outXX$sims.list$N, breaks = 30, col = "gray", main = "", xlab = "Population size", las = 1, xlim = c(143, 220), freq = FALSE)
 abline(v = 143, col = "black", lwd = 3)
