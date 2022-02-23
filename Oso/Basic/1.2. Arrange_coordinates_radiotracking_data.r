@@ -14,7 +14,7 @@ library(dplyr)
 ### Radiotracking_ossos_1996_2020_info.csv
 ### Also added here the observations of Hvala radiotracking 2009 and 2010 from monitoring table
 
-setwd("D:/Oso/Datos/GPS")
+setwd("D:/MargSalas/Oso/Datos/GPS")
 os <- read.csv("Radiotracking_ossos_1996_2020_Pre-coordinates_Info_cubs.csv", header = TRUE, row.names = NULL, sep = ";")
 
 os$X <- as.numeric(os$X)
@@ -91,6 +91,6 @@ os_data$ID_obs <- seq(1:nrow(os_data))
 os_data <- os_data[,c(22,1:21)]
 
 # Save. In this one we will add the info on whether the individuals had cubs
-setwd("D:/Oso/Datos/GPS")
+setwd("D:/MargSalas/Oso/Datos/GPS")
 write.csv(os_data, "Radiotracking_ossos_1996_2020_1.csv") 
 

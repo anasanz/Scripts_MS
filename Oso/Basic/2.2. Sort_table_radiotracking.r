@@ -11,7 +11,7 @@ library(lubridate)
 library(dplyr)
  
 
-setwd("D:/Oso/Datos/GPS")
+setwd("D:/MargSalas/Oso/Datos/GPS")
 os <- read.csv("Radiotracking_ossos_1996_2020_1.csv", header = TRUE, row.names = NULL)
 os <- os[,-c(1)]
 
@@ -28,7 +28,7 @@ os <- os[,c(1:3,24,4:22)]
 
 # Load info 
 
-setwd("D:/Oso/Datos")
+setwd("D:/MargSalas/Oso/Datos")
 info <- read.csv("Info_individuals.csv", header = TRUE, row.names = NULL, sep = ";")
 info <- info[,c(4,5,8)]
 colnames(info)[1] <- "Bear_name"
@@ -64,7 +64,7 @@ os@proj4string <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
 
 # Load layer with regions
 
-map <- readOGR(dsn = "D:/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
+map <- readOGR(dsn = "D:/MargSalas/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
 d <- over(os,map) # Overlay to see where each point fall
 
 os@data <- cbind(os@data, d)
@@ -73,13 +73,13 @@ colnames(os@data)[which(colnames(os@data) %in% c("NAME_0", "NAME_1"))] <- c("Cou
 os@data <- os@data[,c(1:17,27:28,18:26)]
 
 # Export GIS layer with coordinates and good attribute table (last version)
-writeOGR(os, "D:/Oso/Datos/GPS/Radiotracking_layer", "Radiotracking_coordinates", driver = "ESRI Shapefile")
+writeOGR(os, "D:/MargSalas/Oso/Datos/GPS/Radiotracking_layer", "Radiotracking_coordinates", driver = "ESRI Shapefile")
 
 os_data <- os@data
 os_data <- arrange(os_data, ID_obs) 
 
 
-setwd("D:/Oso/Datos/GPS")
+setwd("D:/MargSalas/Oso/Datos/GPS")
 write.csv(os_data, "Radiotracking_ossos_1996_2020_taula_final.csv")
 
 

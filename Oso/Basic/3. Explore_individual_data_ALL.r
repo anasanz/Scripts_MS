@@ -13,7 +13,7 @@ library(viridis)
 library(RColorBrewer)
 
 # Load monitoring data
-setwd("D:/Oso/Datos/Tablas_finales")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales")
 os <- read.csv("Seguiment_Ossos_Pirineus_1996_2020_taula_final.csv", header = TRUE, row.names = NULL)
 os <- os[,-1] 
 
@@ -25,7 +25,7 @@ os <- os[-which(is.na(os$X)), ] # Remove NA
 os <- os[-which(os$Coordinates.precision == 3), ] # Remove coordinates precision 3
 
 # Load radiotracking data
-setwd("D:/Oso/Datos/GPS")
+setwd("D:/MargSalas/Oso/Datos/GPS")
 os_gps <- read.csv("Radiotracking_ossos_1996_2020_taula_final.csv", header = TRUE, row.names = NULL)
 os_gps <- os_gps[,-1]
 
@@ -63,6 +63,10 @@ coordinates(os_all) <- os_all[,c("x_long","y_lat")] # Spatial object
 os_all@proj4string <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
 
 os <- os_all # Call it os to make it fit with code script 3.1
+
+# Save dataset with ALL observations (monitoring+radiotracking)
+# setwd("D:/MargSalas/Oso/Datos/Tablas_finales")
+# write.csv(os@data, file = "Data_os_96_20.csv")
 
 # Load basemap
 map1 <- readOGR(dsn = "D:/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
