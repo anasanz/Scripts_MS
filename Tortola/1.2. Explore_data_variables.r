@@ -19,9 +19,9 @@ var <- data_buff500[ ,c("Hm_mean", "Hm_max", "FCC_mean", "FCC100%", "Forest%", "
 
 # ROUGHNESS CO-VARIATE
 setwd("D:/Otros/Tórtola/Data")
-rough <- read.csv("Roughness500.csv", sep = ";")
+rough <- read.csv("TRI_buff_500.csv", sep = ",")
 rough$site_sec <- paste(rough[,1], rough[,2], sep = "_")
-rough <- rough[,c(3,4)]
+rough <- rough[,c(16,15)]
 
 var <- left_join(var, rough, by = "site_sec")
 

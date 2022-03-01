@@ -106,6 +106,9 @@ win.data <- list(yaug = yaug, M = nrow(yaug), T = ncol(yaug))
 out_dat_m0 <- jags(win.data, inits, params, "model_m0.txt", n.chains = nc, 
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
+setwd("D:/MargSalas/Ganga/Results/Preliminary_2021")
+write.csv(out_dat_m0$summary, file = "out_dat_m0.csv")
+
 # Summarize posteriors 
 print(out_dat_m0, dig = 3) # p very low, 0.13
 hist(out_dat_m0$sims.list$N, nclass = 50, col = "gray", main = "", xlab = "Population size", las = 1, xlim = c(35, 200))
@@ -214,6 +217,9 @@ win.data <- list(yaug = yaug, M = nrow(yaug), T = ncol(yaug))
 # Call WinBUGS from R (BRT <1 min)
 out_dat_mt <- jags(win.data, inits, params, "model_mt.txt", n.chains = nc, 
                    n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
+
+setwd("D:/MargSalas/Ganga/Results/Preliminary_2021")
+write.csv(out_dat_mt$summary, file = "out_dat_mt.csv")
 
 # Summarize posteriors 
 print(out_dat_mt, dig = 3) # p very low, 0.13

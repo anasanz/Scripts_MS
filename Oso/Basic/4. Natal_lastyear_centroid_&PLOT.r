@@ -11,7 +11,7 @@ library(dplyr)
 library(rgdal)
 
 # Load monitoring data
-setwd("D:/Oso/Datos/Tablas_finales")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales")
 os <- read.csv("Natal_established_coordinates.csv", header = TRUE, row.names = NULL)
 os <- os[,-1] 
 
@@ -20,10 +20,10 @@ coordinates(os) <- os[,c("x_long","y_lat")] # Spatial object
 os@proj4string <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
 
 # Load basemap
-map1 <- readOGR(dsn = "D:/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
+map1 <- readOGR(dsn = "D:/MargSalas/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
 
 # Load info database
-setwd("D:/Oso/Datos")
+setwd("D:/MargSalas/Oso/Datos")
 info <- read.csv("Info_individuals.csv", header = TRUE, row.names = NULL, sep = ";")
 info <- info[,c(4:9)]
 
@@ -60,7 +60,7 @@ points(pos_nat, col = adjustcolor("darkgreen", alpha.f = 0.5), pch = 19)
 mx <- mean(coordinates(pos_nat)[,1])
 my <- mean(coordinates(pos_nat)[,2])
 points(mx, my, pch = 3)
-
+plot(mcp_natal[[5]][[2]], add = TRUE)
 
 # 2. Established
 
@@ -90,6 +90,14 @@ for(i in 1:length(id)){
   mcp_est1[[i]] <- o  # Store MCP to plot it
   
 }
+
+# Save MCP
+setwd("D:/MargSalas/Oso/Datos/GIS")
+
+save(mcp_natal, file = "mcp_natal.RData")
+save(mcp_est1, file = "mcp_est1.RData")
+save(mcp_est2, file = "mcp_est2.RData")
+
 
 ## ---- Dispersal distances ----
 

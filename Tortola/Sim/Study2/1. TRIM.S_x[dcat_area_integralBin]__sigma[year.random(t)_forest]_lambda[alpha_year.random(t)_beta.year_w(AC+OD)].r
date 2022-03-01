@@ -13,10 +13,10 @@ set.seed(2013)
 
 # Abundance: random effect in year, trend and overdispersion
 #     Every year the baseline abundance is different, but the same baseline for every section
-# Detection: random year effect, forest
+# Detection: random year effect, forest (model1) / roughness (model1.1)
 
 # y[t] ~ bin(p(sigma),N[t])
-# Sigma[t] <- year.ran[t] + forest[t] 
+# Sigma[t] <- year.ran[t] + forest/roughness[t] 
 
 # N[t] ~ Pois(lambda[t])
 # log(lambda[t]) <- year.ran[t] + beta*yr[t-1] + W
