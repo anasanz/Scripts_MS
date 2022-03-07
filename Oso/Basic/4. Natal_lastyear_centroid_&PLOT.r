@@ -98,6 +98,8 @@ save(mcp_natal, file = "mcp_natal.RData")
 save(mcp_est1, file = "mcp_est1.RData")
 save(mcp_est2, file = "mcp_est2.RData")
 
+names_mcp <- lapply(mcp_natal, `[[`, 1)
+which(names_mcp %in% "Caramelles")
 
 ## ---- Dispersal distances ----
 

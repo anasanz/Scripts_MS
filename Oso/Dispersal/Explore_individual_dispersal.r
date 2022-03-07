@@ -71,7 +71,8 @@ for (i in 1:length(id_males)) {
   myMap <- get_map(location = bbox(os_id), source = "stamen", maptype = "terrain", crop = FALSE) # Basemap
   
   mcp_nat_id <- which(names_mcp_nat %in% id_males[i]) # MCP natal
-  ifelse(mcp_nat_id > 0, x <- mcp_natal[[which(names_mcp_nat %in% id_males[i])]], x <- 0)
+  
+  ifelse(length(mcp_nat_id) > 0, x <- mcp_natal[[which(names_mcp_nat %in% id_males[i])]], x <- 0)
   
   
   # Plot location within study area
@@ -110,7 +111,10 @@ for (i in 1:length(id_males)) {
       meanx = mean(x_long, na.rm = TRUE),
       meany = mean(y_lat, na.rm = TRUE))
 
-  # 2. Plot
+  # 2. Plot(different with and without MCP)
+  
+  
+  if (length(x) > 1){ # If there is a mcp polygon
 
   p2 <- ggmap(myMap)+
     geom_point(data = mean_loc, aes(x = meanx , y = meany, colour = factor(Year)), 
@@ -121,11 +125,22 @@ for (i in 1:length(id_males)) {
           axis.title = element_blank(),
           axis.text = element_blank(),
           axis.ticks = element_blank(),
-          legend.position = "none",
+          legend.position = "none"
           #plot.margin = unit(c(-1,-1,-1,-1), "cm")
           ) +
     geom_polygon(data = x[[2]], aes(x = long, y = lat, group = group), colour = "black", fill = "transparent", size = 1)
-    
+  } else { p2 <- ggmap(myMap)+
+                geom_point(data = mean_loc, aes(x = meanx , y = meany, colour = factor(Year)), 
+                           size = 2) +
+                scale_color_viridis(discrete = TRUE) +
+                #scale_color_brewer(palette = "Dark2") +
+                theme(panel.grid = element_blank(),
+                      axis.title = element_blank(),
+                      axis.text = element_blank(),
+                      axis.ticks = element_blank(),
+                      legend.position = "none"
+                      #plot.margin = unit(c(-1,-1,-1,-1), "cm")
+                        )  }
 
 
   # Common plot:
