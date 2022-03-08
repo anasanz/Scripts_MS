@@ -73,6 +73,9 @@ trend$p_increasing <- round(trend$p_increasing,3)
 trend$label <- paste("PI =", trend$p_increasing)
 trend <- arrange(trend,p_increasing)
 
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results")
+write.csv(trend,"trend0.csv")
+
 ## ---- Plot coefficients and probabilities ----
 
 files_order <- trend$name_file
