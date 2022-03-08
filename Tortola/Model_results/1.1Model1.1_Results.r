@@ -108,7 +108,7 @@ for(i in 1:length(files_order)){
 segments(0, -1, 0, 39.4, col = "red")
 text(5, sort(seq(1:length(files_order))), labels = trend$label, cex = 0.7)
 
-# Plot forest
+# Plot roughness
 plot(10, ylim = c(1, length(files_order)), 
      xlim = c(-7,7), 
      type ="n", yaxt="n", xlab = " ", ylab = "", main = "Roughness(detection)")
