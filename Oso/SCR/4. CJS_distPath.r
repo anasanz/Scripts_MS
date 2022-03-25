@@ -1,3 +1,11 @@
+
+
+
+## -------------------------------------------------
+##    MODEL 7.4.3 BPA: CJS with temporal covariates
+## ------------------------------------------------- 
+
+
 rm(list = ls())
 
 library(dplyr)
@@ -7,56 +15,9 @@ library(raster)
 library(rjags)
 library(jagsUI)
 
-setwd("D:/MargSalas/Scripts_MS/Scripts_MS/Functions")
-source("capt_hist_bear.r")
-
-# Load monitoring data
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales")
-os <- read.csv("Data_os_96_20.csv", header = TRUE, row.names = NULL)
-os <- os[,-1] 
-
-os_id <- os[which(os$Confirmed_Individual != "Indetermined"), ] # Only identified
-os_id$Method[which(os_id$Method == "sampling_station")] <- "Sampling_station"
-os_id$Obs_type[which(os_id$Obs_type == "hair")] <- "Hair"
-
-os_id <- os_id[which(os_id$Region == "Catalunya"), ]
-
-# Set coordinates
-coordinates(os_id) <- os_id[,c("x_long","y_lat")] # Spatial object
-os_id@proj4string <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-
-# Load path
-cam <- raster("D:/MargSalas/Oso/Datos/GIS/Variables/Catalunya/path2m_4326.tif")
-
-coord <- os_id[ ,c("x_long","y_lat")] 
-cells <- cellFromXY(cam, coord) # 1. Tells the number of the cells where the coord. fall
-dist_cam <- cam[cells] # 2. Gets the raster values of those cells
-
-os_id@data <- cbind(os_id@data, dist_cam)
-
-d <- os_id@data
-
-# Mean distance to paths per year
-
-dist_path <- d %>%
-  group_by(Year) %>%
-  summarise(
-    mean = mean(dist_cam, na.rm = TRUE))
-
-# Select from 2010 to 2019 because it is a co-variate on survival, 
-# which happens between years
-
-dist_path <- c(dist_path[15:24,2])  
-
-
-
-## -------------------------------------------------
-##    MODEL 7.4.3 BPA: CJS with temporal covariates
-## ------------------------------------------------- 
 
 ## ---- Simulation ----
 
-set.seed(2022)
 # Define parameter values
 n.occasions <- 20                  # Number of capture occasions
 marked <- rep(15, n.occasions-1)   # Annual number of newly marked individuals
@@ -66,9 +27,8 @@ beta <- -0.3                       # Slope of survival-winter relationship
 r.var <- 0.2                       # Residual temporal variance
 
 # Draw annual survival probabilities
-set.seed(3)
-winter <- rnorm((n.occasions-1)*sum(marked), 0, 1^0.5)
-logit.phi <- qlogis(mean.phi) + beta*winter + rnorm((n.occasions-1)*sum(marked), 0, r.var^0.5)
+winter <- rnorm(n.occasions-1, 0, 1^0.5)
+logit.phi <- qlogis(mean.phi) + beta*winter + rnorm(n.occasions-1, 0, r.var^0.5)
 phi <- plogis(logit.phi)
 
 # Define matrices with survival and recapture probabilities
@@ -120,7 +80,7 @@ for (i in 1:nind){
    } #i
 for (t in 1:(n.occasions-1)){
    epsilon[t] ~ dnorm(0, tau)
-   phi.est[t] <- 1 / (1+exp(-mu-beta*x[t]-epsilon[t])) # Yearly survival
+   #phi.est[t] <- 1 / (1+exp(-mu-beta*x[t]-epsilon[t])) # Yearly survival
    }
 mu ~ dnorm(0, 0.001)                     # Prior for logit of mean survival
 mean.phi <- 1 / (1+exp(-mu))             # Logit transformation
@@ -181,7 +141,7 @@ cjs.init.z <- function(ch,f){
 inits <- function(){list(z = cjs.init.z(CH, f), mu = rnorm(1), sigma = runif(1, 0, 5), beta = runif(1, -5, 5), mean.p = runif(1, 0, 1))}  
 
 # Parameters monitored
-parameters <- c("mean.phi", "mean.p", "phi.est", "sigma2", "beta")
+parameters <- c("mean.phi", "mean.p", "sigma2", "beta")
 
 # MCMC settings
 ni <- 20000
@@ -208,6 +168,45 @@ abline(v = 0.2, col = "red", lwd = 2)
 setwd("D:/MargSalas/Scripts_MS/Scripts_MS/Functions")
 source("capt_hist_bear.r")
 
+# Load monitoring data
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales")
+os <- read.csv("Data_os_96_20.csv", header = TRUE, row.names = NULL)
+os <- os[,-1] 
+
+os_id <- os[which(os$Confirmed_Individual != "Indetermined"), ] # Only identified
+os_id$Method[which(os_id$Method == "sampling_station")] <- "Sampling_station"
+os_id$Obs_type[which(os_id$Obs_type == "hair")] <- "Hair"
+
+os_id <- os_id[which(os_id$Region == "Catalunya"), ]
+
+# Set coordinates
+coordinates(os_id) <- os_id[,c("x_long","y_lat")] # Spatial object
+os_id@proj4string <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+
+# Load path
+cam <- raster("D:/MargSalas/Oso/Datos/GIS/Variables/Catalunya/path2m_4326.tif")
+
+coord <- os_id[ ,c("x_long","y_lat")] 
+cells <- cellFromXY(cam, coord) # 1. Tells the number of the cells where the coord. fall
+dist_cam <- cam[cells] # 2. Gets the raster values of those cells
+
+os_id@data <- cbind(os_id@data, dist_cam)
+
+d <- os_id@data
+
+# Mean distance to paths per year
+
+dist_path <- d %>%
+  group_by(Year) %>%
+  summarise(
+    mean = mean(dist_cam, na.rm = TRUE))
+
+# Select from 2010 to 2019 because it is a co-variate on survival, 
+# which happens between years
+
+dist_path <- c(dist_path[15:24,2])  
+
+# Capture history
 
 HairStCH <- capt_hist_bear(data = d, 
                            method = "Sampling_station", 

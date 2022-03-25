@@ -73,7 +73,7 @@ colnames(os@data)[which(colnames(os@data) %in% c("NAME_0", "NAME_1"))] <- c("Cou
 os@data <- os@data[,c(1:17,27:28,18:26)]
 
 # Export GIS layer with coordinates and good attribute table (last version)
-writeOGR(os, "D:/MargSalas/Oso/Datos/GPS/Radiotracking_layer", "Radiotracking_coordinates", driver = "ESRI Shapefile")
+#writeOGR(os, "D:/MargSalas/Oso/Datos/GPS/Radiotracking_layer", "Radiotracking_coordinates", driver = "ESRI Shapefile")
 
 os_data <- os@data
 os_data <- arrange(os_data, ID_obs) 

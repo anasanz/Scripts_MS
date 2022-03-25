@@ -76,14 +76,14 @@ os <- os[-which(is.na(os$X)), ] # Remove NA to convert coordinates
 
 coordinates(os) <- os[,c("x_long","y_lat")] # Spatial object
 os@proj4string <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
-
+plot(map)
 # Load layer with regions
 
 os@data <- os@data[ ,-which(colnames(os@data) %in% c("Country", "Region"))]
 
-map <- readOGR(dsn = "D:/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
+map <- readOGR(dsn = "D:/MargSalas/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
+Encoding(map$NAME_1) <- "UTF-8"
 d <- over(os,map) # Overlay to see where each point fall
-
 os@data <- cbind(os@data, d)
 colnames(os@data)[which(colnames(os@data) %in% c("NAME_0", "NAME_1"))] <- c("Country", "Region")
 
@@ -102,7 +102,7 @@ os_data$Confirmed_Individual[os_data$Confirmed_Individual == "Hvala  "] <- "Hval
 os_data$Confirmed_Individual[os_data$Confirmed_Individual == "Nere "] <- "Nere"
 
 setwd("D:/Oso/Datos/Tablas_finales")
-write.csv(os_data, "Seguiment_Ossos_Pirineus_1996_2020_taula_final.csv")
+#write.csv(os_data, "Seguiment_Ossos_Pirineus_1996_2020_taula_final.csv")
 
 ## ---- Create GIS layers Females with cubs of < 6 month and 1 year ----
 
@@ -131,17 +131,17 @@ os$Female_cubs_year1[is.na(os$Female_cubs_year1)] <- 0
 os_critic <- os[which(os$Female_cubs_critic == 1), ]
 os_year1 <- os[which(os$Female_cubs_year1 == 1), ]
 
-writeOGR(os_critic, "D:/Oso/Datos/GIS/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2020_OCA_critic", driver = "ESRI Shapefile")
-writeOGR(os_year1, "D:/Oso/Datos/GIS/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2020_OCA_1any", driver = "ESRI Shapefile")
+#writeOGR(os_critic, "D:/Oso/Datos/GIS/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2020_OCA_critic", driver = "ESRI Shapefile")
+#writeOGR(os_year1, "D:/Oso/Datos/GIS/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2020_OCA_1any", driver = "ESRI Shapefile")
 
 # Plot maps
 
 # Load basemap
-map1 <- readOGR(dsn = "D:/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
+map1 <- readOGR(dsn = "D:/MargSalas/Oso/Datos/GIS/Countries", layer = "clip_pyros2")
 
-setwd("D:/Oso/Datos/Plots")
+setwd("D:/MargSalas/Oso/Datos/Plots")
 
-pdf("Seguiment.pdf", 6.7,5.9)
+pdf("Seguiment1.pdf", 6.7,5.9)
 
 par(mfrow = c(1,1),
     oma = c(2,2,4,1),

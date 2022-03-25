@@ -10,7 +10,7 @@ library(rgdal)
 library(stringr)
 library(dplyr)
 
-setwd("D:/Oso/Datos/Tablas_finales")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales")
 os <- read.csv("Seguiment_Ossos_Pirineus_1996_2020_Pre-coordinates.csv", header = TRUE, row.names = NULL, sep = ";")
 Encoding(os$Remarks) <- "UTF-8" # Change encoding for weird characters (Â imported from excel)
 Encoding(os$X) <- "UTF-8" 
@@ -28,7 +28,7 @@ os$Y <- str_trim(os$Y, side = c("both"))
 
 # Load info table
 
-setwd("D:/Oso/Datos")
+setwd("D:/MargSalas/Oso/Datos")
 info <- read.csv("Info_individuals.csv", header = TRUE, row.names = NULL, sep = ";")
 info <- info[,c(4,5,8)]
 colnames(info)[1] <- "Probable_Individual"

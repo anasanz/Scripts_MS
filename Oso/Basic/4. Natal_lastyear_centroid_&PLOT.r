@@ -72,7 +72,7 @@ for(i in 1:length(id)){
   os_id <- os[which(os$Confirmed_Individual_cub %in% id[i]), ]
   pos_est <- os_id[which(os_id$Age_class_cub == "Subadult" | os_id$Age_class_cub == "Adult"), ]
   # Define the last and 2 last years of data
-  last_year <- max(pos_est$Year) 
+  last_year <- max(pos_est$Year, na.rm = TRUE) 
   last_2year <- c(last_year, last_year - 1)
   pos_est1 <- pos_est[which(pos_est$Year %in% last_year), ]
   pos_est2 <- pos_est[which(pos_est$Year %in% last_2year), ]
@@ -110,7 +110,7 @@ for (i in 1:nrow(d)){
   dist <- distm(d[i,c(2,3)], d[i,c(4,5)], fun = distGeo) } else {dist <- distm(d[i,c(2,3)], d[i,c(6,7)], fun = distGeo)} # Calculate distance between the natal (Cub0 - Cub2) to the last year positions
   d$Distance[i] <- dist
 }
-
+d$Distance <- round(d$Distance,digits = 0)
 info_sex <- info[,c(1,2)]
 d <- left_join(d,info_sex)
 
@@ -159,59 +159,12 @@ m <- aov(dist ~ sex, data = d2)
 summary(m)
 
 
-## ---- Plot 1 ----
-# Plot only the individuals for which there was enough data to calculate natal and established centroid
-#### MALES ####
-
-os_males <- os[which(os$Sex_cub == "M"), ]
-id_males <- unique(os_males$Confirmed_Individual_cub)
-id_males <- id_males[id_males %in% d$ID]
-
-setwd("D:/Oso/Datos/Plots")
-pdf("Disp_Males.pdf")  
-
-par(mfrow = c(3,3),
-    oma = c(2,2,4,1),
-    mar = c(0,0.5,1,0))
-
-for (i in 1:length(id_males)) {
-os_id <- os_males[which(os_males$Confirmed_Individual_cub == id_males[i]), ] # Select individual
-os_id_adult <- os_id[which(os_id$Age_class_cub == "Adult"), ]
-os_id_subadult <- os_id[which(os_id$Age_class_cub == "Subadult"), ]
-os_id_cub <- os_id[which(os_id$Age_class_cub == "Cub0" | os_id$Age_class_cub == "Cub1" | os_id$Age_class_cub == "Cub2"), ]
-
-plot(map1, col = "lightgrey", border = "grey")
-mtext(id_males[i], side = 3, line = 0.5, cex = 1)
-mtext(paste("(",info$Year_birth[info$ID %in% id_males[i]], "-", info$Year_death[info$ID %in% id_males[i]], ")"), side = 3, line = -1, cex = 0.8)
-
-# Plot raw points
-points(os_id_adult, col = adjustcolor("purple", alpha.f = 0.5), bg = adjustcolor("purple", alpha.f = 0.5), pch = 19, cex = 0.8)
-points(os_id_subadult, col = adjustcolor("orange", alpha.f = 0.5), bg = adjustcolor("orange", alpha.f = 0.5),  pch = 19, cex = 0.8)
-points(os_id_cub, col = adjustcolor("darkgreen", alpha.f = 0.5), bg = adjustcolor("darkgreen", alpha.f = 0.5), pch = 19, cex = 0.8)
-
-# Plot
-#points(d[d$ID %in% id_males[i],c(2,3)], col = "black", pch = 8, cex = 1)
-#points(d[d$ID %in% id_males[i],c(6,7)], col = "black", pch = 8, cex = 1)
-
-if(!is.na(d[d$ID %in% id_males[i],c(4)])) {
-  arrows(x0 = d[d$ID %in% id_males[i],c(2)], y0 = d[d$ID %in% id_males[i],c(3)], 
-         x1 = d[d$ID %in% id_males[i],c(4)], y1 = d[d$ID %in% id_males[i],c(5)],
-         length = 0.1) 
-} else { arrows(x0 = d[d$ID %in% id_males[i],c(2)], y0 = d[d$ID %in% id_males[i],c(3)], 
-                x1 = d[d$ID %in% id_males[i],c(6)], y1 = d[d$ID %in% id_males[i],c(7)],
-                length = 0.1)
-}}
-
-dev.off()
-
-
-
-## ---- Plot 2 ----
+## ---- Plot ----
 
 # Plot all individuals, and add dispersal arrow for those for which I could calculate the centroids
 
 #### MALES ####
-setwd("D:/Oso/Datos")
+setwd("D:/MargSalas/Oso/Datos")
 load("id_more10.RData")
 
 '%!in%' <- function(x,y)!('%in%'(x,y))
@@ -220,7 +173,7 @@ os_males <- os[which(os$Sex_cub == "M"), ]
 id_males <- unique(os_males$Confirmed_Individual_cub)
 id_males <- id_males[id_males %in% id_more10] # ID males with more than 10 observations (all)
 
-# Visual 1 (Three categories: Cub, subadult, adult) 
+# Three categories: Cub, subadult, adult
 
 setwd("D:/Oso/Datos/Plots")
 
