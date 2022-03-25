@@ -23,6 +23,8 @@ ds <- read.csv("2020_04.csv", sep = ";")
 colnames(ds)[1] <- "Itinerari"
 id_itinerari <- unique(ds$Itinerari)
 
+ds[which(ds$banda1 == 0 & ds$banda2 == 0 & ds$banda3 == 0), ] 
+
 tr_ds <- tr_all[which(tr_all$Itinerari %in% id_itinerari), ]
 proj4string(tr_all)
 #writeOGR(tr_ds,"D:/PhD/Otros/Tórtola", layer = "DS_SOCC_2020", driver = "ESRI Shapefile")

@@ -44,21 +44,17 @@ dat <- as.data.frame(dat)
 variables <- colnames(var)[-9]
 class(dat)
 
-
 par(mfrow = c(2,4))
 par(mfrow = c(1,1))
 for(i in 1:length(variables)){
   plot(dat$detections ~ dat[,colnames(dat) %in% variables[i]], main = variables[i], pch = 18)
 }
 
-
-
 par(mfrow = c(2,4))
 par(mfrow = c(1,1))
 for(i in 1:length(variables)){
   hist(dat[,colnames(dat) %in% variables[i]], main = variables[i])
 }
-
 
 
 # TEMPERATURE CO-VARIATE

@@ -4,10 +4,10 @@ library(dplyr)
 source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/plot.violins3.r")
 source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/DoScale.r")
 
-setwd("S:/Results/Otros/Tortola/Study2/Model0")
+setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model0")
 load("0TortoData_transects.RData") # Load analyzed transects
 
-setwd("S:/Results/Otros/Tortola/Study2/Model1.1")
+setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1")
 
 ## ---- Check convergence of structural parameters ----
 
