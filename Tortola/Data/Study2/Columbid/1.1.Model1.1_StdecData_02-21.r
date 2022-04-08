@@ -6,10 +6,10 @@ library(dplyr)
 library(stringr)
 
 
-setwd("D:/Otros/Tórtola/Data")
+setwd("D:/Otros/Tórtola/Data/Columbid")
 
-tor <- read.csv("tortola_ds_ready_02_21.csv", sep = ",")
-tor[,1] <- "STTUR"
+tor <- read.csv("stdec_ds_ready_02_21.csv", sep = ",")
+tor[,1] <- "STDEC"
 
 ###################################################################
 ##                       HDS ANALYSIS                           ###
@@ -86,9 +86,25 @@ for (i in 1:nrow(m_subset)) {
     m_subset2[nrow(m_subset2)+1,] <-  m_subset[i, ] # Add row if it has 5 time points with counts or more
   }}
 
-length(unique(m_subset2$site)) # Number of transects that will be analyzed
+# Transects that will be analyzed
+length(unique(m_subset2$site)) 
+transect_stdec <- unique(m_subset2$site)
 
-# 3. Load variables
+# 3. Check if they fit with transects Tórtola
+
+setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+load("1.1TortoData_transects_0221.RData") # Load analyzed transects
+transect_stdec <- transect_stdec[transect_stdec %in% transect] 
+# Only 20 of the transects that can be analyzed with STDEC were analyzed with STTUR!! :(
+# Save them
+# setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+# save(transect, file = "1.1CopalData_transects_0221.RData")
+
+# Subset the m df so that we only analyze the transects of sttur
+m_subset2 <- m_subset2[which(m_subset2$site %in% transect_stdec), ]
+
+
+# 4. Load variables
 
 # ROUGHNESS CO-VARIATE
 setwd("D:/Otros/Tórtola/Data")
@@ -110,10 +126,8 @@ rough$site <- m_subset2$site # For subset
 
 # 3. Make the subset and start loop
 
-transect <- unique(m_subset2$site)
+transect <- transect_stdec
 
-setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
-save(transect, file = "1.1TortoData_transects_0221.RData")
 
 for (xxx in 1:length(transect)){
   
@@ -346,6 +360,6 @@ for (xxx in 1:length(transect)){
   
   
   setwd("D:/Otros/Tórtola/Results/Study2/Model1.1")
-  save(out, file = paste("1.1TortoData_0221_", transect[xxx], ".RData"), sep = "")
+  save(out, file = paste("1.1StdecData_0221_", transect[xxx], ".RData"), sep = "")
   
 }

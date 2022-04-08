@@ -2,7 +2,7 @@
 ############      EXPLORE DATA TORTOLA SOCC AMPLIADO      ########################
 ##################################################################################
 
-rm(list=ls())
+
 
 library(rgdal)
 library(sp)
@@ -12,6 +12,8 @@ library(tidyr)
 library(splitstackshape)
 
 # Base de datos socc ampliado (con distance sampling)
+
+rm(list=ls())
 setwd("D:/Otros/Tórtola/Data")
 ds <- read.csv("Dades_SOCC_columbids_2021_v2.csv", sep = ";")
 colnames(ds)[1] <- "Itinerari"
@@ -22,6 +24,7 @@ ds <- ds[which(ds$Especie == "STTUR"), ] # Tórtola
 
  n <- ds %>% group_by(AnySOCC) %>% summarise(n()) 
 sum(n[1:18,2]) # There is 100 observations more than in the data base of 2019, but we move on
+sum(n[1:20,2]) # There is 100 observations more than in the data base of 2019, but we move on
 
 ## ---- Exploración datos DS ----
 
