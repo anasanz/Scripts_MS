@@ -10,13 +10,17 @@
 n <- rbinom(3, size=10, prob=0.5) # Generate 3 binomial outcomes
 # Each time we go (J = 3) we observe a different number
 
-# Probability of getting n = 5 according to the binomial pmf
+# Probability of getting n = 5 when the number of trials is 10 and 
+# the probability of success is 0.5 according to the binomial pmf
 dbinom(5, 10, 0.5)
 
 # You can plot the whole pmf
 plot(0:10, dbinom(0:10, 10, 0.5), type="h", ylab="Probability", 
      xlab="Number of shad caught (X) after 10 casts")
 
+#♣ De 10, hay una probabilidad distinta de cada numero. Esta probabilidad
+# depende de la probabilidad de sucess to get the number of trials
+dbinom(8, 10, 0.8)
 # The sum must be 1
 sum(dbinom(0:10, size=10, p=0.5))
 

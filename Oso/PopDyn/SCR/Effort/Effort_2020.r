@@ -17,7 +17,7 @@ map1 <- spTransform(map1, CRS_utm)
 
 ## ---- Trap Data File ----
 
-setwd("D:/MargSalas/Oso/Datos/Effort")
+setwd("D:/MargSalas/Oso/Datos/Effort_raw")
 ef <- read.csv("Revisions trampes 2020 V2.csv", sep = ";")
 Encoding(ef$tipus_tr) <- "UTF-8" 
 
