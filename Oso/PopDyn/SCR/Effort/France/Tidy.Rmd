@@ -70,7 +70,7 @@ The date when the indice is collect is chosen to identify the occasion of captur
 
 ```{r}
 
-
+dat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Prospind_2017-2019_Maelisv2.xlsx") %>%
   janitor::clean_names() %>%
   mutate(departement = as_factor(num_departement),
          libelle_pyrenees = as_factor(libelle_pyrenees),

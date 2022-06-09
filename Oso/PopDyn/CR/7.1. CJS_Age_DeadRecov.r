@@ -16,13 +16,13 @@ library(tidyr)
 library(rjags)
 library(jagsUI)
 
-setwd("D:/MargSalas/Scripts_MS/Scripts_MS/Functions/bpa")
+setwd("D:/MargSalas/Scripts_MS/Functions/bpa")
 source("known.state.cjs.r")
 source("simul.cjs.r")
 source("cjs.init.z.r")
 source("cjs.init.zdead.r")
 
-setwd("D:/MargSalas/Scripts_MS/Scripts_MS/Functions")
+setwd("D:/MargSalas/Scripts_MS/Functions")
 source("capt_hist_bear.r")
 
 ## ---- Simulation ----
