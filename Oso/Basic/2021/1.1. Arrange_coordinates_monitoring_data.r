@@ -11,7 +11,7 @@ library(stringr)
 library(dplyr)
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2021")
-os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021_Pre-coordinates.csv", header = TRUE, row.names = NULL, sep = ";")
+os <- read.csv("Seguiment_Ossos_Pirineus_1996_2020_Pre-coordinates.csv", header = TRUE, row.names = NULL, sep = ";")
 Encoding(os$Remarks) <- "UTF-8" # Change encoding for weird characters (Â imported from excel)
 Encoding(os$X) <- "UTF-8" 
 Encoding(os$Y) <- "UTF-8"
@@ -24,31 +24,16 @@ colnames(os)[1] <- "Confirmed_Individual"
 os$X <- str_trim(os$X, side = c("both")) # Remove white spaces
 os$Y <- str_trim(os$Y, side = c("both"))
 
-os$Probable_Individual <- str_trim(os$Probable_Individual, side = c("both")) # Remove white spaces
-os$Probable_Individual[which(os$Probable_Individual == "")] <- "Indetermined" # Need that all white spaces are "Indetermined"
-
-unique(os$Confirmed_Individual)
-unique(os$Probable_Individual)
-
 ## ---- First: Join sex and age manually ----
 
 # Load info table
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2021")
-info <- read.csv("Info_individuals_2021.csv", header = TRUE, row.names = NULL, sep = ";")
+info <- read.csv("Info_individuals.csv", header = TRUE, row.names = NULL, sep = ";")
 info <- info[,c(4,5,8)]
 colnames(info)[1] <- "Probable_Individual"
 
-# To checj if it works restricting the ids of info to only the ones in os, but it doesnt work
-#allprob2 <- unique(info$Probable_Individual)
-#osprob <- unique(os$Probable_Individual)
-#id_keep <- allprob2[allprob2 %in% osprob]
-#
-#info <- info[which(info$Probable_Individual %in% id_keep), ] 
-#info$Probable_Individual <- as.character(as.factor(info$Probable_Individual))
-
 os <- left_join(os,info,by = "Probable_Individual")
-
 
 # SEX
 os$Sex.y2 <- ifelse(is.na(os$Sex.y), os$Sex.y <- os$Sex.x, os$Sex.y)
@@ -201,6 +186,6 @@ os_data <- os_data[-which(duplicated(os_data)), ]
 os_data$ID_obs <- seq(1:nrow(os_data))
 os_data <- os_data[,c(33,1:32)]
 
-setwd("D:/Oso/Datos/Tablas_finales")
+setwd("D:/Oso/Datos/Tablas_finales/2021")
 write.csv(os_data, "Seguiment_Ossos_Pirineus_1996_2020.csv")
 
