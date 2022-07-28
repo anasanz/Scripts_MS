@@ -1,5 +1,6 @@
 ## -------------------------------------------------
-##           Join spanish detections - traps           
+##           Join spanish detections - traps     
+##                      YEAR 2020
 ## ------------------------------------------------- 
 
 rm(list = ls())
@@ -62,54 +63,102 @@ trap_aran <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Trampes_
 
 trap_aran$site <- ifelse(trap_aran$tipus_tr == "Mixte", "both","hair")
 
-##ATENCIÓN!! AQUÍ FALTA LA INFORMACIÓN DE NAVARRA
-# No la añado porque faltan info en los datos, pero hay que añadirlo
-# en la nueva base de datos Seguiment 96-21
+## Trampas Navarra
 
+trap_nav <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Copia de INDICIOS OSO PARDO-CAMARAS FOTOTRAMPEO 2021-22 B-GMA D-3 RONCAL-SALAZAR.xlsx", sheet = 1) %>% 
+  janitor::clean_names() %>%
+  rename(codi_tr = toponimia) %>%
+  select(codi_tr, x_utm, y_utm) %>%
+  mutate(tipus_tr = "Mixte") %>% # Lo pongo como Mixto, porque aunque no haya pelo estamos seguras de los individuos (Claverina)
+  mutate(site = "both") %>%
+  st_as_sf(coords = c("x_utm","y_utm"), 
+           crs = CRS("+proj=utm +zone=30 +datum=WGS84") ) %>%
+  st_transform(CRS("+proj=utm +zone=31 +datum=WGS84"))
 
-# Join Catalonia and Aran
+mapview(trap_nav)
+
+## Trampas 2021
+# Hay observaciones en 2020 de estaciones de muestreo que no están asociadas a una trampa en 2020, pero coinciden exactamente con una trampa en 2021.
+# Añado estas trampas de 2021 porque lo más probable esque yo no las tenga pero ya existiesen.
+
+trap_add2021 <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Trampes_2021_SFF_CAR_CGA.xlsx") %>% 
+  janitor::clean_names() %>%
+  select(codi_tr,tipus_tr,coord_x,coord_y) %>%
+  filter(codi_tr %in% c("D510502", "C730142", "E610189", "D710212")) %>%
+  mutate(site = "hair") %>% # poils seul
+  st_as_sf(coords = c("coord_x","coord_y"), 
+           crs = CRS("+proj=utm +zone=31 +datum=WGS84")) 
+
+trap_add2021$site <- ifelse(trap_add2021$tipus_tr == "Mixte", "both","hair")
+
+## Trampa no registrada con observaciones múltiples en 2020 y 2021
+
+# Calcular centroide entre detecciones de ambos años = trampa
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+os_add_trap <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final.xlsx') %>%
+  filter(Year %in% c(2020,2021) & Confirmed_Individual != "Indetermined" & Country == "Spain") %>%
+  filter(Confirmed_Individual %in% c("Bonabe", "New 20-14") & Date_register %in% c("17/08/2020", "06/09/2021") & Obs_type %in% c("Hair", "Video"))
+
+mx <- mean(os_add_trap[,colnames(os_add_trap) == "x_long"])
+my <- mean(os_add_trap[,colnames(os_add_trap) == "y_lat"])
+
+trap_add <- data.frame(codi_tr = "new", tipus_tr = "Mixte", site = "both", x = mx, y = my) %>%
+  st_as_sf(coords = c("x","y"), 
+           crs = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")) %>%
+  st_transform(crs = 32631) 
+
+# Save to use in 2021
+setwd("D:/MargSalas/Oso/Datos/Effort_raw/Spain")
+save(trap_add, file = "trap_add.RData")
+
+# Join Catalonia, Aran and Navarra, new traps 
+
 trap_cat <- trap_onlycat %>%
   rbind(trap_aran) %>%
-  mutate(trap_id = paste(row_number(), "c")) %>%
-  mutate(trap = row_number())
+  rbind(trap_nav) %>%
+  rbind(trap_add2021) %>%
+  rbind(trap_add) %>%
+  arrange(by = site) %>% # Very important for order later
+  mutate(trap_id = paste(row_number(), "c"))  %>% ## This is the ID of all the traps together
+  mutate(trap = row_number())  ## This is different to Maelis, who adds it in the next step**
+# ** I do it like this because I will join the hair detections to all the traps (both and hair),
+# and I need that the trap number is already in
 
 ## Creamos un object para cada tipo de trampa
 
-trap_cat_pels <- trap_cat %>%
-  filter(site == "hair") 
+trap_cat_foto <- trap_cat %>% 
+  filter(site == "both") # VERY IMPORTANT that "both" is located first in trap_cat, so that trap number is the same as row number. Necesary for dist_nearest
 
-trap_cat_foto <- trap_cat %>%
-  filter(site == "both") 
-
-st_bbox(trap_cat_pels)
-#plot(st_geometry(map),xlim = st_bbox(trap_cat_pels)[c(1,3)], ylim = st_bbox(trap_cat_pels)[c(2, 4)])
-plot(st_geometry(map))
-plot(st_geometry(trap_cat_pels), add = TRUE)
+trap_cat_pels <- trap_cat %>% # This file is not used to join with detections (I join with all hair and both)
+  filter(site == "hair")  # ONLY for ploting (trap is not the row number)
 
 #mapview(trap_cat_pels) + mapview(trap_cat_foto, col.regions = "red")
 
 ## ---- Load detections ----
 
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales")
-os <- read.csv("Seguiment_Ossos_Pirineus_1996_2020_taula_final.csv", header = TRUE, row.names = NULL) %>%
-  filter(Year == 2020 & Probable_Individual != "Indetermined" & Country == "Spain") %>%
-  select(-X.1) %>%
+# I take only confirmed individuals (we lose 18 detections)
+
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_cubLocations.xlsx') %>% 
+  filter(Year == 2020 & Confirmed_Individual != "Indetermined" & Country == "Spain") # 290 confirmed, 308 probable
+os <- os %>%
   mutate(date = as_date(os$Date_register, format = "%d/%m/%Y"),
          month = month(date))
-os$month[157] <- 4 # Correct mannually because date was not exact and we only had month
-os$month[158] <- 6
+os$month[307] <- 6 # Correct mannually because date was not exact and we only had month
+os$month[308] <- 4
 os <- os %>%
-  filter(month < 12, month > 4)  # 7 months form mai to november 
+  filter(month < 12, month > 4)  # 7 months form may to november 
+
 
 ## Keep systematic data
 dat_cat_syst <- os[which(os$Method %in% c("Sampling_station", "Transect") &
-                 os$Obs_type %in% c("Photo","Photo/Video", "Hair")), ]
+                 os$Obs_type %in% c("Photo","Photo/Video", "Hair", "Video")), ]
 
 pts_foto_2020 <- dat_cat_syst %>% 
   st_as_sf(coords = c("x_long","y_lat"), 
            crs = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")) %>%
   st_transform(crs = 32631) %>%
-  filter(Obs_type %in% c("Photo","Photo/Video"))
+  filter(Obs_type %in% c("Photo","Photo/Video", "Video"))
 
 pts_pels_2020 <- dat_cat_syst %>% 
   st_as_sf(coords = c("x_long","y_lat"), 
@@ -123,23 +172,50 @@ pts_pels_2020 <- dat_cat_syst %>%
 pts_foto_2020 <- dist_nearest(pts_foto_2020, trap_cat_foto) %>%
   #st_drop_geometry() %>%
   left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>%
-  dplyr::select(Year, Date_register, Probable_Individual, Sex, Method, Obs_type, trap_id, dist)
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
 
-pts_pels_2020 <- dist_nearest(pts_pels_2020, trap_cat) %>% ## Here I join to trap_cat that contains hair and mixed (both)
+pts_pels_2020 <- dist_nearest(pts_pels_2020, trap_cat) %>% ## Here I join to trap_cat that contains hair and mixed (both, this is a bit different than maelis)
   #st_drop_geometry() %>%
   left_join(trap_cat %>% st_drop_geometry(), by = "trap") %>%
-  dplyr::select(Year, Date_register, Probable_Individual, Sex, Method, Obs_type, trap_id, dist)
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
 
 mapview(trap_cat_pels) + mapview(trap_cat_foto, col.regions = "green") + 
   mapview(pts_foto_2020, col.regions = "darkgreen", cex = 2) + 
   mapview(pts_pels_2020, col.regions = "magenta", cex = 2)
 
-## With a threshold of 500 m there is only one that is saved
+# Here trap_id is = trap. I don't know why in MK is different, but this is the only way that works for me.
+# Because every year will have a different trap set, this works for 2020
+
+## With a threshold of 500 m there are few saved
 
 # Cases that could be worth checking with santi
 # There is an observation but there is no trap associated, it is VERY far from any trap and the coordinates are good
 ## Esmolet 15/06, Pepito 12/08, New 18-03 05/07 (sist auto?there is even a camera?)
 # Should we include a trap in this ones??
 
+## ---- Join and save data ----
+seuil <- 500 #♣ Threshold distance, arbitrary (same as MK)
+
+# Format traps
+trap_2020 <- trap_cat %>%
+  rename("NOM" = "codi_tr") %>%
+  mutate(pays = "Espagne") %>%
+  mutate(suivi = "systematic") %>%
+  select(NOM, site, trap_id, pays, trap, suivi, geometry)
+  
+# Combine and format detections
+pts_2020 <- rbind(pts_foto_2020,pts_pels_2020) %>%
+  rename("id" = "Confirmed_Individual") %>%
+  rename("sex" = "Sex") %>%
+  mutate(suivi = "systematic") %>%
+  filter(dist < seuil) %>%
+  select(-dist)
+
+mapview(trap_cat) + mapview(pts_2020, col.regions = "green", cex = 2)
 
 
+dataSpain20 <- list(det = pts_2020,
+                    traps = trap_2020)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Effort/Spain/Data")
+save(dataSpain20, file = "dataSpain20.RData")

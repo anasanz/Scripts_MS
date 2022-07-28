@@ -14,7 +14,7 @@ load("1.1TortoData_transects_0221.RData") # Load analyzed transects
 
 no_converge <- NULL
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
 for (i in 1:length(transect)){
   load(paste("1.1TortoData_0221_", transect[i],".RData", sep = ""))
   
@@ -30,7 +30,7 @@ save(no_converge, file = "1.1TortoData_noconverge_2002_2021.RData") # Save to ru
 
 # --> Check how bad is convergence of 5e5 iter
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
 load("1.1TortoData_noconverge_2002_2021.RData")
 list_no_converge <- list()
 
@@ -44,7 +44,7 @@ for (i in 1:length(no_converge)){
 list_no_converge
 
 # With 9e5 iter
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
 load("1.1TortoData_noconverge_2002_2021.RData")
 
 no_converge <- no_converge[-10] # Transecto 10 (num 169) no esta! No se ha corrido bien
@@ -61,12 +61,12 @@ for (i in 1:length(no_converge)){
   next 
 }
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
 save(no_converge2, file = "1.1TortoData_noconverge2_9e5iter_2002_2021.RData") # Save to run at 500000
 
 # --> Check how bad is convergence of 9e5 iter
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
 load("1.1TortoData_noconverge2_9e5iter_2002_2021.RData")
 
 list_no_converge2 <- list()
