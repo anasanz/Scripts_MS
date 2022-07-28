@@ -153,6 +153,7 @@ dat2_op <- dat2 %>%
 # Determinist monitoring 
 dat2 <- dat2 %>%
   filter(libelle_type_operation_terrain != "prospection suite à dégât")
+
 ```
 
 ## 2) Systematic monitoring
@@ -584,6 +585,10 @@ Ainsi dans le suivi systématique on peut différencier différentes
 méthodes de détection que l'on peu regrouper en 3 catégories :
 
 ```{r}
+
+## ASP check:
+unique(dat2$libelle_type_indice)
+
 # We distinguish the 3 methods 
 dat2 <- dat2 %>%
   mutate(method = "itineraire") # Itinerary 
@@ -617,6 +622,7 @@ df[which(df$an == 2019 & df$id == "Boet" & df$month == 7 & df$method == "piege p
 df[which(df$an == 2019 & df$id == "Chataigne" & df$month == 9 & df$method == "piege poils" & df$itineraire == "AUERAN"), "x"] <- 474788
 df[which(df$an == 2019 & df$id == "Chataigne" & df$month == 9 & df$method == "piege poils" & df$itineraire == "AUERAN"), "y"] <- 1761916
 df[which(df$id == "New18_06"), "x"] <- 512950
+
 
 pts <- df %>%
   st_as_sf(coords = c("x", "y"),
@@ -652,6 +658,10 @@ pts_poils_2018 <-  pts_poils %>%
 pts_poils_2019 <-  pts_poils %>%
   filter(an == 2019) 
 ```
+
+# ASP: Exportar para comprobar con base de datos española
+#setwd("D:/MargSalas/Oso/Datos/Data_raw")
+#openxlsx::write.xlsx(df, 'Data_Maelis_1719_Syst.xlsx')
 
 We match detection indices with traps
 
@@ -747,7 +757,7 @@ pts_2019 <- rbind(pts_photo_2019,pts_poils_2019) %>%
 ## 1) Load and tidy data
 
 ```{r}
-dat_cat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort/France/Raw/Raw/Seguiment_2017_2019_Catalunya.xlsx") %>%
+dat_cat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Seguiment_2017_2019_Catalunya.xlsx") %>%
   janitor::clean_names() %>%
   dplyr::select(annee_indice,num_departement, 
                 libelle_type_indice, 
@@ -935,9 +945,9 @@ pts_pels_2019 <- pts_pels %>%
 On associe chaque détection au piège le plus proche puis on calcule la distance euclidienne les séparants
 ```{r}
 # Association entre la détection et le piège photo le plus proche, les mêmes pièges seraient actifs les 3 années (à vérifier)
-pts_foto_2017 <- dist_nearest(pts_foto_2017, trap_cat_foto) %>%
+pts_foto_2017 <- dist_nearest(pts_foto_2017, trap_cat_foto) %>% ## ASP: It assings to the nearest trap. The name of the trap is the variable "trap" (which is created as the row number of trap_cat_foto)
   st_drop_geometry() %>%
-  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>%
+  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>% # To get the trapID of the whole trap dataset, it joins it by the variable trap
   dplyr::select(an, month, id, sexe, libelle_type_indice, trap_id, dist)
 
 pts_foto_2018 <- dist_nearest(pts_foto_2018, trap_cat_foto) %>%
