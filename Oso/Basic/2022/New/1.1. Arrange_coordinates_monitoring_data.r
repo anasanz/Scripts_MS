@@ -11,7 +11,7 @@ library(stringr)
 library(dplyr)
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021_Pre-coordinates_NEW.csv", header = TRUE, row.names = NULL, sep = ";")
+os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021_Pre-coordinates.csv", header = TRUE, row.names = NULL, sep = ";")
 Encoding(os$Remarks) <- "UTF-8" # Change encoding for weird characters (Â imported from excel)
 Encoding(os$X) <- "UTF-8" 
 os$Y <- as.character(os$Y)
@@ -57,8 +57,8 @@ for (i in 1:nrow(os)){    # I could do with ifelse function but it doesn't work 
     os$Sex.y2[i] <- os$Sex.y[i]
   }
 }
-os <- os[,-c(3,32)]
-os <- os[ ,c(1:2,32,3:31)]
+os <- os[,-c(3,30)]
+os <- os[ ,c(1:2,30,3:29)]
 colnames(os)[3] <- "Sex"
 
 # AGE
@@ -74,8 +74,8 @@ for (i in 1:nrow(os)){    # I could do with ifelse function but it doesn't work 
   }
 }
 
-os <- os[,-c(4,32)]
-os <- os[,c(1:3,31,4:30)]
+os <- os[,-c(4,30)]
+os <- os[,c(1:3,29,4:28)]
 colnames(os)[4] <- "Age"
 
 ## ---- SECOND: Prepare to arrange coordinates ----
@@ -198,19 +198,19 @@ os_data <- rbind(os_spatial@data, os_na)
 # Arrange by date
 os_data$Date_register_formated <- os_data$Date_register # Create column with date format to sort data frame by date
 os_data$Date_register_formated <- as.Date(os_data$Date_register_formated, format = "%d/%m/%Y")
-os_data <- os_data[,c(1:8,34,9:33)]
+os_data <- os_data[,c(1:8,32,9:31)]
 os_data <- arrange(os_data, Year, Date_register_formated) # Arrange by year and date, to keep in order the registers without a specific day
 os_data <- os_data[,-9] # Remove column with date format and keep the original one (with non-accurate dates)
 
 # Sort out columns
-os_data <- os_data[,c(1:12,32,33,13:31)]
+os_data <- os_data[,c(1:12,30,31,13:29)]
 
 
 # Assign number to the observations
 
 os_data$ID_obs <- seq(1:nrow(os_data))
-os_data <- os_data[,c(34,1:33)]
+os_data <- os_data[,c(32,1:31)]
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-write.csv(os_data, "Seguiment_Ossos_Pirineus_1996_2021_2.csv")
+write.csv(os_data, "Seguiment_Ossos_Pirineus_1996_2021.csv")
 

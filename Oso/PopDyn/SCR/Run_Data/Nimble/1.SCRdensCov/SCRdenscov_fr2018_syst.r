@@ -152,6 +152,9 @@ for (obs in 1:nrow(xx)) {
   Y[xx[obs, 1], xx[obs, 2]] <- Y[xx[obs, 1], xx[obs, 2]] + 1
 }
 
+max(Y) # Check the number max number of detections (it can't be higher than K)
+
+
 #----   3.2 AUGMENT Y   ---- 
 ##augment observed data to size M
 M <- 400 

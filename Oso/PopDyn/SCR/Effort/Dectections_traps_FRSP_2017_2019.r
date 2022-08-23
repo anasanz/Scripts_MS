@@ -301,6 +301,10 @@ sites_2017 <- sites_2017 %>%
   arrange(site) %>%
   mutate(trap_id = paste(row_number(),"f"))
 
+# Transform to make crs fit with detections
+sites_2017 <- sites_2017 %>%
+  st_transform(crs = 4326)
+
 #### 2.2. 2018 ####
 # 1))
 # Identifier les appareils qui sont associé à des pièges à poils qui sont sur des itinéraires  
@@ -348,6 +352,10 @@ sites_2018 <- sites_2018 %>%
 sites_2018 <- sites_2018 %>%
   arrange(site) %>%
   mutate(trap_id = paste(row_number(),"f"))
+
+# Transform to make crs fit with detections
+sites_2018 <- sites_2018 %>%
+  st_transform(crs = 4326)
 
 #### 2.3. 2019 ####
 # 1))
@@ -410,13 +418,17 @@ sites_2019 <- sites_2019 %>%
   arrange(site) %>% 
   mutate(trap_id = paste(row_number(),"f"))
 
-
-
+# Transform to make crs fit with detections
+sites_2019 <- sites_2019 %>%
+  st_transform(crs = 4326)
 
 ## ---- 3. Detections ----
 
+# LOAD dataset that has been contrasted with dataset of Maelis (Prospind_2017-2019_Maelisv2.xlsx)
+# We have also added if the hair sample comes from a trap (Poils appât) or not (poils spontanées)
+
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_cubLocations.xlsx') %>% 
+os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_2_cubLocations.xlsx') %>% 
   filter(Year %in% c(2017,2018,2019) & Confirmed_Individual != "Indetermined" & Country == "France") # Removed indetermined
   
 os <- os %>% mutate(date = as_date(os$Date_register, format = "%d/%m/%Y"),
@@ -429,39 +441,283 @@ os <- os %>% mutate(date = as_date(os$Date_register, format = "%d/%m/%Y"),
 dat2 <- os[which(os$Method %in% c("Sampling_station", "Transect") &
                            os$Obs_type %in% c("Photo","Photo/Video", "Hair", "Video")), ]
 
-# CHECK this dataset with dataset Maelis: 
-# The biggest difference is that she only keeps the hair samples that come from traps (not spontaneous)
-# Todos los que vienen de transecto son espontáneos, y los que vienen de estaciones son trampas de pelo
+# We distinguish the 3 methods 
+dat2 <- dat2 %>%
+  mutate(method = "itineraire") # Itinerary 
 
-setwd("D:/MargSalas/Oso/Datos/Data_raw")
-df_st <- openxlsx::read.xlsx('Data_Maelis_1719_Syst.xlsx') %>%
-  filter(method == "piege poils")
-df_trans <- openxlsx::read.xlsx('Data_Maelis_1719_Syst.xlsx') %>%
-  filter(method == "itineraire")
+dat2[which(dat2$Obs_type == "Photo" | dat2$Obs_type == "Photo/Video" | dat2$Obs_type == "Video"),"method"] <- "piege photos" # Camera trap
 
-# Los que sean pelo en las localicaciones donde Maelis tiene que es una trampa, pongo que vienen de una trampa
+nrow(dat2[which(dat2$Obs_type == "Hair"),]) - nrow(dat2[which(dat2$Obs_type == "Hair" & dat2$Hair_trap == 1),]) # We remove 36 that are hair 
+dat2[which(dat2$Obs_type == "Hair" & dat2$Hair_trap == 1),"method"] <- "piege poils" # Hair trap
 
-filt <- dat2[which(dat2$Obs_type == "Hair" & 
-                  dat2$Database %in% c("Seguiment França Ossos 2010-2017.xls", "Seguiment França Ossos 2016-2020.xls")), ]
-filt_trans <- filt[which(filt$Method == "Transect"), ]
-filt_st <- filt[which(filt$Method == "Sampling_station"), ]
+#### 3.1. Separate the detections of each type  ####
 
-unique(df_st$x) %in% unique(filt_st$X) # Comprobando el primero (excel) me doy cuenta de que no coincide porque
-# aunque el tipo de método sea "itineraire", lo ponen como trampa de pelo si la observación viene de una
-# trampa de pelo
+# Détections issues de pièges photos (photographie automatiques, vidéo automatique)
+pts_photo <- dat2 %>%
+  filter(method =="piege photos") %>%
+  st_as_sf(coords = c("x_long", "y_lat"),
+           crs = 4326)
 
-dat2$hairtrap <- 0
-dat2$hairtrap[which(dat2$Obs_type == "Hair" & 
-             dat2$Database %in% c("Seguiment França Ossos 2010-2017.xls", "Seguiment França Ossos 2016-2020.xls") &
-               dat2$X %in% df_st$x)] <- 1
+pts_photo_2017 <- pts_photo %>%
+  filter(Year == 2017) 
 
-# 
+pts_photo_2018 <- pts_photo %>%
+  filter(Year == 2018) 
+
+pts_photo_2019 <- pts_photo %>%
+  filter(Year == 2019)
+
+# Détections issues de pièges à poils 
+pts_poils <- dat2 %>%
+  filter(method =="piege poils") %>%
+  st_as_sf(coords = c("x_long", "y_lat"),
+           crs = 4326)
+
+pts_poils_2017 <-  pts_poils %>%
+  filter(Year == 2017)
+
+pts_poils_2018 <-  pts_poils %>%
+  filter(Year == 2018)
+
+pts_poils_2019 <-  pts_poils %>%
+  filter(Year == 2019)
+
+#### 3.2. We match detection indices with traps  ####
+
+# Association entre la détection et le piège à poil le plus proche en tenant compte des pièges actifs selon les années
+
+# Photo
+pts_photo_2017 <- dist_nearest(pts_photo_2017, 
+                               sites_2017 %>% 
+                                 filter(site != "hair") %>%
+                                 mutate("trap" = row_number())) %>%
+  # mapview(pts_photo_2017, cex = 2) + mapview(sites_2017, col.regions = "red", cex = 2)
+  ## ASP: Distance from detection (photo) to the closest camera trap, and asigns row number of
+  # the sites file (which is the same as the id of the camera)
+  st_drop_geometry() %>%
+  left_join(sites_2017 %>% 
+              filter(site != "hair") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  ## ASP: Joins the detections to the camera trap id (whch is the row number)
+  dplyr::select(Year, month, Confirmed_Individual, Sex, Obs_type, trap_id, dist)
 
 
+pts_photo_2018 <- dist_nearest(pts_photo_2018, 
+                               sites_2018 %>% 
+                                 filter(site != "hair") %>%
+                                 mutate("trap" = row_number())) %>%
+  # mapview(pts_photo_2018, cex = 2) + mapview(sites_2018, col.regions = "red", cex = 2)
+  ## ASP: Distance from detection (photo) to the closest camera trap, and asigns row number of
+  # the sites file (which is the same as the id of the camera)
+  st_drop_geometry() %>%
+  left_join(sites_2018 %>% 
+              filter(site != "hair") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  ## ASP: Joins the detections to the camera trap id (whch is the row number)
+  dplyr::select(Year, month, Confirmed_Individual, Sex, Obs_type, trap_id, dist)
+
+pts_photo_2019 <- dist_nearest(pts_photo_2019, 
+                               sites_2019 %>% 
+                                 filter(site != "hair") %>%
+                                 mutate("trap" = row_number())) %>%
+  
+  #mapview(pts_photo_2019, cex = 2) + mapview(sites_2019, col.regions = "red", cex = 2)
+
+  ## ASP: Distance from detection (photo) to the closest camera trap, and asigns row number of
+  # the sites file (which is the same as the id of the camera)
+  st_drop_geometry() %>%
+  left_join(sites_2019 %>% 
+              filter(site != "hair") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  ## ASP: Joins the detections to the camera trap id (whch is the row number)
+  dplyr::select(Year, month, Confirmed_Individual, Sex, Obs_type, trap_id, dist)
 
 
+#Poils 
+pts_poils_2017 <- dist_nearest(pts_poils_2017, 
+                               sites_2017 %>%
+                                 mutate("trap" = row_number())) %>%
+  #mapview(pts_poils_2017, cex = 2) + mapview(sites_2017, col.regions = "red", cex = 2)
+  st_drop_geometry() %>%
+  left_join(sites_2017 %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(Year, month, Confirmed_Individual, Sex, Obs_type, trap_id, dist)
+
+pts_poils_2018 <- dist_nearest(pts_poils_2018, 
+                               sites_2018 %>%
+                                 mutate("trap" = row_number())) %>%
+  st_drop_geometry() %>%
+  left_join(sites_2018 %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(Year, month, Confirmed_Individual, Sex, Obs_type, trap_id, dist)
+
+pts_poils_2019 <- dist_nearest(pts_poils_2019, 
+                               sites_2019 %>%
+                                 mutate("trap" = row_number())) %>%
+  st_drop_geometry() %>%
+  left_join(sites_2019 %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(Year, month, Confirmed_Individual, Sex, Obs_type, trap_id, dist)
+
+#### 3.3. We remove detection that are to far away a trap, because they must be errors ####
+
+pts_2017 <- rbind(pts_photo_2017,pts_poils_2017) %>%
+  filter(dist < seuil) 
+pts_2018 <- rbind(pts_photo_2018,pts_poils_2018) %>%
+  filter(dist < seuil)
+pts_2019 <- rbind(pts_photo_2019,pts_poils_2019) %>%
+  filter(dist < seuil)
+
+## ---- Spain ----
+
+## ---- 1. Load and sort out traps ----
+#### a) Hair traps ####
+
+trap_cat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/UTM trampas pelos y camaras.xlsx") %>% 
+  janitor::clean_names() %>%
+  filter(!is.na(xutm)) %>%
+  st_as_sf(coords = c("xutm","yutm"), 
+           crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>% 
+  st_transform(crs = 4326) %>%
+  rename("NOM" = "itinerari") %>%
+  mutate(effort = "it") %>%
+  mutate(site = "hair") # poils seul
+
+## ASP: Names all "hair" and then according to foto_video or pels columns assings to camera or both
+trap_cat[which(!is.na(trap_cat$foto_video)),"site"] <- "both" # poils et photo
+trap_cat[which(is.na(trap_cat$pels)),"site"] <- "camera" # photo seul
+
+trap_cat <- trap_cat[-which(duplicated(trap_cat$geometry)),]
+
+# On enlève les pièges photos seul car ils ne permettent pas l'identification des ours 
+trap_cat <- trap_cat %>%
+  filter(site != "camera")  %>%
+  arrange(by = site) %>% # I arrange it so that numbers make more sense (fotos first, then both)
+  mutate(trap_id = paste(row_number(), "c"))
+
+# On fait un sous tableau pour les pièges à poils 
+trap_cat_pels <- trap_cat %>%
+  mutate(trap = row_number())
+
+#### b) Camera traps ####
+
+trap_cat_foto <- trap_cat %>%
+  filter(foto_video != is.na(foto_video)) %>% 
+  mutate(trap = row_number()) 
+
+## ---- 2. Detections ----
+
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_2_cubLocations.xlsx') %>% 
+  filter(Year %in% c(2017,2018,2019) & Confirmed_Individual != "Indetermined" & Country == "Spain") # Removed indetermined
+
+os <- os %>% mutate(date = as_date(os$Date_register, format = "%d/%m/%Y"),
+                    month = month(date)) %>%
+  filter(month < 12, month > 4) %>% # 7 months form may to november
+  filter(!is.na(x_long)) # Remove observations without coordinates
 
 
+## Keep systematic data
+dat_cat_syst <- os[which(os$Method %in% c("Sampling_station", "Transect") &
+                   os$Obs_type %in% c("Photo","Photo/Video", "Hair", "Video")), ]
 
+#### 2.1. Separate the detections of each type  ####
+
+# Camera trap detections
+pts_foto <- dat_cat_syst %>% 
+  st_as_sf(coords = c("x_long","y_lat"), 
+           crs = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")) %>%
+  filter(Obs_type %in% c("Photo","Photo/Video", "Video"))
+
+pts_foto_2017 <- pts_foto %>%
+  filter(Year == 2017) 
+
+pts_foto_2018 <- pts_foto %>%
+  filter(Year == 2018) 
+
+pts_foto_2019 <- pts_foto %>%
+  filter(Year == 2019) 
+
+# Hair detections
+pts_pels <- dat_cat_syst %>% 
+  st_as_sf(coords = c("x_long","y_lat"), 
+           crs = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")) %>%
+  filter(Obs_type %in% c("Hair"))
+
+pts_pels_2017 <- pts_pels %>% 
+  filter(Year == 2017) 
+
+pts_pels_2018 <- pts_pels %>% 
+  filter(Year == 2018)
+
+pts_pels_2019 <- pts_pels %>% 
+  filter(Year == 2019)
+
+#### 2.2. We match detection indices with traps  ####
+
+# Association entre la détection et le piège photo le plus proche, 
+# les mêmes pièges seraient actifs les 3 années (à vérifier)
+
+# Camera trap detections
+
+pts_foto_2017 <- dist_nearest(pts_foto_2017, trap_cat_foto) %>% ## ASP: It assings to the nearest trap. The name of the trap is the variable "trap" (which is created as the row number of trap_cat_foto)
+  #st_drop_geometry() %>%
+  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>% # To get the trapID of the whole trap dataset, it joins it by the variable trap
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
+
+pts_foto_2018 <- dist_nearest(pts_foto_2018, trap_cat_foto) %>% ## ASP: It assings to the nearest trap. The name of the trap is the variable "trap" (which is created as the row number of trap_cat_foto)
+  #st_drop_geometry() %>%
+  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>% # To get the trapID of the whole trap dataset, it joins it by the variable trap
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
+
+pts_foto_2019 <- dist_nearest(pts_foto_2019, trap_cat_foto) %>% ## ASP: It assings to the nearest trap. The name of the trap is the variable "trap" (which is created as the row number of trap_cat_foto)
+  #st_drop_geometry() %>%
+  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>% # To get the trapID of the whole trap dataset, it joins it by the variable trap
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
+
+# Hair trap detections
+
+pts_pels_2017 <- dist_nearest(pts_pels_2017, trap_cat_pels) %>% ## Here I join to trap_cat that contains hair and mixed (both, this is a bit different than maelis)
+  #st_drop_geometry() %>%
+  left_join(trap_cat_pels %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
+
+pts_pels_2018 <- dist_nearest(pts_pels_2018, trap_cat_pels) %>% ## Here I join to trap_cat that contains hair and mixed (both, this is a bit different than maelis)
+  #st_drop_geometry() %>%
+  left_join(trap_cat_pels %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
+
+pts_pels_2019 <- dist_nearest(pts_pels_2019, trap_cat_pels) %>% ## Here I join to trap_cat that contains hair and mixed (both, this is a bit different than maelis)
+  #st_drop_geometry() %>%
+  left_join(trap_cat_pels %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(Confirmed_Individual, month, Sex, trap_id, trap, dist)
+
+mapview(trap_cat_pels) + mapview(trap_cat_foto, col.regions = "green") + 
+  mapview(pts_foto_2017, col.regions = "darkgreen", cex = 2) + 
+  mapview(pts_pels_2017, col.regions = "magenta", cex = 2)
+# Esto se podría solapar con las trampas de otros años a ver si se puede rescatar alguna donde haya muchas detecciones
+
+
+## 2.3. Join and remove detections further than threshold distance 
+
+pts_cat_2017 <- rbind(pts_foto_2017,pts_pels_2017) %>% 
+  filter(dist < seuil) %>%
+  mutate(suivi = "systematic")
+
+pts_cat_2018 <- rbind(pts_foto_2018,pts_pels_2018) %>% 
+  filter(dist < seuil) %>%
+  mutate(suivi = "systematic") 
+
+pts_cat_2019 <- rbind(pts_foto_2019,pts_pels_2019) %>% 
+  filter(dist < seuil) %>%
+  mutate(suivi = "systematic")
+
+## ---- Combine France and Catalunya ----
 
 

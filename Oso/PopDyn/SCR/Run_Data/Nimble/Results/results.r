@@ -699,13 +699,44 @@ dev.off()
 ##                  openSCRdenscov      
 ## ------------------------------------------------- 
 
-setwd("D:/MargSalas/Scripts_MS/Scripts_MS/Oso/PopDyn/SCR/Data/Nimble/Results/openSCRdenscov")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/2.openSCRdenscov")
 load("sampOpenSCR.RData")
 sampOpen <- samp2
-summOpen <- MCMCsummary(sampOpen)
+summOpen1 <- MCMCsummary(sampOpen)
 MCMCtrace(sampOpen)
 
 write.csv(summOpen, file = "summOpen.csv")
 
 summOpen
+
+## -------------------------------------------------
+##        openSCRdenscov + different trap arrays    
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/2.openSCRdenscov")
+load("sampOpenSCR_diftraps.RData")
+
+##remove NAs
+inn<-colnames(samp[[1]])
+remm<-pmatch(c("R[1]", "pc.gam[1]"), inn)
+samp2<-lapply(samp, function(x)x[,-remm])
+
+summOpen3 <- MCMCsummary(samp2)
+MCMCtrace(samp2)
+
+## -------------------------------------------------
+##        openSCRdenscov + Age structure + different trap arrays    
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age")
+load("sampOpenSCR_diftraps_age2.RData")
+
+##remove NAs
+inn<-colnames(samp[[1]])
+remm<-pmatch(c("R[1]", "pc.gam[1]"), inn)
+samp2<-lapply(samp, function(x)x[,-remm])
+
+summOpen2 <- MCMCsummary(samp)
+MCMCtrace(samp)
+
 

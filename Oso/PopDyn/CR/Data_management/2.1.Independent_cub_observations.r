@@ -16,12 +16,12 @@ library(stringr)
 # Load monitoring data
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final.xlsx')
+os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_2.xlsx')
 
 
 # Load table info individuals to fill out sex and ages of cubs
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2021/Info_individuals_2021.xlsx", sheet = 1)
+info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/Info_individuals_2021.xlsx", sheet = 1)
 info <- info[,c(4,5,8)]
 colnames(info)[1] <- "Probable_Individual"
 info <- info[-which(is.na(info)), ]
@@ -67,7 +67,7 @@ for (i in 1:nrow(os)){
        
        add_row[,c(20:26)] <- NA # Because it is the cub
        
-       add_row <- add_row[,-c(34,35)]
+       add_row <- add_row[,-c(36,37)]
        add_row$ID_obs <- paste(add_row$ID_obs,j, sep = ".")
        add_row$cub_with_mother <- 1 
        
@@ -122,7 +122,7 @@ for (i in 1:nrow(os)){
       
       add_row[,c(20:26)] <- NA # Because it is the cub
       
-      add_row <- add_row[,-c(34,35)]
+      add_row <- add_row[,-c(36,37)]
       add_row$ID_obs <- paste(add_row$ID_obs,j, sep = ".")
       add_row$cub_with_mother <- 1 
       
@@ -151,5 +151,7 @@ length(os$Age_class[which(os$Age_class %in% c("Cub0","Cub1","Cub2"))]) # 1418, s
 rownames(os) <- seq(1,nrow(os))
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-openxlsx::write.xlsx(os, 'Seguiment_Ossos_Pirineus_1996_2021_taula_final_cubLocations.xlsx')
+openxlsx::write.xlsx(os, 'Seguiment_Ossos_Pirineus_1996_2021_taula_final_2_cubLocations.xlsx')
+
+# For normal CR we join it to radiotracking in next script. For SCR there is no need, we only use hair and camera data
 

@@ -10,7 +10,7 @@ library(rgdal)
 library(lubridate)
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021_2.csv", header = TRUE, row.names = NULL)
+os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021.csv", header = TRUE, row.names = NULL)
 os <- os[,-c(1)] 
 
 ## ---- Differenciate cubs in critic period ----
@@ -33,7 +33,7 @@ for (i in 1:nrow(os)) {
       os$With_cubs_estimated_new[i] <- "<6month" # Place <6 month if it has cubs (estimated number) that are below 6 months
     }}}
 
-os <- os[,c(1:22,37,23:36)] # Check variable is well calculated
+os <- os[,c(1:22,35,23:34)] # Check variable is well calculated
 os <- os[ ,-c(22)]# Delete extra-columns and sort table
 colnames(os)[colnames(os) %in% c("With_cubs_estimated_new")] <- "With_cubs_estimated"
 
@@ -67,7 +67,7 @@ for (i in 1:nrow(os_manage)) {
 
 os <- rbind(os_removed, os_manage)
 
-os <- os[,-c(35:37)] # Delete extra-columns
+os <- os[,-c(33:35)] # Delete extra-columns
 
 ## ---- Add region and country ----
 
@@ -86,7 +86,7 @@ d <- over(os,map) # Overlay to see where each point fall
 os@data <- cbind(os@data, d)
 colnames(os@data)[which(colnames(os@data) %in% c("NAME_0", "NAME_1"))] <- c("Country", "Region")
 
-os@data <- os@data[,c(1:17,33:34,18:32)]
+os@data <- os@data[,c(1:17,31:32,18:30)]
 
 # Export GIS layer with coordinates and good attribute table (last version)
 writeOGR(os, "D:/MargSalas/Oso/Datos/GIS/2022/Seguiment_GIS_layer", "Seguiment_Ossos_Pirineus_1996_2021_coordinates_final", driver = "ESRI Shapefile")
@@ -96,7 +96,7 @@ os_data <- arrange(os_data, ID_obs)
 
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-openxlsx::write.xlsx(os_data, 'Seguiment_Ossos_Pirineus_1996_2021_taula_final_2.xlsx')
+openxlsx::write.xlsx(os_data, 'Seguiment_Ossos_Pirineus_1996_2021_taula_final.xlsx')
 
 
 ## ---- Create GIS layers Females with cubs of < 6 month and 1 year ----
