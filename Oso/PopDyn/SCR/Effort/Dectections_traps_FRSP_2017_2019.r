@@ -37,7 +37,7 @@ dist_nearest <- function(point, piege){
 map <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2.shp") %>%
   st_transform(map, crs = 32631) # WGS84 31N
 
-## ---- France ----
+## ---- FRANCE ----
 ## ---- 1. Load and sort out transects and traps ----
 #### a) Itineraries ####
 # Make one file by year with only itineraries that have been made. 
@@ -574,8 +574,7 @@ pts_2018 <- rbind(pts_photo_2018,pts_poils_2018) %>%
 pts_2019 <- rbind(pts_photo_2019,pts_poils_2019) %>%
   filter(dist < seuil)
 
-## ---- Spain ----
-
+## ---- SPAIN ----
 ## ---- 1. Load and sort out traps ----
 #### a) Hair traps ####
 
@@ -704,7 +703,7 @@ mapview(trap_cat_pels) + mapview(trap_cat_foto, col.regions = "green") +
 # Esto se podría solapar con las trampas de otros años a ver si se puede rescatar alguna donde haya muchas detecciones
 
 
-## 2.3. Join and remove detections further than threshold distance 
+#### 2.3. Join and remove detections further than threshold distance ####
 
 pts_cat_2017 <- rbind(pts_foto_2017,pts_pels_2017) %>% 
   filter(dist < seuil) %>%
@@ -719,5 +718,147 @@ pts_cat_2019 <- rbind(pts_foto_2019,pts_pels_2019) %>%
   mutate(suivi = "systematic")
 
 ## ---- Combine France and Catalunya ----
+# 1. Sites
 
+sites_2017_t <- sites_2017 %>%
+  mutate(pays = "France") %>%
+  rbind(trap_cat %>%
+          mutate(pays = "Espagne") %>%
+          dplyr::select(NOM, site, effort, geometry, trap_id, pays)) %>%
+  mutate(trap = row_number()) %>%
+  st_transform(map, crs = 32631) %>% # Transform a UTM to run in SCR
+  mutate(X = unlist(map(geometry,1)),
+         Y = unlist(map(geometry,2))) %>%
+  dplyr::select(trap,trap_id,X,Y,site, pays) %>%
+  st_drop_geometry()
+
+sites_2018_t <- sites_2018 %>%
+  mutate(pays = "France") %>%
+  rbind(trap_cat %>%
+          mutate(pays = "Espagne") %>%
+          dplyr::select(NOM, site, effort, geometry, trap_id, pays)) %>%
+  mutate(trap = row_number()) %>%
+  st_transform(map, crs = 32631) %>% # Transform a UTM to run in SCR
+  mutate(X = unlist(map(geometry,1)),
+         Y = unlist(map(geometry,2))) %>%
+  dplyr::select(trap,trap_id,X,Y,site, pays) %>%
+  st_drop_geometry()
+
+sites_2019_t <- sites_2019 %>%
+  mutate(pays = "France") %>%
+  rbind(trap_cat %>%
+          mutate(pays = "Espagne") %>%
+          dplyr::select(NOM, site, effort, geometry, trap_id, pays)) %>%
+  mutate(trap = row_number()) %>%
+  st_transform(map, crs = 32631) %>% # Transform a UTM to run in SCR
+  mutate(X = unlist(map(geometry,1)),
+         Y = unlist(map(geometry,2))) %>%
+  dplyr::select(trap,trap_id,X,Y,site, pays) %>%
+  st_drop_geometry()
+
+# 2. Detections
+
+pts_2017_t <- pts_2017 %>%
+  mutate(id  = as.character(Confirmed_Individual)) %>%
+  mutate(month = month %>%
+           as.character() %>%
+           as.numeric()) %>%
+  mutate(sex  = as.character(Sex)) %>%
+  mutate(trap_id  = as.character(trap_id)) %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  rbind(pts_cat_2017 %>%
+          st_drop_geometry() %>%
+          mutate(id  = as.character(Confirmed_Individual)) %>%
+          mutate(month = month %>%
+                   as.character() %>%
+                   as.numeric()) %>%
+          mutate(sex  = as.character(Sex)) %>%
+          mutate(trap_id  = as.character(trap_id)) %>%
+          dplyr::select(id, month, sex, trap_id)) %>%
+  left_join(sites_2017_t, by = "trap_id") %>%
+  dplyr::select(id, month, sex, trap, trap_id) %>%
+  mutate(sex = as.factor(sex)) 
+
+
+pts_2018_t <- pts_2018 %>%
+  mutate(id  = as.character(Confirmed_Individual)) %>%
+  mutate(month = month %>%
+           as.character() %>%
+           as.numeric()) %>%
+  mutate(sex  = as.character(Sex)) %>%
+  mutate(trap_id  = as.character(trap_id)) %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  rbind(pts_cat_2018 %>%
+          st_drop_geometry() %>%
+          mutate(id  = as.character(Confirmed_Individual)) %>%
+          mutate(month = month %>%
+                   as.character() %>%
+                   as.numeric()) %>%
+          mutate(sex  = as.character(Sex)) %>%
+          mutate(trap_id  = as.character(trap_id)) %>%
+          dplyr::select(id, month, sex, trap_id)) %>%
+  left_join(sites_2018_t, by = "trap_id") %>% # ASP: Esto no sería necesario, pero lo hace MK
+  dplyr::select(id, month, sex, trap, trap_id) %>%
+  mutate(sex = as.factor(sex)) 
+
+pts_2019_t <- pts_2019 %>%
+  mutate(id  = as.character(Confirmed_Individual)) %>%
+  mutate(month = month %>%
+           as.character() %>%
+           as.numeric()) %>%
+  mutate(sex  = as.character(Sex)) %>%
+  mutate(trap_id  = as.character(trap_id)) %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  rbind(pts_cat_2019 %>%
+          st_drop_geometry() %>%
+          mutate(id  = as.character(Confirmed_Individual)) %>%
+          mutate(month = month %>%
+                   as.character() %>%
+                   as.numeric()) %>%
+          mutate(sex  = as.character(Sex)) %>%
+          mutate(trap_id  = as.character(trap_id)) %>%
+          dplyr::select(id, month, sex, trap_id)) %>%
+  left_join(sites_2019_t, by = "trap_id") %>%
+  dplyr::select(id, month, sex, trap, trap_id) %>%
+  mutate(sex = as.factor(sex)) 
+
+## ---- Create EDF and TDF ----
+# I will need to add the effort before this step, but for now I leave it like this
+
+#EDF
+edf <- pts_2017_t %>% 
+  mutate(occ = month %>% as.factor() %>% as.numeric) %>% 
+  mutate(session = 1) %>%
+  mutate(ind = id) %>%
+  dplyr::select(session, ind, occ, trap, sex) %>%
+  rbind(pts_2018_t %>% 
+          mutate(occ = month %>% as.factor() %>% as.numeric) %>% 
+          mutate(session = 2) %>%
+          mutate(ind = id) %>%
+          dplyr::select(session, ind, occ, trap, sex)) %>%
+  rbind(pts_2019_t %>% 
+          mutate(occ = month %>% as.factor() %>% as.numeric) %>% 
+          mutate(session = 3) %>%
+          mutate(ind = id) %>%
+          dplyr::select(session, ind, occ, trap, sex))
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_final_1719")
+save(edf, file = "edf1719.RData")
+
+#TDF
+
+tdf2017 <- sites_2017_t %>% 
+  dplyr::select(trap,X,Y,site, pays)
+
+tdf2018 <- sites_2018_t %>% 
+  dplyr::select(trap,X,Y,site, pays)
+
+tdf2019 <- sites_2019_t %>% 
+  dplyr::select(trap,X,Y,site, pays)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_final_1719")
+
+save(tdf2017, file = "tdf2017.RData")
+save(tdf2018, file = "tdf2018.RData")
+save(tdf2019, file = "tdf2019.RData")
 
