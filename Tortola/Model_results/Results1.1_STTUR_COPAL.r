@@ -6,7 +6,7 @@
 ## Update on status of study:
 # - We ran species trend models in 56 transects
 #   -> For STTUR, 46 models converged
-#   -> For COPAL, X models converged
+#   -> For COPAL, 53 models converged
 
 rm(list=ls())
  
@@ -60,7 +60,7 @@ trendSTTUR$label_STTUR <- paste("PI =", trendSTTUR$p_increasing_STTUR)
 trendSTTUR <- arrange(trendSTTUR,p_increasing_STTUR)
 
 setwd("D:/Otros/Tórtola/Results/Study2/Model_results")
-write.csv(trendSTTUR,"STTUR_trend1.1.csv")
+#write.csv(trendSTTUR,"STTUR_trend1.1.csv")
 
 ## ---- COPAL ----
 
@@ -105,7 +105,7 @@ trendCOPAL$label_COPAL <- paste("PI =", trendCOPAL$p_increasing_COPAL)
 trendCOPAL <- arrange(trendCOPAL,p_increasing_COPAL)
 
 setwd("D:/Otros/Tórtola/Results/Study2/Model_results")
-write.csv(trendCOPAL,"COPAL_trend1.1.csv")
+#write.csv(trendCOPAL,"COPAL_trend1.1.csv")
 
 ## ---- Join ----
 
@@ -115,6 +115,8 @@ transectSTTUR[which(transectSTTUR %in% transectCOPAL == FALSE)]
 
 trends <- left_join(trendCOPAL, trendSTTUR, by = "Site")
 trends <- trends[complete.cases(trends), ]
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results")
+write.csv(trends,"trends_COPAL_STTUR_1.1.csv")
 
 ## ---- Preliminary exploration ----
 

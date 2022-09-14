@@ -75,6 +75,7 @@ roads <- readOGR("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_road
 # roads3 -> Tracks: 514, except 5141, 5143, 5147 (track_grade 5, hardly visible, hay que esta categoría y con la 5146)
 # roads4 -> Combines roads2 and roads3
 # roads5 -> Paths: 515 + 5147 (track_grade5)
+# roads6 -> Combines roads 1 and roads 2 (ASPHALTED ROADS)
 
 roads1 <- roads[grep(pattern = '511|513', roads$code), ]
 roads2 <- roads[grep(pattern = '512|5141|5143', roads$code), ]
@@ -85,11 +86,14 @@ roads3 <- roads3[-which(roads3$code %in% c("5147","5143","5141")), ]
 roads4 <- rbind(roads2,roads3)
 roads5 <- roads[grep(pattern = '515|5147', roads$code), ]
 
+roads6 <- rbind(roads1,roads2)
+
 #writeOGR(roads1, dsn = "D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads", layer = 'roads1', driver = "ESRI Shapefile")
 #writeOGR(roads2, dsn = "D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads", layer = 'roads2', driver = "ESRI Shapefile")
 #writeOGR(roads3, dsn = "D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads", layer = 'roads3', driver = "ESRI Shapefile")
 #writeOGR(roads4, dsn = "D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads", layer = 'roads4', driver = "ESRI Shapefile")
 #writeOGR(roads5, dsn = "D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads", layer = 'roads5', driver = "ESRI Shapefile")
+writeOGR(roads6, dsn = "D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads", layer = 'roads6', driver = "ESRI Shapefile")
 
 roads <- readOGR("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads", layer = "allroads_clip_WGS84_31N")
 
@@ -163,6 +167,15 @@ logDistcore <- raster("dist_corekernel_log.tif")
 dens1km <- raster("dens1km.tif")
 dens200m <- raster("dens200m.tif")
 dens200m_preST <- raster("dens200m_preStudy1016.tif")
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/OpenStreetMap_roads/Road_density_200m_David")
+roads1 <- raster("roads1_raster.tif")
+roads2 <- raster("roads2_raster.tif")
+roads3 <- raster("roads3_raster.tif")
+roads4 <- raster("roads4_raster.tif")
+roads5 <- raster("roads5_raster.tif")
+
+
 
 
 
@@ -249,4 +262,18 @@ plot(dens1km)
 plot(dens200m)
 plot(dens200m_preST)
 
+## ---- Density of roads ----
+
+roads1_2 <- hrscale(data = roads1)
+roads2_2 <- hrscale(data = roads2)
+roads3_2 <- hrscale(data = roads3)
+roads4_2 <- hrscale(data = roads4)
+roads5_2 <- hrscale(data = roads5)
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+writeRaster(roads1_2, filename = "roads1_hrbear.tif")
+writeRaster(roads2_2, filename = "roads2_hrbear.tif")
+writeRaster(roads3_2, filename = "roads3_hrbear.tif")
+writeRaster(roads4_2, filename = "roads4_hrbear.tif")
+writeRaster(roads5_2, filename = "roads5_hrbear.tif")
 

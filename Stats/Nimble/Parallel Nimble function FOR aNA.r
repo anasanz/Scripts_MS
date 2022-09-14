@@ -19,6 +19,8 @@ run_MCMC_allcode <- function(seed, data, code, inits, constants, params, niter, 
   
   library(nimble)
   library(nimbleSCR)
+  #inits <- inits
+  Tt<- Tt
   
   
   #### add any other libraries we use, like nibleSCR
@@ -99,7 +101,7 @@ run_MCMC_allcode <- function(seed, data, code, inits, constants, params, niter, 
   ### objects need to refer to function definition
   
   #(1) set up model
-  model <- nimbleModel(code = code, constants = constants, data=data, inits=inits, check = FALSE)
+  model <- nimbleModel(code = code, constants = constants, data=data, check = FALSE)
   
   #(2) Compile model in c++
   cmodel <- compileNimble(model)       

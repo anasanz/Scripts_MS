@@ -404,7 +404,6 @@ TrapLocal <- getLocalObjects(habitatMask = habitatMask,
 # GET SPARSE MATRIX 
 SparseY <- getSparseY(y)
 
-#########################################################################
 ## RANDOM GENERATION
 
 # Take the first individual 
@@ -551,8 +550,7 @@ rbinomLocal_normal <- nimbleFunction(
     
   })
 
-
-########################################################################################
+####DISTRIBUTION
 
 dbinomLocal_normal <- nimbleFunction(
   run = function( 
@@ -614,7 +612,7 @@ dbinomLocal_normal <- nimbleFunction(
     }
     
     ## Shortcut if the current individual is not available for detection
-      ## ASP: Because z = 0??
+      ## ASP: Because z = 0
     
     if(indicator == 0){
       if(detNums == 0){
@@ -700,3 +698,219 @@ dbinomLocal_normal <- nimbleFunction(
     return(exp(logProb))
   })
 
+## ---- Bernoulli point process for activity center movement ----
+
+# models and simulates movement of activity centers between consecutive occasions 
+# in open population models. The distribution assumes that the new individual 
+# activity center location (\emph{x}) follows an isotropic multivariate normal 
+# centered on the previous activity center (\emph{s}) with standard deviation (\emph{sd}).
+# The local evaluation technique is implemented (ASP: by only accounting for the cells
+# that are beside the cell where was the AC at time t)
+
+# Creat habitat grid
+habitatGrid <- matrix(c(1:(4^2)), nrow = 4, ncol=4, byrow = TRUE)
+coordsHabitatGridCenter <- matrix(c(0.5, 3.5,
+                                   1.5, 3.5,
+                                   2.5, 3.5,
+                                   3.5, 3.5,
+                                   0.5, 2.5,
+                                   1.5, 2.5,
+                                   2.5, 2.5,
+                                   3.5, 2.5,
+                                   0.5, 1.5,
+                                   1.5, 1.5,
+                                   2.5, 1.5,
+                                   3.5, 1.5,
+                                   0.5, 0.5,
+                                   1.5, 0.5,
+                                   2.5, 0.5,
+                                   3.5, 0.5), ncol = 2,byrow = TRUE)
+colnames(coordsHabitatGridCenter) <- c("x","y")
+# Create habitat windows
+lowerCoords <- coordsHabitatGridCenter-0.5
+upperCoords <- coordsHabitatGridCenter+0.5
+colnames(lowerCoords) <- colnames(upperCoords) <- c("x","y")
+# Plot check
+plot(lowerCoords[,"y"]~lowerCoords[,"x"],pch=16, xlim=c(0,4), ylim=c(0,4),col="red") 
+points(upperCoords[,"y"]~upperCoords[,"x"],col="red",pch=16) 
+points(coordsHabitatGridCenter[,"y"]~coordsHabitatGridCenter[,"x"],pch=16) 
+
+# Rescale coordinates 
+ScaledLowerCoords <- scaleCoordsToHabitatGrid(coordsData =  lowerCoords,
+                                             coordsHabitatGridCenter = coordsHabitatGridCenter)
+ScaledUpperCoords <- scaleCoordsToHabitatGrid(coordsData =  upperCoords,
+                                             coordsHabitatGridCenter = coordsHabitatGridCenter)
+ScaledUpperCoords$coordsDataScaled[,2] <- ScaledUpperCoords$coordsDataScaled[,2] + 1
+ScaledLowerCoords$coordsDataScaled[,2] <- ScaledLowerCoords$coordsDataScaled[,2] - 1
+habitatMask <- matrix(1, nrow = 4, ncol=4, byrow = TRUE)
+# Create local objects 
+HabWindowsLocal <- getLocalObjects(habitatMask = habitatMask,
+                                  coords = coordsHabitatGridCenter,
+                                  dmax=4,
+                                  resizeFactor = 1,
+                                  plot.check = TRUE
+)
+
+s <- c(1, 1) # Currrent activity center location
+sd <- 0.1
+numWindows <- nrow(coordsHabitatGridCenter)
+baseIntensities <- rep(1,numWindows)
+numRows <- nrow(habitatGrid)
+numCols <- ncol(habitatGrid)
+
+## RANDOM GENERATION: Generates the location of the AC at t+1, with a given SD (sigD)
+
+rbernppLocalACmovement_normal <- nimbleFunction(
+  run = function(
+    n                      = 1
+    ,
+    lowerCoords            = lowerCoords
+    ,
+    upperCoords            = upperCoords
+    ,
+    s                      = s
+    ,
+    sd                     = sd
+    ,
+    baseIntensities        = baseIntensities
+    ,
+    habitatGrid            = habitatGrid
+    ,
+    habitatGridLocal       = HabWindowsLocal$habitatGrid
+    ,
+    resizeFactor           = 1
+    ,
+    localHabWindowIndices  = HabWindowsLocal$localIndices
+    ,
+    numLocalHabWindows     = HabWindowsLocal$numLocalIndices
+    ,
+    numGridRows            = numRows
+    ,
+    numGridCols            = numCols
+    ,
+    numWindows             = numWindows
+  ) {
+    ## Ensure that only one sample is requested
+    if(n <= 0) {
+      stop("The number of requested samples must be above zero")
+    } else if(n > 1) {
+      print("rbernppACmovement only allows n = 1; using n = 1")
+    }
+    ## Find in which habitat window (from the rescaled habitat grid) the s (source AC location) falls in
+    sourceAC <- habitatGridLocal[trunc(s[2]/resizeFactor)+1, trunc(s[1]/resizeFactor)+1]
+    ## Get local windows ids within a close distance from the source AC  
+    numWindowsLoc <- numLocalHabWindows[sourceAC] 
+    localWindows <- localHabWindowIndices[sourceAC, 1:numWindowsLoc]
+    
+    ## Integrate the intensity function over all habitat windows
+    windowIntensities <- integrateIntensityLocal_normal(lowerCoords = lowerCoords[1:numWindows,,drop = FALSE],
+                                                        upperCoords = upperCoords[1:numWindows,,drop = FALSE], 
+                                                        s = s,
+                                                        baseIntensities = baseIntensities[1:numWindows], 
+                                                        sd = sd,
+                                                        numLocalWindows = numWindowsLoc, 
+                                                        localWindows = localWindows)
+    
+              ## numDims <- 2 ## We only consider 2D models for now
+              #res <- rep(0.0, numLocalWindows)
+              #constant <- 6.283185 * sd^2  # (2.0 * pi)^(numDims / 2.0) * (sd^numDims)
+              #for(i in 1:numLocalWindows) {
+              #  res[i] <- constant * baseIntensities[localWindows[i]] *
+              #    prod(pnorm((upperCoords[localWindows[i],] - s) / sd) - pnorm((lowerCoords[localWindows[i],] - s) / sd))
+              #}
+              #returnType(double(1))
+              #return(res)
+    # ASP: Intensities is the probability of the AC at t+1 of being in all the localEv cells
+    # Following a isotropic multivariate normal model
+  
+    sumIntensity <- sum(windowIntensities)
+    ## DO THE SUBSETTING OF THE LOWER AND UPPER COORDS HERE. 
+    lowerCoords1 <- nimMatrix(nrow = numWindowsLoc, ncol = 2)
+    upperCoords1 <- nimMatrix(nrow = numWindowsLoc, ncol = 2)
+    
+    for(i in 1:numWindowsLoc){
+      lowerCoords1[i,1:2] <- lowerCoords[localWindows[i],,drop = FALSE]
+      upperCoords1[i,1:2] <- upperCoords[localWindows[i],,drop = FALSE]
+    }
+    
+    ## Call the statified rejection sampler
+    ## ASP: Sample all the cells, I don't know how, and take the most plausible one on where is the
+    # AC at t+1
+    outCoordinates <- stratRejectionSampler_normal(numPoints = 1,
+                                                   lowerCoords = lowerCoords1[,,drop = FALSE],
+                                                   upperCoords = upperCoords1[,,drop = FALSE],
+                                                   s = s,
+                                                   windowIntensities = windowIntensities[1:numWindowsLoc],
+                                                   sd = sd)
+    return(outCoordinates[1,])
+    returnType(double(1))
+    
+    
+  }
+  
+)
+
+####DISTRIBUTION
+
+outCoordinates[1,]
+x <- c(1.015567,1.117961) # Coordinates of possible location of AC at t+1 
+
+dbernppACmovement_normal <- nimbleFunction(
+  run = function(
+    x               = x
+    ,
+    lowerCoords     = lowerCoords
+    ,
+    upperCoords     = upperCoords
+    ,
+    s               = s
+    ,
+    sd              = sd
+    ,
+    baseIntensities = baseIntensities
+    ,
+    habitatGrid     = habitatGrid
+    ,
+    numGridRows     = numRows
+    ,
+    numGridCols     = numCols
+    ,
+    numWindows      = numWindows
+    ,
+    log             = integer(0, default = 0)
+  ) {
+    ## Check if the point x falls within the habitat
+    if(min(x) < 0 | x[2] >= numGridRows | x[1] >= numGridCols) {
+      if(log) return(-Inf) 
+      else return(0.0)
+    }
+    ## Index of the window where x falls
+    windowInd <- habitatGrid[trunc(x[2])+1, trunc(x[1])+1]
+    ## windowInd == 0 means this window is not defined as habitat
+    if(windowInd == 0) {
+      if(log) return(-Inf)
+      else return(0.0)
+    }
+    ## Integrate the intensity function over all habitat windows
+    windowIntensities <- integrateIntensity_normal(lowerCoords = lowerCoords[1:numWindows,,drop = FALSE], 
+                                                   upperCoords = upperCoords[1:numWindows,,drop = FALSE], 
+                                                   s = s,
+                                                   baseIntensities = baseIntensities[1:numWindows], 
+                                                   sd = sd,
+                                                   numWindows = numWindows)
+    sumIntensity <- sum(windowIntensities)
+    # ASP: Accorging to the baseintensities, probability of being in each cell?
+    
+    ## Log intensity at x
+    # numDims <- 2
+    # logPointIntensity <- (numDims / 2.0) * log(2.0 * pi) + log(baseIntensities[windowInd]) + sum(dnorm((x - s) / sd, log = 1))
+    logPointIntensity <-  1.837877 + log(baseIntensities[windowInd]) + sum(dnorm((x - s) / sd, log = 1))
+    
+    ## Log probability density under the Bernoulli point process
+    logProb <- logPointIntensity - log(sumIntensity)
+    
+    if(log) return(logProb)
+    else return(exp(logProb))
+    returnType(double(0))
+  }
+)
