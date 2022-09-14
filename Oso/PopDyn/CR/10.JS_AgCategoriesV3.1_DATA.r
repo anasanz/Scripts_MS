@@ -29,7 +29,7 @@ source("capt_hist_bear.r")
 
 ## ---- Monitoring data and capture history ----
 
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022/Copia_versionPrev")
 os <- read.csv("Data_os_96_21_cubLocations.csv", header = TRUE, row.names = NULL)
 os <- os[,-1] 
 
@@ -54,8 +54,8 @@ ydatAug <- rbind(chb, matrix(0, nz,K))
 
 ## ---- Age structure ----
 
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2021")
-info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2021/Info_individuals_2021.xlsx", sheet = 1)
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/Info_individuals_2021.xlsx", sheet = 1)
 
 info <- info[,c(4,8,10)] # I keep column 10 (confirmed_death) because it is the least restrictive
 

@@ -592,7 +592,8 @@ trap_cat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/
 trap_cat[which(!is.na(trap_cat$foto_video)),"site"] <- "both" # poils et photo
 trap_cat[which(is.na(trap_cat$pels)),"site"] <- "camera" # photo seul
 
-trap_cat <- trap_cat[-which(duplicated(trap_cat$geometry)),]
+trap_cat <- trap_cat[-which(duplicated(trap_cat$geometry)),] # ASP: MK did not do this step, but I do it
+                  # because they are duplicates and it gives problems when assigning detections to traps
 
 # On enlève les pièges photos seul car ils ne permettent pas l'identification des ours 
 trap_cat <- trap_cat %>%
@@ -845,7 +846,7 @@ edf <- pts_2017_t %>%
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_final_1719")
 save(edf, file = "edf1719.RData")
 
-#TDF
+#TDF: There are a few traps less than MK (5-6 less) because I removed the duplicates
 
 tdf2017 <- sites_2017_t %>% 
   dplyr::select(trap,X,Y,site, pays)
@@ -858,7 +859,108 @@ tdf2019 <- sites_2019_t %>%
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_final_1719")
 
-save(tdf2017, file = "tdf2017.RData")
-save(tdf2018, file = "tdf2018.RData")
-save(tdf2019, file = "tdf2019.RData")
+#save(tdf2017, file = "tdf2017.RData")
+#save(tdf2018, file = "tdf2018.RData")
+#save(tdf2019, file = "tdf2019.RData")
 
+
+#### CHECK THAT IS RIGHT --> IT SEEMS OKay ####
+
+# 2017 
+
+# To be able to plot, to convert it in spatial
+pts_photo_2017 <- pts_photo %>%
+  filter(Year == 2017) 
+pts_poils_2017 <-  pts_poils %>%
+  filter(Year == 2017)
+
+mapview(trap_cat) + mapview(sites_2017, col.regions = "red") + 
+  mapview(pts_cat_2017, col.regions = "green", cex = 2) + # Detections catalonia
+  mapview(pts_photo_2017, col.regions = "yellow", cex = 2) + mapview(pts_poils_2017, col.regions = "orange", cex = 2) + # Detections France
+  mapview(pts_poils_2017[31,], col.regions = "darkblue", cex = 2)
+# Photo Nere France 06/05/2017 (obs 3 yellow) -> Nearest trap 16 f (trap 16)
+edf[which(edf$session == 1 & edf$ind == "Nere" & edf$occ == 1),]
+sites_2017_t[sites_2017_t$trap == 16,]
+
+#↑ Hair Rodri France 12/11/2017 (obs 43 orange) -> Nearest trap 16 F
+edf[which(edf$session == 1 & edf$ind == "Rodri" & edf$occ == 7),]
+sites_2017_t[sites_2017_t$trap == 16,]
+
+#♦ Hair Nere France 11/08/2017 (obs 31 orange) -> Nearest trap 161 f (hair)
+edf[which(edf$session == 1 & edf$ind == "Nere" & edf$occ == 4),]
+sites_2017_t[sites_2017_t$trap == 161,]
+
+#  Hair Hvala (8/2017) (obs 45 green) -> Nearest trap 192 c (192 trap_cat)
+edf[which(edf$session == 1 & edf$ind == "Hvala" & edf$occ == 4),]
+sites_2017_t[sites_2017_t$trap_id == "192 c",]
+
+# Both Goiat (7/2017) obs 22 green -> Nearest trap 45 c (45 trap_cat)
+edf[which(edf$session == 1 & edf$ind == "Goiat" & edf$occ == 3),]
+sites_2017_t[sites_2017_t$trap_id == "45 c",]
+
+# 2019 
+
+# To be able to plot, to convert it in spatial
+pts_photo_2019 <- pts_photo %>%
+  filter(Year == 2019) 
+pts_poils_2019 <-  pts_poils %>%
+  filter(Year == 2019)
+
+mapview(trap_cat) + mapview(sites_2019, col.regions = "red") + 
+  mapview(pts_cat_2019, col.regions = "green", cex = 2) + # Detections catalonia
+  mapview(pts_photo_2019, col.regions = "yellow", cex = 2) + mapview(pts_poils_2019, col.regions = "orange", cex = 2) # Detections France
+
+# Photo Canellito France 07/09/2019 (obs 15 yellow) .> Nearest trap 49 f (49)
+edf[which(edf$session == 3 & edf$ind == "Canellito" & edf$occ == 5),]
+sites_2019_t[sites_2019_t$trap == 49,]
+
+# Hair Cirera cat 7/2019 (obs 9 green) -> Nearest trap 196 c
+edf[which(edf$session == 3 & edf$ind == "Cirera" & edf$occ == 3),]
+sites_2019_t[sites_2019_t$trap == 712,]
+
+#### COMPARE WITH TDF MK ####
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Effort/France/Data/Systematic")
+#setwd("~/Scripts_MS/Oso/PopDyn/SCR/Effort/France/Data/Systematic")
+
+#---- 1. LOAD THE DETECTION DATA ---- 
+edf_new <- edf
+tdf2017_new <- tdf2017 %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 32631)
+tdf2018_new <- tdf2018 %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 32631) %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 32631)
+tdf2019_new <- tdf2019 %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 32631)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Effort/France/Data/Systematic")
+load("edf2017_2019_fr.RData")
+load("tdf2017_fr.RData")
+load("tdf2018_fr.RData")
+load("tdf2019_fr.RData")
+
+tdf2017 <- tdf2017 %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 32631)
+
+tdf2018 <- tdf2018 %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 32631)
+
+tdf2018 <- tdf2018 %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 32631)
+
+# It makes sense to have more detections in edf, but in tdf??? I need to check this
+
+mapview(tdf2017_new, col.regions = "red", cex = 2) + mapview(tdf2017, col.regions = "blue", cex = 2)
+# In the map they look the same
+
+# I have checked step by step building the script (hers and mine), and the result is exactly
+# the same (as is logical). The different number of traps comes from the file ("data.RData"), 
+# she has around 30 traps less each year.
+# so one day I will need to ask Maelis why and if she did something on that file or deleted traps.

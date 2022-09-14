@@ -39,6 +39,7 @@ For each trap:
  - geometry: GPS location of the trap in UTM (crs= CRS("+proj=utm +zone=31 +datum=WGS84"))  
     
 ```{r}
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Effort/France/Data")
 load("data.RData")
 ```
    

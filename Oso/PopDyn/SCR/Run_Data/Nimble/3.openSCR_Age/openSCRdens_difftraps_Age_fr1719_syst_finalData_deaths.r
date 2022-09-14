@@ -3,7 +3,6 @@
 ##                      French 2017-2019
 ##                        ONLY Syst
 ##                  Different trap arrays per year
-##                RUN IN PARALLEL TO TEST HOW FAST IT IS
 ## ------------------------------------------------- 
 rm(list = ls())
 
@@ -18,12 +17,12 @@ library(sp)
 library(dplyr)
 library(parallel)
 
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Effort/France/Data/Systematic")
-setwd("~/Scripts_MS/Oso/PopDyn/SCR/Effort/France/Data/Systematic")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_final_1719")
+#setwd("~/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_final_1719")
 
 #---- 1. LOAD THE DETECTION DATA ---- 
 
-load("edf2017_2019_fr.RData")
+load("edf1719.RData")
 
 # As the model is set, there can be only one capture per trap and occasion
 # --> The number of trials is 7 (From may to November): So max number of captures per trap = 7
@@ -32,9 +31,9 @@ edf <- edf[-which(duplicated(edf)), ]
 t <- edf %>% group_by(ind,occ, session,trap) %>% # All need to be one
   summarise(n()) 
 
-load("tdf2017_fr.RData")
-load("tdf2018_fr.RData")
-load("tdf2019_fr.RData")
+load("tdf2017.RData")
+load("tdf2018.RData")
+load("tdf2019.RData")
 
 tdf_all <- rbind(tdf2017[,1:3], tdf2018[,1:3], tdf2019[,1:3]) # Join to define state space
 rownames(tdf_all) <- 1:nrow(tdf_all)
@@ -43,7 +42,7 @@ rownames(tdf_all) <- 1:nrow(tdf_all)
 # We remove Nere and Goiat, which are two individuals moving a lot that don't represent
 # the rest of the population.
 
-edf <- edf[-which(edf$ind %in% c("Néré", "Goiat")), ]
+edf <- edf[-which(edf$ind %in% c("Nere", "Goiat")), ]
 
 #---- 2. DEFINE THE TRAP AND THE HABITAT  ---- 
 #----   2.1 GET TRAPS---- 
@@ -64,9 +63,8 @@ e <- as(raster::extent(xmin, xmax, ymin, ymax), "SpatialPolygons") # Extent of s
 #----   2.3 GET A RASTER FOR THE HABITAT ---- 
 # USE A FOREST RASTER TO GET A BASIS FOR THE HABITAT RASTER
 # Set up a raster file 
-#setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
-setwd("~/Data_server/Variables_hrscale")
-
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+#setwd("~/Data_server/Variables_hrscale")
 distcore <- raster("logDistcore_hrbear.tif")
 
 # Crop it to extent of state-space
@@ -232,28 +230,13 @@ y.sp <- y.sparse$y # Number of detections at each trap
 
 ## ---- 3.4 INCLUDE AGE DATA ----
 
-#setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-setwd("~/Data_server")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+#setwd("~/Data_server")
 
-info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/Info_individuals_2021.xlsx", sheet = 1)
+info <- readxl::read_excel("info_individuals_2021.xlsx")
+#info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/Info_individuals_2021.xlsx", sheet = 1)
 
 info <- info[,c(4,8,10)]
-
-rownames(Y)[which(rownames(Y) == "Pépite")] <- "Pepito"
-rownames(Y)[which(rownames(Y) == "Gaïa")] <- "Gaia"
-rownames(Y)[which(rownames(Y) == "Bonabé")] <- "Bonabe"
-rownames(Y)[which(rownames(Y) == "Réglisse")] <- "Reglisse"
-rownames(Y)[which(rownames(Y) == "Cannellito")] <- "Canellito"
-rownames(Y)[which(rownames(Y) == "Callisto")] <- "Callista"
-rownames(Y)[which(rownames(Y) == "New18_17")] <- "Negre"
-rownames(Y)[which(rownames(Y) == "New18_04")] <- "Plumita"
-rownames(Y)[which(rownames(Y) == "New18_10")] <- "Pepiton"
-rownames(Y)[which(rownames(Y) == "New18_14")] <- "Nheueto"
-rownames(Y)[which(rownames(Y) == "Gribouille")] <- "Griboulle"
-rownames(Y)[which(rownames(Y) == "New18_16")] <- "New 18-16"
-rownames(Y)[which(rownames(Y) == "New18_06")] <- "Salada"
-rownames(Y)[which(rownames(Y) == "New18_18")] <- "Deserta"
-rownames(Y)[which(rownames(Y) == "New19_01")] <- "Cirera"
 
 # Create matrix with age data
 
@@ -299,18 +282,41 @@ ageMatAug[1:n,] <- age.cat #Matrix with age categories augmented
 # here, this is highest age category excluding dead and unrecruited, so 5
 max.age <- 5
 
+## ---- Known z ----
+
+# To include the death information into the z, I create an age matrix including the deaths (value 0)
+# The function of this matrix is ONLY to then create the last_alive vector
+age.cat.z <- age.cat
+for (i in 1:nrow(age.cat)){
+  death <- info$Confirmed_death[which(info$ID %in% rownames(age.cat.z)[i])]
+  if (death == "Alive") next
+  if (death == 2019 |death == 2020 | death == 2021 | death == 2022) next #This has to be modified depending on the years of study
+  death <- as.numeric(death) + 1 # We don't know when it died exactly, so we set it as death the year after
+  # I could dig into this and get the specific date for some individuals
+  age.cat.z[i,which(colnames(age.cat.z) %in% death):Tt] <- 0 
+}
+
 ##some stuff for known z state below
 #year of recruitment for observed individuals
 r <- apply(age,1,function(x) min(which(x!=0)))
 Y2d <- apply(Y, c(1,3), sum, na.rm=T)
-last <- apply(Y2d,1,function(x) max(which(x>0)))  # last year with detection
 
-# Known z: state process is informed by both y and age data 
+# Combined vector to inform of the death or last capture (if death not available) of individuals
+last_cap <- apply(Y2d,1,function(x) max(which(x>0)))  # last year with detection
+last_alive <- apply(age.cat.z,1,function(x) min(which(x == 0))-1) # last occasion alive
+
+last <- last_cap
+last[which(last_alive != Inf)] <- last_alive[which(last_alive != Inf)] 
+
+# Known z: state process is informed by both y, age data AND death recoveries
+
 zdatAGE <- matrix(NA, M, Tt)
 for(i in 1:n){
+  #zdatNoAGE[i, first[i]:last[i]] <- 1         # when ignoring age data, we known an individuals is alive between first and last observation
   #if age is used to inform z
-  zdatAGE[i, r[i]:last[i]] <- 1               # alive between known recruitment year and last observation
+  zdatAGE[i, r[i]:last[i]] <- 1               # alive between known recruitment year and last capture or last occasion alive when known
   if(r[i]>1)  zdatAGE[i, 1:(r[i]-1)] <- 0     # Not entered prior to age==1
+  if(last_alive[i] != Inf) zdatAGE[i, (last_alive[i]+1):Tt] <- 0 # Death after the last occasion alive (when available, so when last_alive !=Inf)
 }
 
 
@@ -320,8 +326,7 @@ for(i in 1:n){
 ### running a model in parallel ############################################################
 
 ##source code to run model in parallel 
-#setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
-setwd("~/Scripts_MS/Stats/Nimble")
+setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
 source("Parallel Nimble function FOR aNA2.r") ##sorry, caps lock...
 
 #----   4.1 CONSTANT AND DATA    ---- 
@@ -462,7 +467,7 @@ S.in.sc <- scaleCoordsToHabitatGrid(S.in, G)
 #}
 
 
-#----     4.2.2 COMPILE INITIAL VALUES   ----
+#----     4.2.2 COMPILE INITIAL VALUES   ---- 
 
 S.in.sc_coords <- S.in.sc$coordsDataScaled
 
@@ -488,15 +493,15 @@ inits<-function(){list(beta=c(0.15,rep(0.85/(Tt-1), Tt-1)),
 ##I prefer working on code in a separate script but you can also have everything in
 ##one script and just execute the code
 
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-setwd("~/Scripts_MS/Oso/PopDyn/SCR/Model")
-
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
+#setwd("~/Scripts_MS/Oso/PopDyn/SCR/Model")
 source('3.3.SCRopen_diftraps_Age in Nimble.r')
 
 ##determine which parameters to monitor
 params<-c("p.ad", "p.sub","p.cub","phi.ad","phi.sub","phi.cub", 
           "beta", "psi", "piAGE", "Nsuper", "N", "B", "N.cub", "N.sub", "N.ad", 'sigma', 'beta.dens', 'sigD')
 
+#### OPTION 1: PARALLEL ####
 detectCores()
 
 ##start cluster w/ 3 cores (for 3 chains)
@@ -530,15 +535,63 @@ new <- Sys.time() - old
 ## ALWAYS close cluster when model is done
 stopCluster(this_cluster)
 
+### output is a list 
 
 
 
 
 
+#### OPTION 2: NO PARALLEL (TO TRY INITIAL VALUES AND IF MODEL WORKS) ####
+
+#(1) set up model
+
+model <- nimbleModel(SCRhab.Open.diftraps.age, constants = nimConstants, 
+                     data=nimData, inits=inits(), check = FALSE)
+##ignore error message, only due to missing initial values at this stage
+
+model$initializeInfo()
+#THEN YOU SHOULD ALWAYS CHECK THAT THE MODEL IS ABLE TO CALCULATE A LIKELIHOOD (RETURN A VALUE) GIVEN THE INITIAL VALUES PROVIDED
+model$calculate()#
+# IF A -INF OF NA IS RETURNED YOU CAN CHECK WHERE THE PROBLEM COMES FROM WITH (AND THEN TRY TO FIX IT UNTIL THE -INF DISAPEARS):
+#model$logProb_p0# WILL GIVE YOU LIKELIHOOD OF P0
 
 
+#(2) Compile model in c++
+#     In complex models, this step can take a while (as well as step 5)
+#     Much longer than in JAGS, but the model typically runs much faster
+cmodel <- compileNimble(model)       
+
+# (3) Configure MCMC - on an uncompiled model - this step allows setting which quantities to monitor
+#     Also, nimble allows two sets of monitors, these can be thinned at different rates
+#     all of which is more important in complex models but not to start with
+conf.mcmc <- configureMCMC(model, monitors = params, thin=10)
+
+# (4) Build the MCMC sampler based on configurations
+mcmc <- buildMCMC(conf.mcmc)
+
+# (5) Compile sampler in c++ together with compiled model
+cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
+
+# (6) Run (monitor time just for fun) [takes 20 seconds on my computer]
+system.time(
+  (samp <- runMCMC(cmcmc, niter = 150000, nburnin = 100000, nchains=3, inits = inits) )
+)
+
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/2.openSCRdenscov")
+setwd("~/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age")
+
+save(samp, file = "sampOpenSCR_diftraps_age2.RData")
+
+##remove NAs
+inn<-colnames(samp[[1]])
+remm<-pmatch(c("R[1]", "pc.gam[1]"), inn)
+samp2<-lapply(samp, function(x)x[,-remm])
+
+##NOTE: summary command is from MCMCvis package; that also has good plotting options
+## summary table for everything in "params" vector
+summ<-MCMCsummary(samp2)
+MCMCtrace(samp)
 
 
-
-
-
+# Density
+summ$mean[1]/max(habitatGrid) # 65/605 = 0.1074799

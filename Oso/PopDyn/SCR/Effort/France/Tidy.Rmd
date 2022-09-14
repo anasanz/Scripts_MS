@@ -1088,7 +1088,7 @@ import raw data
 ```{r}
 # Navarre 
 # Navarre 2017 = pas de déprédation 
-Navarre2018 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort/France/Raw/Raw/Donnees_Espagne_2017_2019/2018/Navarre2018.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
+Navarre2018 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/2018/Navarre2018.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
   st_as_sf() %>%
   st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) 
 
@@ -1105,12 +1105,12 @@ dat_nav_op <- Navarre2018 %>%
 # Aragon 
 #Aragon2017 <- readxl::read_xls("Raw/Donnees_Espagne_2017_2019/2017/IndicesVrai2017_LbtII_Aragon.xls") # pas de déprédation où l'individu a pu être identifié
 
-Aragon2018 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort/France/Raw/Raw/Donnees_Espagne_2017_2019/2018/Aragon2018.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
+Aragon2018 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/2018/Aragon2018.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
   st_as_sf() %>%
   st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>% 
   dplyr::select(FECHA, INDIVIDUO, TIPO.INDIC)
 
-Aragon2019 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort/France/Raw/Raw/Donnees_Espagne_2017_2019/2019/Tabla OSO AragÓ©én 2019.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
+Aragon2019 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/2019/Tabla OSO AragÓ©én 2019.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
   st_as_sf() %>%
   st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>% 
   dplyr::select(FECHA, INDIVIDUO, TIPO.INDIC)
@@ -1171,7 +1171,7 @@ Por lo tanto, definimos una zona de cuadrícula asociada con estos informes de d
 
 # Cargar datos de daños entre 1996 y 2019 (áreas donde hubo daños e intervención). En estas zonas hay personas y tropas por lo que, potencialmente, si hubiera osos, habrían sido detectados.
 
-Constats_dommages_Total <- read.table("D:/MargSalas/Oso/Datos/Effort/France/Raw/Raw/Constats_dommages_Total.csv", dec=",", header=T, sep=";", fill=TRUE, encoding = "UTF-8") %>%
+Constats_dommages_Total <- read.table("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Constats_dommages_Total.csv", dec=",", header=T, sep=";", fill=TRUE, encoding = "UTF-8") %>%
   janitor::clean_names() %>%
   rename(x = x_lamb_ii_etendu,
          y = y_lamb_ii_etendu,
@@ -1220,7 +1220,7 @@ read_excel_allsheets <- function(filename, tibble = F ){
 }
 
 # Read the Spanish table with all depredations from 2010
-Depred <- read_excel_allsheets("D:/MargSalas/Oso/Datos/Effort/France/Raw/Raw/Donnees_Espagne_2017_2019/Predation_Espagne.xlsx")
+Depred <- read_excel_allsheets("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/Predation_Espagne.xlsx")
 
 # Make a function to spacialize the table with the right EPSG
 Depredation <- function(region){

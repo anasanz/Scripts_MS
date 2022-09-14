@@ -115,3 +115,28 @@ sites_2020 <- sites_2020 %>%
 
 ## ---- Detections ----
 
+# LOAD dataset that has been contrasted with dataset of Maelis (Prospind_2017-2019_Maelisv2.xlsx)
+# ONLY for 2017-2019 (so this year 2020 is not contrasted with the french data)
+# Whether the hair sample comes from a trap (Poils appât) or not (poils spontanées) is only identified
+# for 2017-2019, so I will need to use all hair samples and assume they come from traps.
+
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_2_cubLocations.xlsx') %>% 
+  filter(Year %in% c(2020) & Confirmed_Individual != "Indetermined" & Country == "France") # Removed indetermined
+
+os <- os %>% mutate(date = as_date(os$Date_register, format = "%d/%m/%Y"),
+                    month = month(date)) %>%
+  filter(month < 12, month > 4) %>% # 7 months form may to november
+  filter(!is.na(x_long)) # Remove observations without coordinates
+
+
+## Keep systematic data
+dat2 <- os[which(os$Method %in% c("Sampling_station", "Transect") &
+                   os$Obs_type %in% c("Photo","Photo/Video", "Hair", "Video")), ]
+
+# We distinguish the 3 methods 
+dat2 <- dat2 %>%
+  mutate(method = "itineraire") # Itinerary 
+
+dat2[which(dat2$Obs_type == "Photo" | dat2$Obs_type == "Photo/Video" | dat2$Obs_type == "Video"),"method"] <- "piege photos" # Camera trap
+dat2[which(dat2$Obs_type == "Hair"),"method"] <- "piege poils" # Hair trap
