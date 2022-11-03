@@ -116,7 +116,7 @@ transectSTTUR[which(transectSTTUR %in% transectCOPAL == FALSE)]
 trends <- left_join(trendCOPAL, trendSTTUR, by = "Site")
 trends <- trends[complete.cases(trends), ]
 setwd("D:/Otros/Tórtola/Results/Study2/Model_results")
-write.csv(trends,"trends_COPAL_STTUR_1.1.csv")
+#write.csv(trends,"trends_COPAL_STTUR_1.1.csv")
 
 ## ---- Preliminary exploration ----
 

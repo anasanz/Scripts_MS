@@ -54,7 +54,7 @@ e <- as(raster::extent(xmin, xmax, ymin, ymax), "SpatialPolygons") # Extent of s
 ## ---- *** START LOOP TO RUN SINGLE-COVARIATE MODELS *** ----
 
 covs <- c("forest", "dem", "rough", "slope", "logDistcore", "obsDens200m", "obsDens200m_preST",
-          "roads1", "roads4", "roads5")
+          "roads1", "roads4", "roads5", "roads6")
 
 for (xxx in 1:length(covs)) {
   
@@ -268,7 +268,7 @@ for (xxx in 1:length(covs)) {
     (samp <- runMCMC(cmcmc, niter = 25000, nburnin = 1000, nchains=3, inits = inits) )
   )
   
-  setwd(paste("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_17_19/"), covs[xxx], sep = "")
+  setwd(paste("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_17_19/", covs[xxx], sep = ""))
   #setwd("~/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/obsDensPre")
   save(samp, file = "sampSCRdenscov2019.RData")
   

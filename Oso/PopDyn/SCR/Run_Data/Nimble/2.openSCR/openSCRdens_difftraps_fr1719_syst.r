@@ -158,9 +158,9 @@ dmax <- c(20,8,7) ## PROBLEM: First year the local evaluation is almost useless
 
 localTraps <- localTrapsNum.l <- MaxLocalTraps.l <- list()
 for (t in 1:Tt){
-  localTraps[[t]] <- getLocalTraps(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = dmax[[t]])
-  localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalTraps
-  MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalTrapsMax
+  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = dmax[[t]])
+  localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalIndices
+  MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalIndicesMax
 }
 
 ##check that there are always local traps available
@@ -175,8 +175,9 @@ MaxLocalTraps <- unlist(MaxLocalTraps.l) # This will also act as an index to map
 
 localTrapsIndex <- array(NA, c(max(habitatGridDet), max(MaxLocalTraps), Tt)) # Array with dimensions of maximun maxlocaltraps, will need to subset in the model
 for (t in 1:Tt){
-  localTrapsIndex[,1:MaxLocalTraps[t],t] <- localTraps[[t]]$localTrapsIndices
+  localTrapsIndex[,1:MaxLocalTraps[t],t] <- localTraps[[t]]$localIndices
 }
+
 
 ##some characteristics of S, not affected by changing trap array
 numHabWindows <- sum(habitatGrid !=0) #number of cells in S
@@ -362,8 +363,9 @@ inits<-function(){list(gamma=c(0.5, rep(0.1, (Tt-1))),
 ##I prefer working on code in a separate script but you can also have everything in
 ##one script and just execute the code
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/3.openSCR")
-source('SCR in Nimble_diftraps.R')
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
+#setwd("~/Scripts_MS/Oso/PopDyn/SCR/Model")
+source('3.2.SCRopen_diftraps in Nimble.R')
 
 ##determine which parameters to monitor
 params<-c('N', 'gamma', 'sigma', 'p0', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')

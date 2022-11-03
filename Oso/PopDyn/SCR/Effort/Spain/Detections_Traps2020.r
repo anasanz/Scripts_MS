@@ -37,7 +37,7 @@ map <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2.shp") %>%
 
 ## Trampas Catalonia
 
-trap_onlycat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Revisions trampes 2020 V2.xlsx", sheet = 1) %>% 
+trap_onlycat_2020 <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Revisions trampes 2020 V2.xlsx", sheet = 1) %>% 
   janitor::clean_names() %>%
   filter(!is.na(coord_x)) %>%
   select(codi_tr,tipus_tr,coord_x,coord_y) %>%
@@ -45,13 +45,13 @@ trap_onlycat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Revis
   st_as_sf(coords = c("coord_x","coord_y"), 
            crs = CRS("+proj=utm +zone=31 +datum=WGS84"))
 
-  trap_onlycat$site <- ifelse(trap_onlycat$tipus_tr == "Mixte", "both","hair")
+  trap_onlycat_2020$site <- ifelse(trap_onlycat_2020$tipus_tr == "Mixte", "both","hair")
 
 ## Trampas Aran
 #  De momento cojo las de Aran 2021, porque en teoría es un sistema
 ## nuevo de cuadrículas en el que las trampas se repiten y son las mismas para 2020 y 2021
 
-trap_aran <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Trampes_2021_SFF_CAR_CGA.xlsx") %>% 
+trap_aran_2020 <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Trampes_2021_SFF_CAR_CGA.xlsx") %>% 
   janitor::clean_names() %>%
   filter(comarca == "Vall d'Aran") %>%
   select(codi_tr,tipus_tr,coord_x,coord_y) %>%
@@ -61,11 +61,11 @@ trap_aran <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Trampes_
            crs = CRS("+proj=utm +zone=31 +datum=WGS84")) 
 #mutate(trap = row_number())
 
-trap_aran$site <- ifelse(trap_aran$tipus_tr == "Mixte", "both","hair")
+trap_aran_2020$site <- ifelse(trap_aran_2020$tipus_tr == "Mixte", "both","hair")
 
 ## Trampas Navarra
 
-trap_nav <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Copia de INDICIOS OSO PARDO-CAMARAS FOTOTRAMPEO 2021-22 B-GMA D-3 RONCAL-SALAZAR.xlsx", sheet = 1) %>% 
+trap_nav_2020 <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Copia de INDICIOS OSO PARDO-CAMARAS FOTOTRAMPEO 2021-22 B-GMA D-3 RONCAL-SALAZAR.xlsx", sheet = 1) %>% 
   janitor::clean_names() %>%
   rename(codi_tr = toponimia) %>%
   select(codi_tr, x_utm, y_utm) %>%
@@ -75,7 +75,7 @@ trap_nav <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Copia de 
            crs = CRS("+proj=utm +zone=30 +datum=WGS84") ) %>%
   st_transform(CRS("+proj=utm +zone=31 +datum=WGS84"))
 
-mapview(trap_nav)
+mapview(trap_nav_2020)
 
 ## Trampas 2021
 # Hay observaciones en 2020 de estaciones de muestreo que no están asociadas a una trampa en 2020, pero coinciden exactamente con una trampa en 2021.
@@ -109,13 +109,13 @@ trap_add <- data.frame(codi_tr = "new", tipus_tr = "Mixte", site = "both", x = m
 
 # Save to use in 2021
 setwd("D:/MargSalas/Oso/Datos/Effort_raw/Spain")
-save(trap_add, file = "trap_add.RData")
+#save(trap_add, file = "trap_add.RData")
 
 # Join Catalonia, Aran and Navarra, new traps 
 
-trap_cat <- trap_onlycat %>%
-  rbind(trap_aran) %>%
-  rbind(trap_nav) %>%
+trap_cat_2020 <- trap_onlycat_2020 %>%
+  rbind(trap_aran_2020) %>%
+  rbind(trap_nav_2020) %>%
   rbind(trap_add2021) %>%
   rbind(trap_add) %>%
   arrange(by = site) %>% # Very important for order later
@@ -126,10 +126,10 @@ trap_cat <- trap_onlycat %>%
 
 ## Creamos un object para cada tipo de trampa
 
-trap_cat_foto <- trap_cat %>% 
+trap_cat_foto_2020 <- trap_cat %>% 
   filter(site == "both") # VERY IMPORTANT that "both" is located first in trap_cat, so that trap number is the same as row number. Necesary for dist_nearest
 
-trap_cat_pels <- trap_cat %>% # This file is not used to join with detections (I join with all hair and both)
+trap_cat_pels_2020 <- trap_cat %>% # This file is not used to join with detections (I join with all hair and both)
   filter(site == "hair")  # ONLY for ploting (trap is not the row number)
 
 #mapview(trap_cat_pels) + mapview(trap_cat_foto, col.regions = "red")

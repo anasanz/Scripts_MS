@@ -121,14 +121,15 @@ Xt.sc.array[1:Jyear[1], 1:2, 1] # Example: to get traps from year 1
 
 localTraps <- localTrapsNum.l <- MaxLocalTraps.l <- list()
 for (t in 1:Tt){
-  localTraps[[t]] <- getLocalTraps(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma)
-  localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalTraps
-  MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalTrapsMax
+  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma)
+  localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalIndices
+  MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalIndicesMax
 }
 
 ##check that there are always local traps available
 lapply(localTrapsNum.l, function(x){min(x)})
 ##yes, every cell has at least some local traps
+
 
 # Store objects of localtraps as numeric objects because nimble doesn't support lists
 
@@ -138,7 +139,7 @@ MaxLocalTraps <- unlist(MaxLocalTraps.l) # This will also act as an index to map
 
 localTrapsIndex <- array(NA, c(max(habitatGridDet), max(MaxLocalTraps), Tt)) # Array with dimensions of maximun maxlocaltraps, will need to subset in the model
 for (t in 1:Tt){
-  localTrapsIndex[,1:MaxLocalTraps[t],t] <- localTraps[[t]]$localTrapsIndices
+  localTrapsIndex[,1:MaxLocalTraps[t],t] <- localTraps[[t]]$localIndices
 }
 
 ##some characteristics of S, not affected by changing trap array
@@ -450,23 +451,35 @@ S.in.sc <- scaleCoordsToHabitatGrid(S.in, G)
 
 ##compile constants
 nimConstants <- list(
-  M=Maug, J=Jyear, numHabWindows=numHabWindows, 
-  numGridRows=numGridRows, numGridCols=numGridCols, 
-  maxDetNums=maxDetNums, MaxLocalTraps=MaxLocalTraps,
-  nobs=n, Nyr=Tt,
-  max.age=max.age)
+  M = Maug, 
+  J = Jyear, 
+  numHabWindows=numHabWindows, 
+  numGridRows = numGridRows, 
+  numGridCols = numGridCols, 
+  maxDetNums = maxDetNums, 
+  MaxLocalTraps = MaxLocalTraps,
+  nobs = n, 
+  Nyr = Tt,
+  max.age = max.age)
 
 ##compile data
-nimData <- list(habDens=X.d, y=y.sp,detNums=detNums, 
-                lowerHabCoords=lowerHabCoords, upperHabCoords=upperHabCoords,
-                habitatGrid=habitatGrid, K=rep(K, n.max.traps),  X.sc = Xt.sc.array, # ASP: Vector of k for bern trials with length = max number of traps
-                habitatGridDet=habitatGridDet,detIndices=detIndices,
-                detNums=detNums, localTrapsIndex=localTrapsIndex, 
-                localTrapsNum=localTrapsNum,
-                agePlusOne=age.aug,          #known age in yr 1
-                w=c(rep(1, n), rep(NA, nz)), #membership in superpopulation
-                u=zdatAGE,                   #known alive states
-                b=rep(1,K), a=rep(1, max.age) #prior params for recruitment, age distribution
+nimData <- list(habDens = X.d, 
+                y = y.sp,
+                detNums = detNums, 
+                lowerHabCoords = lowerHabCoords, 
+                upperHabCoords = upperHabCoords,
+                habitatGrid = habitatGrid, 
+                K = rep(K, n.max.traps),  
+                X.sc = Xt.sc.array, # ASP: Vector of k for bern trials with length = max number of traps
+                habitatGridDet = habitatGridDet,
+                detIndices = detIndices,
+                detNums = detNums, 
+                localTrapsIndex = localTrapsIndex, 
+                localTrapsNum = localTrapsNum,
+                agePlusOne = age.aug,          #known age in yr 1
+                w = c(rep(1, n), rep(NA, nz)), #membership in superpopulation
+                u = zdatAGE,                   #known alive states
+                b = rep(1,K), a = rep(1, max.age) #prior params for recruitment, age distribution
 )
 
 
@@ -479,6 +492,7 @@ inits<-function(){list(beta=c(0.15,rep(0.85/(Tt-1), Tt-1)),
                        phi.ad=runif(1,0.5,1),
                        phi.sub=runif(1,0.5,1),
                        phi.cub=runif(1,0.5,1),
+                       beta.dens = runif(1,-0.1, 0.1), # Added
                        piAGE=piAGE,
                        u = zstAGE,
                        w=w.in,
@@ -490,9 +504,12 @@ inits<-function(){list(beta=c(0.15,rep(0.85/(Tt-1), Tt-1)),
 ##source model code
 ##I prefer working on code in a separate script but you can also have everything in
 ##one script and just execute the code
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/3.openSCR")
 
-source('SCR in Nimble_diftraps_Age.txt')
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/3.openSCR")
+#source('SCR in Nimble_diftraps_Age.txt')
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
+source('3.3.SCRopen_diftraps_Age in Nimble.r')
 
 ##determine which parameters to monitor
 params<-c("p.ad", "p.sub","p.cub","phi.ad","phi.sub","phi.cub", 
@@ -503,6 +520,9 @@ params<-c("p.ad", "p.sub","p.cub","phi.ad","phi.sub","phi.cub",
 model <- nimbleModel(SCRhab.Open.diftraps.age, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
 ##ignore error message, only due to missing initial values at this stage
+model$calculate()
+model$initializeInfo()
+
 
 #(2) Compile model in c++
 #     In complex models, this step can take a while (as well as step 5)

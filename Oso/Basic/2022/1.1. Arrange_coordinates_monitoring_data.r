@@ -10,8 +10,8 @@ library(rgdal)
 library(stringr)
 library(dplyr)
 
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021_Pre-coordinates_NEW.csv", header = TRUE, row.names = NULL, sep = ";")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022") # WD actual es D:\MargSalas\Oso\Datos\Tablas_finales\2022\Copia_versionPrev2
+os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021_Pre-coordinates.csv", header = TRUE, row.names = NULL, sep = ";")
 Encoding(os$Remarks) <- "UTF-8" # Change encoding for weird characters (Â imported from excel)
 Encoding(os$X) <- "UTF-8" 
 os$Y <- as.character(os$Y)
@@ -25,15 +25,22 @@ colnames(os)[1] <- "Confirmed_Individual"
 os$X <- str_trim(os$X, side = c("both")) # Remove white spaces
 os$Y <- str_trim(os$Y, side = c("both"))
 
-os$Probable_Individual <- str_trim(os$Probable_Individual, side = c("both")) # Remove white spaces
-os$Probable_Individual[which(os$Probable_Individual == "")] <- "Indetermined" # Need that all white spaces are "Indetermined"
-
 # Remove duplicates 
+# Ya no hay porque Elena los quitó en crosscheck
+#os <- os[-which(duplicated(os)), ]
 
-os <- os[-which(duplicated(os)), ]
+## ---- Assign all confirmed individuals to probable individuals ----
+# After crosscheck there are some confirmed individuals that appear as "Indetermined"
+# in the column "Probable_Individual". This needs to be changed because it is problematic
+#os[which(os$Confirmed_Individual != "Indetermined" & os$Probable_Individual == "Indetermined"), ]
 
+for (i in 1:nrow(os)){
+  if(os$Confirmed_Individual[i] != "Indetermined" & os$Probable_Individual[i] == "Indetermined"){
+    os$Probable_Individual[i] <- os$Confirmed_Individual[i]
+  }
+}
 
-## ---- First: Join sex and age manually ----
+## ---- Join sex and age manually ----
 
 # Load info table
 
@@ -57,8 +64,8 @@ for (i in 1:nrow(os)){    # I could do with ifelse function but it doesn't work 
     os$Sex.y2[i] <- os$Sex.y[i]
   }
 }
-os <- os[,-c(3,32)]
-os <- os[ ,c(1:2,32,3:31)]
+os <- os[,-c(3,33)]
+os <- os[ ,c(1:2,33,3:32)]
 colnames(os)[3] <- "Sex"
 
 # AGE
@@ -66,7 +73,7 @@ os$Year <- as.numeric(os$Year)
 os$Year_birth <- as.numeric(os$Year_birth)
 os <- os %>% mutate(Age2 = Year - Year_birth)
 
-for (i in 1:nrow(os)){    # I could do with ifelse function but it doesn't work I don't know why
+for (i in 1:nrow(os)){    
   if (is.na(os$Age2[i])){
     os$Age2[i] <- os$Age[i]
   } else {
@@ -74,8 +81,8 @@ for (i in 1:nrow(os)){    # I could do with ifelse function but it doesn't work 
   }
 }
 
-os <- os[,-c(4,32)]
-os <- os[,c(1:3,31,4:30)]
+os <- os[,-c(4,33)]
+os <- os[,c(1:3,32,4:31)]
 colnames(os)[4] <- "Age"
 
 ## ---- SECOND: Prepare to arrange coordinates ----
@@ -188,19 +195,56 @@ os_wgs84_TRANSF$x_long <- coordinates(os_wgs84_TRANSF)[,1]
 os_wgs84_TRANSF$y_lat <- coordinates(os_wgs84_TRANSF)[,2]
 
 
-## ---- Join and arrange all ----
+## ---- Join all ----
 
 os_spatial <- rbind(os_latlong_TRANSF, os_lambert_TRANSF, os_etrs31N_TRANSF, os_etrs30N_TRANSF, 
                  os_ed5030N_TRANSF, os_ed5031N_TRANSF, os_wgs84_TRANSF)
 
 os_data <- rbind(os_spatial@data, os_na)
 
+## ---- Keep one date column and arrange by date ----
+
+# New date precision column (added after crosscheck Elena, because she added a 
+# column called "Date" in the data base that was the date contact if available,
+# or the date_register)
+# - Date.precision = "contact": Date_contact
+# - Date.precision = "register": Date_register
+# - Date.precision = "most_accurate": Date contact if available. Otherwise date
+#                   register. But we don't know which one it is because Elena 
+#                   did not keep record of it, so we put this category.
+
+os_data$Date.precision <- NA
+
+for (i in 1:nrow(os_data)){
+  if(os_data$Date[i] == "" & os_data$Date_contact[i] == "" & os_data$Date_register[i] == "") next
+  
+  if(os_data$Date[i] == "" & os_data$Date_contact[i] != ""){
+    os_data$Date[i] <- os_data$Date_contact[i]
+    os_data$Date.precision[i] <- "contact"} 
+  
+  else if (os_data$Date[i] == "" & os_data$Date_contact[i] == ""){
+    os_data$Date[i] <- os_data$Date_register[i]
+    os_data$Date.precision[i] <- "register"}
+  
+  else if (os_data$Date[i] != ""){
+    if (os_data$Date[i] == os_data$Date_contact[i]){
+      os_data$Date.precision[i] <- "contact"
+    } else if (os_data$Date[i] == os_data$Date_register[i]){
+      os_data$Date.precision[i] <- "register"
+    } else if (os_data$Date[i] != os_data$Date_contact[i] & os_data$Date[i] != os_data$Date_register[i]){
+      os_data$Date.precision[i] <- "most_accurate"
+      }
+  }}
+
+os_data <- os_data[,c(1:9,35,10:34)] # Sort out to check if it was 
+os_data <- os_data[,-c(7,8)] # I keep one date column
+
 # Arrange by date
-os_data$Date_register_formated <- os_data$Date_register # Create column with date format to sort data frame by date
+os_data$Date_register_formated <- os_data$Date # Create column with date format to sort data frame by date
 os_data$Date_register_formated <- as.Date(os_data$Date_register_formated, format = "%d/%m/%Y")
-os_data <- os_data[,c(1:8,34,9:33)]
+os_data <- os_data[,c(1:7,34,8:33)]
 os_data <- arrange(os_data, Year, Date_register_formated) # Arrange by year and date, to keep in order the registers without a specific day
-os_data <- os_data[,-9] # Remove column with date format and keep the original one (with non-accurate dates)
+os_data <- os_data[,-8] # Remove column with date format and keep the original one (with non-accurate dates)
 
 # Sort out columns
 os_data <- os_data[,c(1:12,32,33,13:31)]

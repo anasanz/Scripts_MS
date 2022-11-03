@@ -174,7 +174,7 @@ roads2 <- raster("roads2_raster.tif")
 roads3 <- raster("roads3_raster.tif")
 roads4 <- raster("roads4_raster.tif")
 roads5 <- raster("roads5_raster.tif")
-
+roads6 <- raster("roads6_raster.tif")
 
 
 
@@ -269,6 +269,8 @@ roads2_2 <- hrscale(data = roads2)
 roads3_2 <- hrscale(data = roads3)
 roads4_2 <- hrscale(data = roads4)
 roads5_2 <- hrscale(data = roads5)
+roads6_2 <- hrscale(data = roads6)
+
 
 setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
 writeRaster(roads1_2, filename = "roads1_hrbear.tif")
@@ -276,4 +278,38 @@ writeRaster(roads2_2, filename = "roads2_hrbear.tif")
 writeRaster(roads3_2, filename = "roads3_hrbear.tif")
 writeRaster(roads4_2, filename = "roads4_hrbear.tif")
 writeRaster(roads5_2, filename = "roads5_hrbear.tif")
+writeRaster(roads6_2, filename = "roads6_hrbear.tif")
 
+## -------------------------------------------------
+##                 Correlations
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+
+covs <- c(forest, dem, rough, slope, logDistcore, obsDens200m, obsDens200m_preST,
+          roads1, roads4, roads5, roads6)
+
+forest <- raster("forest_hrbear.tif")
+dem <- raster("dem_hrbear.tif")
+rough <- raster("rough_hrbear.tif")
+slope <- raster("slope_hrbear.tif")
+logDistcore <- raster("logDistcore_hrbear.tif")
+obsDens200m <- raster("obsDens200m_hrbear.tif")
+obsDens200m_preST <- raster("obsDens200m_preST_hrbear.tif")
+roads1 <- raster("roads1_hrbear.tif")
+roads4 <- raster("roads4_hrbear.tif")
+roads5 <- raster("roads5_hrbear.tif")
+roads6 <- raster("roads6_hrbear.tif")
+
+file = covs
+minExt <- function(file){
+
+  file  
+}
+extent(forest)[1,]
+
+lapply(covs,min(extent[1,]))
+extent(covs)
+
+extent(forest)
+extent(roads1)

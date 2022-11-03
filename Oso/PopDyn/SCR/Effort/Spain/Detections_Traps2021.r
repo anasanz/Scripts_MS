@@ -37,7 +37,7 @@ map <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2.shp") %>%
 
 ## Trampas Catalonia y Aran
 
-trap_cat_aran <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Trampes_2021_SFF_CAR_CGA.xlsx") %>% 
+trap_cat_aran_2021 <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Trampes_2021_SFF_CAR_CGA.xlsx") %>% 
   janitor::clean_names() %>%
   select(codi_tr,tipus_tr,coord_x,coord_y) %>%
   #mutate(trap_id = paste(row_number(), "c")) %>% 
@@ -46,11 +46,11 @@ trap_cat_aran <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Tram
            crs = CRS("+proj=utm +zone=31 +datum=WGS84")) 
 #mutate(trap = row_number())
 
-trap_cat_aran$site <- ifelse(trap_cat_aran$tipus_tr == "Mixte", "both","hair")
+trap_cat_aran_2021$site <- ifelse(trap_cat_aran_2021$tipus_tr == "Mixte", "both","hair")
 
 ## Trampas Navarra
 
-trap_nav <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Copia de INDICIOS OSO PARDO-CAMARAS FOTOTRAMPEO 2021-22 B-GMA D-3 RONCAL-SALAZAR.xlsx", sheet = 2) %>% 
+trap_nav_2021 <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Copia de INDICIOS OSO PARDO-CAMARAS FOTOTRAMPEO 2021-22 B-GMA D-3 RONCAL-SALAZAR.xlsx", sheet = 2) %>% 
   janitor::clean_names() %>%
   rename(codi_tr = toponimia) %>%
   select(codi_tr, x_utm, y_utm) %>%
@@ -60,7 +60,7 @@ trap_nav <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/Spain/Copia de 
            crs = CRS("+proj=utm +zone=30 +datum=WGS84") ) %>%
   st_transform(CRS("+proj=utm +zone=31 +datum=WGS84"))
 
-mapview(trap_nav)
+#mapview(trap_nav_2021)
 
 ## Trampa no registrada con observaciones múltiples en 2020 y 2021 (average location detections)
 setwd("D:/MargSalas/Oso/Datos/Effort_raw/Spain")
@@ -69,8 +69,8 @@ load("trap_add.RData")
 
 # Join Catalonia, Aran and Navarra
 
-trap_cat <- trap_cat_aran %>%
-  rbind(trap_nav) %>%
+trap_cat_2021 <- trap_cat_aran_2021 %>%
+  rbind(trap_nav_2021) %>%
   rbind(trap_add) %>%
   arrange(by = site) %>% # Very important for order later
   mutate(trap_id = paste(row_number(), "c"))  %>% ## This is the ID of all the traps together
@@ -80,20 +80,20 @@ trap_cat <- trap_cat_aran %>%
 
 ## Creamos un object para cada tipo de trampa
 
-trap_cat_foto <- trap_cat %>% 
+trap_cat_foto_2021 <- trap_cat_2021 %>% 
   filter(site == "both") # VERY IMPORTANT that "both" is located first in trap_cat, so that trap number is the same as row number. Necesary for dist_nearest
 
-trap_cat_pels <- trap_cat %>% # This file is not used to join with detections (I join with all hair and both)
+trap_cat_pels_2021 <- trap_cat_2021 %>% # This file is not used to join with detections (I join with all hair and both)
   filter(site == "hair")  # ONLY for ploting (trap is not the row number)
 
-mapview(trap_cat_pels) + mapview(trap_cat_foto, col.regions = "red")
+#mapview(trap_cat_pels) + mapview(trap_cat_foto, col.regions = "red")
 
 ## ---- Load detections ----
 
 # I take only confirmed individuals (we lose 20 detections)
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_cubLocations.xlsx') %>%
+os <- openxlsx::read.xlsx('Seguiment_Ossos_Pirineus_1996_2021_taula_final_2_cubLocations.xlsx') %>%
   filter(Year == 2021 & Confirmed_Individual != "Indetermined" & Country == "Spain") #164 probable, 144 confirmed
 os <- os %>%
   mutate(date = as_date(os$Date_register, format = "%d/%m/%Y"),

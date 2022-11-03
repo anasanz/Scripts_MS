@@ -285,9 +285,12 @@ obs <- array(NA, c(n.all, n.max.traps, Tt))
 for (t in 1:Tt){
   D <- e2dist(cbind(Sx[,t], Sy[,t]), Xt[[t]])
   ## ASP: Distance from each AC to each traps
+  
   for (i in 1:n.all){
     if(z.all[i,t]==0){obs[i,,t] <- 0} else{
+      
       p.eff <- p0*exp(-D[i,]^2/(2*sigma^2)) ## ASP: The p is a function of the distance to the traps
+      
       obs[i,1:nrow(Xt[[t]]),t] <- rbinom(nrow(Xt[[t]]), K, p.eff)
       }
   }

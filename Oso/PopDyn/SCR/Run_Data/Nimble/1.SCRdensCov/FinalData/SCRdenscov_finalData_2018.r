@@ -54,7 +54,7 @@ e <- as(raster::extent(xmin, xmax, ymin, ymax), "SpatialPolygons") # Extent of s
 ## ---- *** START LOOP TO RUN SINGLE-COVARIATE MODELS *** ----
 
 covs <- c("forest", "dem", "rough", "slope", "logDistcore", "obsDens200m", "obsDens200m_preST",
-          "roads1", "roads4", "roads5")
+          "roads1", "roads4", "roads5", "roads6")
 
 for (xxx in 1:length(covs)) {
   

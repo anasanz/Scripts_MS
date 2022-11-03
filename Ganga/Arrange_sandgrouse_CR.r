@@ -28,7 +28,7 @@ coord_g <- g[,c(4,5,8,13,16)]
 
 library(stringr)
 coord_g$X.Coord <- str_sub(coord_g$X.Coord, 5)
-write.csv(coord_g, "coord_g.csv")
+#write.csv(coord_g, "coord_g.csv")
 
 
 # Save detection history
@@ -52,4 +52,11 @@ capt.hist <- g %>%
 
 capt.hist$ch <- as.character(capt.hist$ch)
 
-save(capt.hist, file = "cr_sandgrouse.RData")
+#save(capt.hist, file = "cr_sandgrouse.RData")
+
+#☺ Check how many are caotured twice
+
+data_ganga <- matrix(data = as.numeric(do.call("rbind", strsplit(as.character(capt.hist$ch), "", fixed = TRUE))), nrow = nrow(capt.hist), ncol = length(unique(g$Occasion)))
+T = unique(g$Occasion)
+
+capt.hist[which(apply(data_ganga,1,sum) > 1),]

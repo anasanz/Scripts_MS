@@ -8,6 +8,8 @@ rm(list = ls())
 library(sp)
 library(rgdal)
 library(lubridate)
+library(dplyr)
+library(adehabitatHR)
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
 os <- read.csv("Seguiment_Ossos_Pirineus_1996_2021_2.csv", header = TRUE, row.names = NULL)
@@ -17,7 +19,7 @@ os <- os[,-c(1)]
 
 # Date column to differenciate month
 
-os$Date_register_formated <- os$Date_register 
+os$Date_register_formated <- os$Date
 os$Date_register_formated <- as.Date(os$Date_register_formated, format = "%d/%m/%Y")
 os$month <- month(ymd(os$Date_register_formated)) 
 
@@ -89,18 +91,18 @@ colnames(os@data)[which(colnames(os@data) %in% c("NAME_0", "NAME_1"))] <- c("Cou
 os@data <- os@data[,c(1:17,33:34,18:32)]
 
 # Export GIS layer with coordinates and good attribute table (last version)
-writeOGR(os, "D:/MargSalas/Oso/Datos/GIS/2022/Seguiment_GIS_layer", "Seguiment_Ossos_Pirineus_1996_2021_coordinates_final", driver = "ESRI Shapefile")
+#writeOGR(os, "D:/MargSalas/Oso/Datos/GIS/2022/Seguiment_GIS_layer", "Seguiment_Ossos_Pirineus_1996_2021_coordinates_final", driver = "ESRI Shapefile")
 
 os_data <- rbind(os@data, os_na)
 os_data <- arrange(os_data, ID_obs) 
 
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-openxlsx::write.xlsx(os_data, 'Seguiment_Ossos_Pirineus_1996_2021_taula_final_2.xlsx')
+#openxlsx::write.xlsx(os_data, 'Seguiment_Ossos_Pirineus_1996_2021_taula_final.xlsx')
 
 
 ## ---- Create GIS layers Females with cubs of < 6 month and 1 year ----
-################## ESTO NO ESTÁ CORRIDO PARA 2021 ######################
+## ONLY MONITORING DATA!!
 
 # Column of critical observations (only cubs or females with cubs of less than 6 month)
 
@@ -126,8 +128,9 @@ os$Female_cubs_year1[is.na(os$Female_cubs_year1)] <- 0
 os_critic <- os[which(os$Female_cubs_critic == 1), ]
 os_year1 <- os[which(os$Female_cubs_year1 == 1), ]
 
-#writeOGR(os_critic, "D:/Oso/Datos/GIS/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2020_OCA_critic", driver = "ESRI Shapefile")
-#writeOGR(os_year1, "D:/Oso/Datos/GIS/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2020_OCA_1any", driver = "ESRI Shapefile")
+writeOGR(os_critic, "D:/MargSalas/Oso/Datos/GIS/2022/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2021_OCA_critic", driver = "ESRI Shapefile")
+writeOGR(os_year1, "D:/MargSalas/Oso/Datos/GIS/2022/Seguiment_GIS_layers_OCA", "Seguiment_Ossos_Pirineus_1996_2021_OCA_1any", driver = "ESRI Shapefile")
+
 
 # Plot maps
 
