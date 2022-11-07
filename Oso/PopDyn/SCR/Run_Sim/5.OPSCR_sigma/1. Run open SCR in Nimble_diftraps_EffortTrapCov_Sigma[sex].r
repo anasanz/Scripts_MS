@@ -5,6 +5,8 @@ library(MCMCvis)
 library(nimbleSCR)
 ##NOTE: load two helper functions at bottom of script for script to run
 
+### ITS GOOD ALTHOUGH NOT COMPLETELY RIGHT BECAUSE I DID NOT SIMULATE SEX AS A LATENT VARIABLE (OMEGA)
+
 ################################################################################
 #### helper functions ##########################################################
 
@@ -37,18 +39,18 @@ spcov2 <- function(D, alpha=2, standardize=TRUE) {
 
 
 ##detection parameters
-#sigma=movement, sex specific (1 Females, 2 Males)
-sigma <- c(0.5,1)
+#sigma=movement
+sigma <- 1
 
 #p0=baseline detection, intercept on logit scale
 p0 <- -2.534601
 
-# 2 beta for 3 level effort covariate
+# 2 beta for 3 level effort covariate on p0
 # Intercept is 1 visit in France (cat 1)
 b.effort1 <- 0.8 # Positive effect of effort on detection if 2 visits in france (cat 2)
 b.effort2 <- -0.4 # Negative effect of effort on detection if in spain (cat 3)
 
-# 1 beta for "type of trap" covariate
+# 1 beta for "type of trap" covariate on p0
 b.trap <- 0.3 # Positive effect if trap is composed by hair trap and camera trap ("both")
 # rather than only hair trap
 
@@ -57,11 +59,11 @@ X<-as.matrix(expand.grid(seq(-6,6,1), seq(-6,7,1)))
 colnames(X)<-c('x', 'y')
 J<-dim(X)[1]
 
-##state space coordinates, max trap coords (below) + 3*sigma (larger sigma)
-xmin<-min(X[,1])-3*sigma[2]
-ymin<-min(X[,2])-3*sigma[2]
-xmax<-max(X[,1])+3*sigma[2]
-ymax<-max(X[,2])+3*sigma[2]
+##state space coordinates, max trap coords (below) + 3*sigma
+xmin<-min(X[,1])-3*sigma
+ymin<-min(X[,2])-3*sigma
+xmax<-max(X[,1])+3*sigma
+ymax<-max(X[,2])+3*sigma
 
 ##for discrete state space, create 342 grid cells (center coordinates)
 gx <- rep(seq(xmin+0.5, xmax-0.5,1), 19)
@@ -330,7 +332,7 @@ trap <- matrix(0, nrow = n.max.traps, ncol = Tt)
 n4 <- round(prod(dim(trap))*0.3, dig=0) #ASP: 30% will be traps of type "both
 trap[sample(1:prod(dim(trap)),n4, replace=FALSE)] <- 1
 
-#3. Sex covariate to index sigma (Female = 0; Male = 1)
+#3. Sex covariate (Female = 0; Male = 1)
 
 sex0 <- rep(0,n.all)
 sex0[sample(1:length(sex0), 50, replace = FALSE)] <- 1 # Sex ratio around 1:1
@@ -349,12 +351,13 @@ for (t in 1:Tt){
     if(z.all[i,t]==0){obs[i,,,t] <- 0} else{
       
       ##calculate distance component of detection, which is constant over occasions
-      p.d <- exp(-D[i,]^2/(2*sigma^2)) ## 
+      p.d <- exp(-D[i,]^2/(2*sigma[sex0[i]+1]^2)) ## 
       
       ##loop over occasions
       for (k in 1:K){
         #calculate effective baseline detection as function of effort (3 level)
-        p <- plogis(p0+b.effort1*effort.dummy[1:nrow(Xt[[t]]),k,t,1] + b.effort2*effort.dummy[1:nrow(Xt[[t]]),k,t,2] + b.trap*trap[1:nrow(Xt[[t]]),t]) 
+        p <- plogis(p0+b.effort1*effort.dummy[1:nrow(Xt[[t]]),k,t,1] + b.effort2*effort.dummy[1:nrow(Xt[[t]]),k,t,2] + 
+                      b.trap*trap[1:nrow(Xt[[t]]),t]) 
         
         # Occasion is the second dimension, and because it 
         #changes every year effort needs to be also indexed by year right?
@@ -377,15 +380,16 @@ n <- sum(apply(obs, 1, sum, na.rm = TRUE) >0)
 seen <- which(apply(obs, 1, sum, na.rm = TRUE)>0)
 Y <- obs[seen,,,] ## ASP: Only detected individuals (capture histories)
 
-##this now has NAs - does that matter?? Should prob all be 0,
-##they won't enter the model anyway
-
+# Sex of seen individuals
+sex1 <- sex0[seen]
 
 ##augment observed data to size Maug
 Maug <- 150 
 y.in <- array(0, c(Maug, n.max.traps,K, Tt)) # One array of nxJxK every year (5 years)
 y.in[1:n,,,] <- Y
 
+##augment sex with NA
+sex <- c(sex1,rep(NA,length((n+1):Maug)))
 
 ##change to 'sparse' format - speeds up computation by reducing file size
 ## getSparseY cannot handle 4d arrays, so loop over years to get a 3d array per year
@@ -435,7 +439,7 @@ nimData <- list(habDens=X.d, y=y.sp,detNums=detNums,
                 habitatGrid=habitatGrid, ones=ones,  X.sc = Xt.sc.array, # ASP: Vector of k for bern trials with length = max number of traps
                 habitatGridDet=habitatGridDet,detIndices=detIndices,     # ASP: ones substitutes K=rep(K, n.max.traps)
                 detNums=detNums, localTrapsIndex=localTrapsIndex, 
-                localTrapsNum=localTrapsNum
+                localTrapsNum=localTrapsNum, sex = sex
 )
 
 ##set up initial values
@@ -502,31 +506,47 @@ for(i in (n+1) : Maug){
 colnames(S.in) <- c('x', 'y')
 S.in.sc <- scaleCoordsToHabitatGrid(S.in, G)
 
+## initial values for sex
+sex.in <- c(rep(NA,n),rep(0,length((n+1):Maug)))
+sex.in[sample((n+1):Maug, 30, replace = FALSE)] <- 1 # Random sex for augmented individuals
+
+### AQUI
+
 inits<-function(){list(gamma=c(0.5, rep(0.1, (Tt-1))), 
-                       sigma=runif(1,0.5, 1.5),
+                       sigma=runif(2,0.5, 1.5),
                        p0=runif(1,-1,0),
                        b.effort1=runif(1, 0.5,1),
                        b.effort2=runif(1, 0.5,1),
                        b.trap=runif(1, 0.5,1),
+                       omega = runif(1, 0.5,1),
+                       sex = sex.in,
                        phi=runif(1,0.5,1),
                        z=z.in,
                        sxy=S.in.sc$coordsDataScaled,
                        sigD=runif(1, 1.5, 2.5),
                        beta.dens=runif(1,-0.5, 0.5))}
 
+
+
+
 ##source model code
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('4.2.SCRopen_diftraps_difeff_effortTrapCov in Nimble.r')
+source('5.SCRopen_diftraps_difeff_effortTrapCov_Sigma[sex] in Nimble.r')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
+params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'omega', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapCov, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapCov.sigsex, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
 ##ignore error message, only due to missing initial values at this stage
 model$calculate()
+model$initializeInfo()
+
+#  [Note] Ignoring non-NA values in inits for data nodes: sex?
+#  p.eff, y not initialized¿?
+
 
 #(2) Compile model in c++
 #     In complex models, this step can take a while (as well as step 5)
@@ -550,10 +570,10 @@ system.time(
 )
 ##4471.98
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/4.openSCRdenscov_Age_difeff")
-save(samp, file = "samp_difeff_3d_efforCov.r")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/2.openSCRdenscov_effort")
+save(samp, file = "samp_difeff_3d_effortTrapSexCov.r")
 
-load("samp_difeff_3d_efforCov.r")
+load("samp_difeff_3d_effortTrapSexCov.r")
 
 library(MCMCvis)
 ##remove NAs

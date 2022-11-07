@@ -2,7 +2,7 @@
 ##                      openSCR + denscov
 ##                      ALL DATA 2017-2021
 ##                  Different trap arrays per year
-##          Cov in p0: Effort + Type of trap 
+##          Cov in p0: Effort + Type of trap + Behavioral response
 ## -------------------------------------------------
 
 rm(list = ls())
@@ -241,12 +241,25 @@ for (t in 1:Tt){
 }
 trap[trap[] %in% c(2)] <- 0
 
-# Coefficient of b.effort2 (Spain) becomes negative when including trap covariate
-# Check if there are a higher number of traps "both" in Spain
+#----   2.10. SEX COVARIATE ---- 
 
-tdfs <- do.call("rbind",tdf_list)
-nrow(tdfs[which(tdfs$site == "both" & tdfs$pays == "France"), ])
-nrow(tdfs[which(tdfs$site == "both" & tdfs$pays == "Espagne"), ]) # Yes, 129 more in Spain than France!
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/info_individuals_2021.xlsx", sheet = 1)
+
+#setwd("~/data/data/Data_server")
+#info <- readxl::read_xlsx("~/data/data/Data_server/info_individuals_2021.xlsx", sheet = 1)
+
+info <- info[,c(4,5)]
+colnames(info)[1] <- "ind"
+
+# Arrange in the same order than detections data frame below
+indsex <- data.frame(ind = unique(edf$ind))
+indsex <- left_join(indsex,info, by = "ind")
+
+indsex$Sex[indsex$Sex == "F"] <- 0
+indsex$Sex[indsex$Sex == "M"] <- 1
+
+sex <- as.numeric(indsex$Sex)
 
 #---- 3. DETECTION DATA   ---- 
 #----   3.1 MAKE Y   ---- 
@@ -275,6 +288,35 @@ for (t in 1:Tt){
 
 max(Y) # Check the number max number of detections (it can't be higher than 1)
 
+####
+dim(Y)
+
+prevcap <- list()
+for (s in 1:dim(Y)[4]) {
+  Ys <- Y[,,,s]
+  prevcap[[s]] <- array(0, dim = c(dim(Ys)[1], dim(Ys)[2], 
+                                   dim(Ys)[3]))
+  first <- matrix(0, dim(Ys)[1], dim(Ys)[2])
+  for (i in 1:dim(Ys)[1]) {
+    for (j in 1:dim(Ys)[2]) {
+      if (sum(Ys[i, j, ]) > 0) {
+        first[i, j] <- min((1:(dim(Ys)[3]))[Ys[i, j, 
+        ] > 0])
+        prevcap[[s]][i, j, 1:first[i, j]] <- 0
+        if (first[i, j] < dim(Ys)[3]) 
+          prevcap[[s]][i, j, (first[i, j] + 1):(dim(Ys)[3])] <- 1
+      }
+    }
+  }
+  # zeros <- array(0, c(1, dim(prevcap[[s]])[2], dim(prevcap[[s]])[3]))
+  # prevcap[[s]] <- abind(prevcap[[s]], zeros, along = 1)
+}
+
+##
+prevcapArray <- array(0,dim(Y))
+for(t in 1:dim(Y)[4]){
+  prevcapArray[,,,t] <- prevcap[[t]]
+}
 
 #----   3.2 AUGMENT Y   ---- 
 ##augment observed data to size M
@@ -282,6 +324,13 @@ M <- 400
 
 y.in <- array(0, c(M, max(Jyear), K, Tt))
 y.in[1:n,,,] <- Y
+
+prevcapArray.in <- array(0, c(M, max(Jyear), K, Tt))
+prevcapArray.in[1:n,,,] <- prevcapArray
+
+##augment observed sex variable to size M (it becomes latent)
+sex <- c(sex,rep(NA,length((n+1):M)))
+
 
 #----   3.3 USE SPARSE FORMAT FOR Y   ---- 
 ##change to 'sparse' format - speeds up computation by reducing file size
@@ -320,9 +369,9 @@ ones <- rep(1, max(Jyear))
 ### running a model in parallel ############################################################
 
 ##source code to run model in parallel 
-#setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
-setwd("~/data/data/Scripts_MS/Stats/Nimble")
-source("Parallel Nimble function FOR aNA2_model3.2.r") 
+setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
+#setwd("~/data/data/Scripts_MS/Stats/Nimble")
+source("Parallel Nimble function FOR aNA2_model4.6.r")
 
 #----   4.1 CONSTANT AND DATA    ---- 
 
@@ -339,7 +388,8 @@ nimConstants <- list(
   Nyr = Tt,
   K = K,
   effort = effort.dummy,
-  trap = trap
+  trap = trap,
+  prevcap = prevcapArray.in
 )
 
 ##compile data
@@ -355,7 +405,8 @@ nimData <- list(habDens = X.d_sc,
                 detIndices = detIndices,
                 detNums = detNums,
                 localTrapsIndex = localTrapsIndex, 
-                localTrapsNum = localTrapsNum 
+                localTrapsNum = localTrapsNum,
+                sex = sex
 )
 
 
@@ -424,29 +475,48 @@ for(i in (n+1) : M){
 colnames(S.in) <- c('x', 'y')
 S.in.sc <- scaleCoordsToHabitatGrid(S.in, G)
 
+#----     4.2.3 SEX  ---- 
+
+sex.in <- c(rep(NA,n), rep(0,length((n+1):M))) # NA for known values and 
+sex.in[sample((n+1):M, 30, replace = FALSE)] <- 1 # random sex for augmented individuals
+
 #----     4.2.2 COMPILE INITIAL VALUES   ---- 
 
 S.in.sc_coords <- S.in.sc$coordsDataScaled
 
 inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))), 
-                       sigma = runif(1,0.5, 1.5),
+                       sigma = runif(2,0.5, 1.5),
                        p0 = runif(1,0,1),
                        b.effort1 = runif(1, 0.5,1),
                        b.effort2 = runif(1, 0.5,1),
                        b.trap = runif(1, 0.5,1),
+                       b.bh = runif(1, 0.5,1),
+                       omega = runif(1, 0.5,1),
+                       sex = sex.in,
                        phi = runif(1,0.5,1),
-                       beta.dens = runif(1,-0.1, 0.1), 
+                       beta.dens = runif(1,-0.1, 0.1), # Added
                        z = z.in,
                        sxy = S.in.sc_coords,
                        sigD = runif(1, 1.5, 2.5))}
 
 ##source model code
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('4.2.SCRopen_diftraps_difeff_effortTrapCov in Nimble.r')
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
+#setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Model")
+source('6.SCRopen_diftraps_difeff_effortTrapBhCov_Sigma[sex] in Nimble.r')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
+params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'b.bh', 'omega', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
+
+
+###### SAVE FOR RUNNING #####
+
+model = SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/5.OPSCR_sigma/Data_server")
+save(nimData, nimConstants, 
+     inits, Tt, sex.in, z.in, S.in.sc_coords, 
+     params, run_MCMC_allcode, model, file = "Data_Model5-2.RData")
+
 
 #### OPTION 1: PARALLEL ####
 detectCores()
@@ -463,7 +533,7 @@ old <- Sys.time()
 chain_output <- parLapply(cl = this_cluster, X = 1:3, 
                           fun = run_MCMC_allcode,      ##function in "Parallel Nimble function.R"
                           data = nimData,              ##your data list
-                          code = SCRhab.Open.diftraps.3d.effortTrapCov,   ##your model code
+                          code = SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex,   ##your model code
                           inits = inits,                 ##your inits function
                           constants = nimConstants,      ##your list of constants
                           params = params,               ##your vector with params to monitor
@@ -472,7 +542,8 @@ chain_output <- parLapply(cl = this_cluster, X = 1:3,
                           nthin = 10,                  ##thinning, main parameters
                           Tt = Tt,                     ##additional objects needed within inits
                           z.in = z.in,
-                          S.in.sc_coords = S.in.sc_coords 
+                          S.in.sc_coords = S.in.sc_coords,
+                          sex.in = sex.in
 )
 new <- Sys.time() - old
 
@@ -483,7 +554,7 @@ stopCluster(this_cluster)
 
 #setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
 setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
-save(chain_output, file = "sampOpenSCR_diftraps_effortTrapCov_1721_FINALDATA_3d.RData")
+save(chain_output, file = "sampOpenSCR_diftraps_effortTrapBhCov_1721_FINALDATA_3d.RData")
 
 
 
@@ -493,7 +564,7 @@ save(chain_output, file = "sampOpenSCR_diftraps_effortTrapCov_1721_FINALDATA_3d.
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapCov, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
 ##ignore error message, only due to missing initial values at this stage
 

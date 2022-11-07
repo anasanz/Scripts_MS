@@ -212,9 +212,52 @@ MCMCtrace(out.list,   # Convergence: beffort2 and sigma do not mix great
           ind = TRUE,
           pdf = FALSE)
 
-summ_EffortTrapSocc <- MCMCsummary(out.list)
+summ_Effort2p0<- MCMCsummary(out.list)
 
 # Observations: 
 # - Convergence is even worst: P0[2] (Spain, as before) and now also sigma dont converge
+# - Maybe better with trap?
 # - Effects make sense because trap covariate is not included
+
+
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
+load("sampOpenSCR_diftraps_effortTrapBhCov_1721_FINALDATA_3d.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
+
+MCMCtrace(out.list,   # Convergence: beffort2 and sigma do not mix great
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh <- MCMCsummary(out.list)
+
+# Observations: 
+# - Doesn't converge at all, REMOVE MONTH
 

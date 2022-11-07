@@ -2,7 +2,7 @@
 ##                      openSCR + denscov
 ##                      ALL DATA 2017-2021
 ##                  Different trap arrays per year
-##          Cov in p0: Effort + Type of trap 
+##    Added 3d structure AND effort covariate reparametrized (2p0)
 ## -------------------------------------------------
 
 rm(list = ls())
@@ -16,8 +16,13 @@ library(sp)
 library(dplyr)
 library(parallel)
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
-#setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+# Load function to export p0 accordying to country within Nimble
+#setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
+setwd("~/data/data/Scripts_MS/Stats/Nimble")
+source('getp0.r')
+
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 
 
 #---- 1. LOAD THE DETECTION DATA ---- 
@@ -68,8 +73,8 @@ e <- as(raster::extent(xmin, xmax, ymin, ymax), "SpatialPolygons") # Extent of s
 #----   2.3 GET A RASTER FOR THE HABITAT ---- 
 # USE A FOREST RASTER TO GET A BASIS FOR THE HABITAT RASTER
 # Set up a raster file 
-setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
-#setwd("~/data/data/Data_server/Variables_hrscale")
+#setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+setwd("~/data/data/Data_server/Variables_hrscale")
 distcore <- raster("logDistcore_hrbear.tif")
 
 # Crop it to extent of state-space
@@ -200,7 +205,7 @@ numGridCols <- ncol(localTraps[[1]]$habitatGrid)
 lowerHabCoords <- windowCoords$lowerHabCoords
 upperHabCoords <- windowCoords$upperHabCoords
 
-#----   2.8. EFFORT COVARIATE ---- 
+#----   2.8 EFFORT COVARIATE ---- 
 
 K <- 7 # 7 occasions
 
@@ -211,26 +216,32 @@ for (t in 1:Tt){
   effort[1:Jyear[t],,t] <- as.numeric(as.matrix(tdf_list[[t]][1:Jyear[t], 6:12]))
 }
 
-# Create dummy variable
+# The intercept is different whether the trap is in France (p0[1]) or Spain (p0[2])
+# Create array for indexing p0 (1/2)
 
-effort.dummy <- array(1, c(max(Jyear), K, Tt, 2)) # 4th dimension includes 2 arrays: one per level (intercept doesnt count)
-
-# effort.dummy[,,,1] =0  effort.dummy[,,,2] =0 ==> 1 visit in France (cat 1): Intercept, no need to add
-# effort.dummy[,,,1] =1  effort.dummy[,,,2] =0 ==> 2 visit in France (cat 2): Multiply b.effort1*array #1 
-# effort.dummy[,,,1] =0  effort.dummy[,,,2] =1 ==> Spain (cat 3): Multiply b.effort2*array #2
+country <- array(NA, c(max(Jyear), K, Tt)) 
 
 for (t in 1:Tt){
-  tmp <-tmp2 <- tmp3 <- effort[,,t]
+  tmp1 <- effort[,,t]
+  
+  # Dummy variable 2 visits in France (only de 2 appear as 1)
+  tmp1[tmp1[] %in% c(1,2)] <- 1
+  tmp1[tmp1[] %in% c(3)] <- 2
+  country[,,t] <- tmp1
+}
+
+
+# Create dummy variable only one dimension (2 visits in France) 
+
+effort.dummy <- array(NA, c(max(Jyear), K, Tt)) 
+
+for (t in 1:Tt){
+  tmp2 <- effort[,,t]
   
   # Dummy variable 2 visits in France (only de 2 appear as 1)
   tmp2[tmp2[] %in% c(1,3)] <- 0
   tmp2[tmp2[] %in% c(2)] <- 1
-  effort.dummy[,,t,1] <- tmp2
-  
-  # Dummy variable trap in Spain (only de 3 appear as 1)
-  tmp3[tmp3[] %in% c(1,2)] <- 0
-  tmp3[tmp3[] %in% c(3)] <- 1
-  effort.dummy[,,t,2] <- tmp3
+  effort.dummy[,,t] <- tmp2
 }
 
 #----   2.9. TRAP COVARIATE ---- 
@@ -241,12 +252,6 @@ for (t in 1:Tt){
 }
 trap[trap[] %in% c(2)] <- 0
 
-# Coefficient of b.effort2 (Spain) becomes negative when including trap covariate
-# Check if there are a higher number of traps "both" in Spain
-
-tdfs <- do.call("rbind",tdf_list)
-nrow(tdfs[which(tdfs$site == "both" & tdfs$pays == "France"), ])
-nrow(tdfs[which(tdfs$site == "both" & tdfs$pays == "Espagne"), ]) # Yes, 129 more in Spain than France!
 
 #---- 3. DETECTION DATA   ---- 
 #----   3.1 MAKE Y   ---- 
@@ -322,7 +327,7 @@ ones <- rep(1, max(Jyear))
 ##source code to run model in parallel 
 #setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
 setwd("~/data/data/Scripts_MS/Stats/Nimble")
-source("Parallel Nimble function FOR aNA2_model3.2.r") 
+source("Parallel Nimble function FOR aNA2_model4.2.1.r") 
 
 #----   4.1 CONSTANT AND DATA    ---- 
 
@@ -335,10 +340,11 @@ nimConstants <- list(
   numGridCols = numGridCols, 
   maxDetNums = maxDetNums,
   MaxLocalTraps = MaxLocalTraps,
-  nobs = n, 
+  nobs =  n, 
   Nyr = Tt,
   K = K,
   effort = effort.dummy,
+  country = country,
   trap = trap
 )
 
@@ -430,12 +436,11 @@ S.in.sc_coords <- S.in.sc$coordsDataScaled
 
 inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))), 
                        sigma = runif(1,0.5, 1.5),
-                       p0 = runif(1,0,1),
+                       p0 = runif(2,0,1),
                        b.effort1 = runif(1, 0.5,1),
-                       b.effort2 = runif(1, 0.5,1),
                        b.trap = runif(1, 0.5,1),
                        phi = runif(1,0.5,1),
-                       beta.dens = runif(1,-0.1, 0.1), 
+                       beta.dens = runif(1,-0.1, 0.1), # Added
                        z = z.in,
                        sxy = S.in.sc_coords,
                        sigD = runif(1, 1.5, 2.5))}
@@ -443,10 +448,10 @@ inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))),
 ##source model code
 #setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
 setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('4.2.SCRopen_diftraps_difeff_effortTrapCov in Nimble.r')
+source('4.1.2.SCRopen_diftraps_difeff_effort2p0TrapCov in Nimble.r')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
+params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'phi', 'b.trap', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
 
 #### OPTION 1: PARALLEL ####
 detectCores()
@@ -463,7 +468,7 @@ old <- Sys.time()
 chain_output <- parLapply(cl = this_cluster, X = 1:3, 
                           fun = run_MCMC_allcode,      ##function in "Parallel Nimble function.R"
                           data = nimData,              ##your data list
-                          code = SCRhab.Open.diftraps.3d.effortTrapCov,   ##your model code
+                          code = SCRhab.Open.diftraps.3d.effort2p0TrapCov,   ##your model code
                           inits = inits,                 ##your inits function
                           constants = nimConstants,      ##your list of constants
                           params = params,               ##your vector with params to monitor
@@ -472,7 +477,8 @@ chain_output <- parLapply(cl = this_cluster, X = 1:3,
                           nthin = 10,                  ##thinning, main parameters
                           Tt = Tt,                     ##additional objects needed within inits
                           z.in = z.in,
-                          S.in.sc_coords = S.in.sc_coords 
+                          S.in.sc_coords = S.in.sc_coords,
+                          getp0 = getp0
 )
 new <- Sys.time() - old
 
@@ -483,7 +489,7 @@ stopCluster(this_cluster)
 
 #setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
 setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
-save(chain_output, file = "sampOpenSCR_diftraps_effortTrapCov_1721_FINALDATA_3d.RData")
+save(chain_output, file = "sampOpenSCR_diftraps_effortCov2p0_1721_FINALDATA.RData")
 
 
 
@@ -493,7 +499,7 @@ save(chain_output, file = "sampOpenSCR_diftraps_effortTrapCov_1721_FINALDATA_3d.
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapCov, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.3d.effort2p0TrapCov, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
 ##ignore error message, only due to missing initial values at this stage
 

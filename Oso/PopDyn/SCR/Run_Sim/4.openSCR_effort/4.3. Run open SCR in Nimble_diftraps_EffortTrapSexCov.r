@@ -355,13 +355,14 @@ for (t in 1:Tt){
     if(z.all[i,t]==0){obs[i,,,t] <- 0} else{
       
       ##calculate distance component of detection, which is constant over occasions
-      p.d <- exp(-D[i,]^2/(2*sigma[sex0[i]+1]^2)) ## 
+      p.d <- exp(-D[i,]^2/(2*sigma^2)) ## 
       
       ##loop over occasions
       for (k in 1:K){
         #calculate effective baseline detection as function of effort (3 level)
         p <- plogis(p0+b.effort1*effort.dummy[1:nrow(Xt[[t]]),k,t,1] + b.effort2*effort.dummy[1:nrow(Xt[[t]]),k,t,2] + 
-                      b.trap*trap[1:nrow(Xt[[t]]),t]) 
+                      b.trap*trap[1:nrow(Xt[[t]]),t] +
+                      b.sex*sex0[i]) 
         
         # Occasion is the second dimension, and because it 
         #changes every year effort needs to be also indexed by year right?
@@ -383,6 +384,7 @@ n <- sum(apply(obs, 1, sum, na.rm = TRUE) >0)
 
 seen <- which(apply(obs, 1, sum, na.rm = TRUE)>0)
 Y <- obs[seen,,,] ## ASP: Only detected individuals (capture histories)
+Y[1,,1]
 
 # Sex of seen individuals
 sex1 <- sex0[seen]
@@ -511,17 +513,18 @@ colnames(S.in) <- c('x', 'y')
 S.in.sc <- scaleCoordsToHabitatGrid(S.in, G)
 
 ## initial values for sex
-sex.in <- c(rep(NA,n),rep(0,length((n+1):Maug)))
+sex.in <- c(sex1,rep(0,length((n+1):Maug)))
 sex.in[sample((n+1):Maug, 30, replace = FALSE)] <- 1 # Random sex for augmented individuals
 
 ### AQUI
 
 inits<-function(){list(gamma=c(0.5, rep(0.1, (Tt-1))), 
-                       sigma=runif(2,0.5, 1.5),
+                       sigma=runif(1,0.5, 1.5),
                        p0=runif(1,-1,0),
                        b.effort1=runif(1, 0.5,1),
                        b.effort2=runif(1, 0.5,1),
                        b.trap=runif(1, 0.5,1),
+                       b.sex = runif(1, 0.5,1),
                        omega = runif(1, 0.5,1),
                        sex = sex.in,
                        phi=runif(1,0.5,1),
@@ -535,14 +538,14 @@ inits<-function(){list(gamma=c(0.5, rep(0.1, (Tt-1))),
 
 ##source model code
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('5.SCRopen_diftraps_difeff_effortTrapCov_Sigma[sex] in Nimble.r')
+source('4.5.SCRopen_diftraps_difeff_effortTrapSexCov in Nimble.r')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'omega', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
+params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'b.sex', 'omega', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapCov.sigsex, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapSexCov, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
 ##ignore error message, only due to missing initial values at this stage
 model$calculate()

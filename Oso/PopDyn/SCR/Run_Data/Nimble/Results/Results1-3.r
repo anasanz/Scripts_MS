@@ -989,6 +989,17 @@ dev.off()
 ##             FinalData17-21
 ## ------------------------------------------------- 
 
+# Data frame to store values of p0 accross models and years
+
+covs <- c("forest", "elevation", "roughness", "slope", "logDistcore", "obsDens200m", "obsDens200m_preST",
+          "roads1", "roads4", "roads5", "roads6")
+yrs <- c("2017", "2018", "2019", "2020", "2021")
+
+p0 <- data.frame(matrix(NA, nrow = length(yrs), ncol = length(covs)))
+rownames(p0) <- yrs
+colnames(p0) <- covs
+
+
 ## ---- Forest ----
 
 # Load and plot at the same time
@@ -1142,6 +1153,16 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               border.col = "darkgreen",
               horizontal = TRUE)
 
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+
 ## ---- Elevation ----
 
 # Load and plot at the same time
@@ -1289,6 +1310,15 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               scale.width = FALSE,
               border.col = "darkgreen",
               horizontal = TRUE)
+
+files <- list(summ17_elevation, summ18_elevation, summ19_elevation, summ20_elevation, summ21_elevation)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "elevation")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
 
 
 ## ---- Roughness ----
@@ -1438,6 +1468,15 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               scale.width = FALSE,
               border.col = "darkgreen",
               horizontal = TRUE)
+
+files <- list(summ17_roughness, summ18_roughness, summ19_roughness, summ20_roughness, summ21_roughness)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "roughness")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                      "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                      "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                      ")",sep = "")
+}
 
 ## ---- Slope ----
 
@@ -1589,6 +1628,14 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
 
 dev.off()
 
+files <- list(summ17_slope, summ18_slope, summ19_slope, summ20_slope, summ21_slope)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "slope")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                      "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                      "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                      ")",sep = "")
+}
 
 ## ---- Distcore ----
 
@@ -1743,6 +1790,15 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
 
 dev.off()
 
+files <- list(summ17_distcore, summ18_distcore, summ19_distcore, summ20_distcore, summ21_distcore)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "logDistcore")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                  "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                  "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                  ")",sep = "")
+}
+
 ## ---- obsDens ----
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_17_19")
@@ -1896,6 +1952,15 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               border.col = "darkgreen",
               horizontal = TRUE)
 
+files <- list(summ17_obsdens, summ18_obsdens, summ19_obsdens, summ20_obsdens, summ21_obsdens)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "obsDens200m")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                        "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                        "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                        ")",sep = "")
+}
+
 ## ---- obsDens_preST ----
 
 # Load and plot at the same time
@@ -2045,6 +2110,16 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               horizontal = TRUE)
 
 dev.off()
+
+files <- list(summ17_preST, summ18_preST, summ19_preST, summ20_preST, summ21_preST)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "obsDens200m_preST")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                        "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                        "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                        ")",sep = "")
+}
+
 
 ## ---- roads1 ----
 
@@ -2198,6 +2273,17 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               border.col = "darkgreen",
               horizontal = TRUE)
 
+
+files <- list(summ17_roads1, summ18_roads1, summ19_roads1, summ20_roads1, summ21_roads1)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "roads1")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                              "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                              "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                              ")",sep = "")
+}
+
+
 ## ---- roads6 ----
 # Load and plot at the same time
 plot(1, ylim = c(0.5, 5+0.5), 
@@ -2344,6 +2430,15 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               scale.width = FALSE,
               border.col = "darkgreen",
               horizontal = TRUE)
+
+files <- list(summ17_roads6, summ18_roads6, summ19_roads6, summ20_roads6, summ21_roads6)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "roads6")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
 
 
 ## ---- roads4 ----
@@ -2493,6 +2588,16 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               border.col = "darkgreen",
               horizontal = TRUE)
 
+files <- list(summ17_roads4, summ18_roads4, summ19_roads4, summ20_roads4, summ21_roads4)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "roads4")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+
 ## ---- roads5 ----
 # Load and plot at the same time
 plot(1, ylim = c(0.5, 5+0.5), 
@@ -2640,11 +2745,19 @@ plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
               border.col = "darkgreen",
               horizontal = TRUE)
 
-
-
-
 dev.off()
 
+files <- list(summ17_roads5, summ18_roads5, summ19_roads5, summ20_roads5, summ21_roads5)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "roads5")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+setwd("D:/MargSalas/Oso/SCR/Exp_analysis")
+#openxlsx::write.xlsx(p0, 'p0_singleyear_allcovs.xlsx')
 
 ## -------------------------------------------------
 ##                  openSCRdenscov      

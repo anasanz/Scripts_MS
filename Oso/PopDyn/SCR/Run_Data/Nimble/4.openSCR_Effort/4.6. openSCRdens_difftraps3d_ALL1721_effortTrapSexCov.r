@@ -251,7 +251,8 @@ nrow(tdfs[which(tdfs$site == "both" & tdfs$pays == "Espagne"), ]) # Yes, 129 mor
 #----   2.10. SEX COVARIATE ---- 
 
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/Info_individuals_2021.xlsx", sheet = 1)
+#setwd("~/data/data/Data_server")
+info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/info_individuals_2021.xlsx", sheet = 1)
 info <- info[,c(4,5)]
 colnames(info)[1] <- "ind"
 
@@ -340,9 +341,9 @@ ones <- rep(1, max(Jyear))
 ### running a model in parallel ############################################################
 
 ##source code to run model in parallel 
-#setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
-setwd("~/data/data/Scripts_MS/Stats/Nimble")
-source("Parallel Nimble function FOR aNA2_model3.2.r") 
+setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
+#setwd("~/data/data/Scripts_MS/Stats/Nimble")
+source("Parallel Nimble function FOR aNA2_model4.6.r") 
 
 #----   4.1 CONSTANT AND DATA    ---- 
 
@@ -491,7 +492,7 @@ old <- Sys.time()
 chain_output <- parLapply(cl = this_cluster, X = 1:3, 
                           fun = run_MCMC_allcode,      ##function in "Parallel Nimble function.R"
                           data = nimData,              ##your data list
-                          code = SCRhab.Open.diftraps.3d.effortTrapCov,   ##your model code
+                          code = SCRhab.Open.diftraps.3d.effortTrapSexCov,   ##your model code
                           inits = inits,                 ##your inits function
                           constants = nimConstants,      ##your list of constants
                           params = params,               ##your vector with params to monitor
@@ -500,7 +501,8 @@ chain_output <- parLapply(cl = this_cluster, X = 1:3,
                           nthin = 10,                  ##thinning, main parameters
                           Tt = Tt,                     ##additional objects needed within inits
                           z.in = z.in,
-                          S.in.sc_coords = S.in.sc_coords 
+                          S.in.sc_coords = S.in.sc_coords,
+                          sex.in = sex.in
 )
 new <- Sys.time() - old
 
@@ -511,7 +513,7 @@ stopCluster(this_cluster)
 
 #setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
 setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/4.openSCRdenscov_Effort")
-save(chain_output, file = "sampOpenSCR_diftraps_effortTrapCov_1721_FINALDATA_3d.RData")
+save(chain_output, file = "sampOpenSCR_diftraps_effortTrapSexCov_1721_FINALDATA_3d.RData")
 
 
 
