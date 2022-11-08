@@ -1,11 +1,22 @@
-SCRhab<-nimbleCode({
+
+SCRhab_covsp0_sigSex <- nimbleCode({
   
   ###data augmentation parameter
   psi ~ dunif(0,1)
-  ##detection parameters - sigma (movement)
-  sigma ~ dunif(0,5) #adjust to units of trap array and space use of species
+  
+  ##movement parameters: detection model and between-year AC movement model
+  sigma[1]~dunif(0,5) # Sex-specific sigma (1 = Females; 2 = Males)
+  sigma[2]~dunif(0,5)
+  
   ##detection parameters - lam0 (baseline detection probability)
   p0 ~ dunif(0,1)
+  
+  b.effort1~dnorm(0, 0.01)
+  b.effort2~dnorm(0, 0.01)
+  b.trap~dnorm(0, 0.01)
+  b.bh~dnorm(0, 0.01)
+  
+  omega~dunif(0,1) # Prior for sex latent variable
   
   ##effect of habitat cov on density
   beta.dens ~ dnorm(0, 0.01)
@@ -32,15 +43,21 @@ SCRhab<-nimbleCode({
     #alive state
     z[i]~dbern(psi)
     
-    #detection model; data are from getSparseY()$y
-    #maxDetNums = getSparseY()$maxDetNums
-    #Note that in this example, the detection and the habitat grid have the same dimensions
-    #otherwise numHabWindows would need to be provided separately for the detection grid
-    y[i,1:maxDetNums,1] ~ dbinomLocal_normal(detNums = detNums[i,1],#getSparseY()$detNums
-                                             detIndices=detIndices[i,1:maxDetNums,1],#getSparseY()$detIndices
-                                             size=K[1:J], ##number of trials per trap (data)
-                                             p0 = p0, #model parameter
-                                             sigma= sigma, #model parameter
+    
+    #detection model
+    
+    sex[i]~dbern(omega)     # Sex is a latent variable
+    
+    for (k in 1:K){
+      
+    logit(p.eff[i,1:J,k]) <- p0 + b.effort1*effort[1:J,k,1] + b.effort2*effort[1:J,k,2] + b.trap*trap[1:J] +
+      b.bh * prevcap[i,1:J,k]
+
+    y[i,1:maxDetNums,k] ~ dbinomLocal_normal(detNums = detNums[i,k],#getSparseY()$detNums
+                                             detIndices=detIndices[i,1:maxDetNums,k],#getSparseY()$detIndices
+                                             size = ones[1:J], ##NOW: always 1, because we model each occasion separately
+                                             p0Traps = p.eff[i,1:J,k], #model parameter
+                                             sigma = sigma[sex[i]+1], #model parameter
                                              s=sxy[i,1:2], #model parameter
                                              trapCoords=X.sc[1:J,1:2], #trap coordinates (data)
                                              localTrapsIndices=localTrapsIndex[1:numHabWindows,1:MaxLocalTraps], #from getLocalTraps()
@@ -48,6 +65,7 @@ SCRhab<-nimbleCode({
                                              resizeFactor=1, #no resizing
                                              habitatGrid=habitatGridDet[1:numGridRows,1:numGridCols],#from getLocalTraps()
                                              indicator=z[i]) #model parameter
+    }
   }
   #total abundance in state-space
   N<-sum(z[1:M])

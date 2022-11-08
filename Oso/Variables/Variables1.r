@@ -286,9 +286,6 @@ writeRaster(roads6_2, filename = "roads6_hrbear.tif")
 
 setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
 
-covs <- c(forest, dem, rough, slope, logDistcore, obsDens200m, obsDens200m_preST,
-          roads1, roads4, roads5, roads6)
-
 forest <- raster("forest_hrbear.tif")
 dem <- raster("dem_hrbear.tif")
 rough <- raster("rough_hrbear.tif")
@@ -301,15 +298,51 @@ roads4 <- raster("roads4_hrbear.tif")
 roads5 <- raster("roads5_hrbear.tif")
 roads6 <- raster("roads6_hrbear.tif")
 
-file = covs
-minExt <- function(file){
+covs <- c(forest, dem, rough, slope, logDistcore, obsDens200m, obsDens200m_preST,
+          roads1, roads4, roads5, roads6)
 
-  file  
+# Function to get minimun extent among layers
+minExt <- function(file = file){
+  ext <- lapply(file, extent) # All extents of rasters
+  ext_out <- ext[[1]] # To fill in with new minimun extent
+  
+  for (i in 1:4){ # Dimensions of extent argument
+    ext1 <- lapply(ext, function(x){x[i]}) # Get the extent x from all layers
+    ext_out[i,] <- min(unlist(ext1)) # Fill in with minimun
+  }
+  return(ext_out)
 }
-extent(forest)[1,]
 
-lapply(covs,min(extent[1,]))
-extent(covs)
+ext_crop <- minExt(covs)
 
-extent(forest)
-extent(roads1)
+# Resample to desired resolution (create new raster)
+r <- raster(ext_crop, res=5000)
+values(r) <- 1
+
+resampld <- list()
+for(i in 1:length(covs)) {
+  resampld[[i]] <- resample(covs[[i]],r,method='bilinear')
+}
+
+# Raster stack of all layers
+st <- do.call('stack',resampld)
+
+# Correlation matrix
+jnk <- layerStats(st, 'pearson', na.rm=T)
+corr_matrix <- jnk$'pearson correlation coefficient'
+
+## CONCLUSION
+# - Forest correlated with roughness and slope (>0.6)
+#- Dem, roughness and slope are highly correlated with each other (>0.8)
+#- LogDistCore is correlated with roughness and slope (>0.6), and slightly to dem and the previous observations (0.5)
+#- From roads: All correlated except paths (roads 5)
+#     -> roads1(Asphalted major roads + highway links) and roads6 (roads 1 + asphalted secondary) : >0.9 -> Normal
+#     -> roads 1 and roads6 with roads 4 (Minor asphalted + tracks): >0.7
+#     -> roads 1, 6, 4, slightly correlated with roads 5 (paths): >0.5
+
+# So maybe try models with LogDistCore, Dem/roughness/slope/Forest, roads1/6/4 and roads5
+# BUT they are actually all kind of correlated (Except roads with the rest)
+
+
+  
+  

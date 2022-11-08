@@ -1,6 +1,6 @@
 ## -------------------------------------------------
 ##                      SCR + denscov
-##                  Final Systematic Data 2017 (fr+Sp)
+##                  Final Systematic Data 2018 (fr+Sp)
 ##                      Covs on p0
 ## ------------------------------------------------- 
 rm(list = ls())
@@ -22,7 +22,7 @@ setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 #---- 1. LOAD THE DETECTION DATA ---- 
 load("edf1721.RData")
 
-edf <- edf[which(edf$session == 1), ] # Keep only detections of 2017 (year 1)
+edf <- edf[which(edf$session == 2), ] 
 
 # As the model is set, there can be only one capture per trap and occasion
 # --> The number of trials is 7 (From may to November): So max number of captures per trap = 7
@@ -38,8 +38,8 @@ t <- edf %>% group_by(ind,occ, trap) %>% # All need to be one
 edf <- edf[-which(edf$ind %in% c("Nere", "Goiat")), ]
 
 ## Traps
-load("tdf2017_effort.RData")
-tdf <- tdf2017
+load("tdf2018_effort.RData")
+tdf <- tdf2018
 
 
 #---- 2. DEFINE THE TRAP AND THE HABITAT  ---- 
@@ -60,8 +60,8 @@ e <- as(raster::extent(xmin, xmax, ymin, ymax), "SpatialPolygons") # Extent of s
 ## ---- *** START LOOP TO RUN SINGLE-COVARIATE MODELS *** ----
 
 covs <- c("forest", "slope", "logDistcore", "roads1")
-          #,"dem", "rough", "obsDens200m", "obsDens200m_preST",
-          #, "roads4", "roads5", "roads6")
+#,"dem", "rough", "obsDens200m", "obsDens200m_preST",
+#, "roads4", "roads5", "roads6")
 
 for (xxx in 1:length(covs)) {
   
@@ -153,19 +153,19 @@ for (xxx in 1:length(covs)) {
   # effort.dummy[,,,1] =1  effort.dummy[,,,2] =0 ==> 2 visit in France (cat 2): Multiply b.effort1*array #1 
   # effort.dummy[,,,1] =0  effort.dummy[,,,2] =1 ==> Spain (cat 3): Multiply b.effort2*array #2
   
-    tmp <-tmp2 <- tmp3 <- effort
-    
-    # Dummy variable 2 visits in France (only de 2 appear as 1)
-    tmp2[tmp2[] %in% c(1,3)] <- 0
-    tmp2[tmp2[] %in% c(2)] <- 1
-    effort.dummy[,,1] <- tmp2
-    
-    # Dummy variable trap in Spain (only de 3 appear as 1)
-    tmp3[tmp3[] %in% c(1,2)] <- 0
-    tmp3[tmp3[] %in% c(3)] <- 1
-    effort.dummy[,,2] <- tmp3
-    
-
+  tmp <-tmp2 <- tmp3 <- effort
+  
+  # Dummy variable 2 visits in France (only de 2 appear as 1)
+  tmp2[tmp2[] %in% c(1,3)] <- 0
+  tmp2[tmp2[] %in% c(2)] <- 1
+  effort.dummy[,,1] <- tmp2
+  
+  # Dummy variable trap in Spain (only de 3 appear as 1)
+  tmp3[tmp3[] %in% c(1,2)] <- 0
+  tmp3[tmp3[] %in% c(3)] <- 1
+  effort.dummy[,,2] <- tmp3
+  
+  
   #----   2.9. TRAP COVARIATE ---- 
   
   trap <- as.numeric(as.factor(as.matrix(tdf[,4])))
@@ -203,17 +203,17 @@ for (xxx in 1:length(covs)) {
   Y <- array(0, c(n, nrow(tdf), K))
   rownames(Y) <- unique(edf$ind)
   xx <- edf[,c(1,2,3,4)]
-
-    for (k in 1:K){
-      xxtk <- xx[which(xx$occ == k), ]
-      
-      if(nrow(xxtk) == 0) next # If there were no detections in that occasion
-      
-      for (obs in 1:nrow(xxtk)) {
-        Y[xxtk[obs, 2], xxtk[obs, 4], xxtk[obs, 3]] <- 1 # ASP: 1 because it can only be detected once per trap and occasion
-      }
+  
+  for (k in 1:K){
+    xxtk <- xx[which(xx$occ == k), ]
+    
+    if(nrow(xxtk) == 0) next # If there were no detections in that occasion
+    
+    for (obs in 1:nrow(xxtk)) {
+      Y[xxtk[obs, 2], xxtk[obs, 4], xxtk[obs, 3]] <- 1 # ASP: 1 because it can only be detected once per trap and occasion
     }
-
+  }
+  
   
   
   #----   3.1.1 BEHAVIOURAL RESPONSE COVARIATE FROM Y   ---- 
@@ -222,7 +222,7 @@ for (xxx in 1:length(covs)) {
   
   Ys <- Y
   prevcap <- array(0, dim = c(dim(Ys)[1], dim(Ys)[2], 
-                                   dim(Ys)[3]))
+                              dim(Ys)[3]))
   first <- matrix(0, dim(Ys)[1], dim(Ys)[2])
   for (i in 1:dim(Ys)[1]) {
     for (j in 1:dim(Ys)[2]) {
@@ -238,11 +238,11 @@ for (xxx in 1:length(covs)) {
   
   dim(prevcap)
   
-
+  
   #----   3.2 AUGMENT Y   ---- 
   ##augment observed data to size M
   M <- 400 
-
+  
   y.in <- array(0, c(M, nrow(tdf), K))
   y.in[1:n,,] <- Y
   
@@ -276,7 +276,7 @@ for (xxx in 1:length(covs)) {
   setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
   #setwd("~/data/data/Scripts_MS/Stats/Nimble")
   source("Parallel Nimble function FOR aNA2_model2.1.r")  
-
+  
   #----   4.1 CONSTANT AND DATA    ---- 
   
   ##compile constants
@@ -377,7 +377,7 @@ for (xxx in 1:length(covs)) {
   
   model = SCRhab_covsp0_sigSex
   
-  setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/1.SCRdensCov/Data_server")
+  setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/1.SCRdensCov/Data_server/2018")
   save(nimData, nimConstants, 
        inits, sex.in, z.in, S.in, 
        params, run_MCMC_allcode, model, file = paste("Data_Model1-1_", covs[xxx], ".RData", sep = ""))
@@ -416,11 +416,9 @@ for (xxx in 1:length(covs)) {
   
   ### output is a list 
   
-  setwd(paste("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/", covs[xxx], sep = ""))
-  #setwd(paste("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/", covs[xxx], sep = ""))
-  save(chain_output, file = paste("Results_Model1-1_", covs[xxx], ".RData", sep = ""))
-  
-  
+  #setwd(paste("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/", covs[xxx], sep = ""))
+  ##setwd(paste("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/", covs[xxx], sep = ""))
+  #save(chain_output, file = paste("Results_Model1-1_", covs[xxx], ".RData", sep = ""))
   
   
   #### OPTION 2: NO PARALLEL (TO TRY INITIAL VALUES AND SEE IF MODEL WORKS) ####

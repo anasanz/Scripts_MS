@@ -291,6 +291,8 @@ max(Y) # Check the number max number of detections (it can't be higher than 1)
 ####
 dim(Y)
 
+#----   3.1.1 BEHAVIOURAL RESPONSE COVARIATE FROM Y   ---- 
+
 prevcap <- list()
 for (s in 1:dim(Y)[4]) {
   Ys <- Y[,,,s]
@@ -403,7 +405,6 @@ nimData <- list(habDens = X.d_sc,
                 X.sc = Xt.sc.array,
                 habitatGridDet = habitatGridDet,
                 detIndices = detIndices,
-                detNums = detNums,
                 localTrapsIndex = localTrapsIndex, 
                 localTrapsNum = localTrapsNum,
                 sex = sex
