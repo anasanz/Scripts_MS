@@ -40,7 +40,7 @@ spcov2 <- function(D, alpha=2, standardize=TRUE) {
 
 ##detection parameters
 #sigma=movement
-sigma <- 1
+sigma <- c(0.5,1)
 
 #p0=baseline detection, intercept on logit scale
 p0 <- -2.534601
@@ -60,10 +60,10 @@ colnames(X)<-c('x', 'y')
 J<-dim(X)[1]
 
 ##state space coordinates, max trap coords (below) + 3*sigma
-xmin<-min(X[,1])-3*sigma
-ymin<-min(X[,2])-3*sigma
-xmax<-max(X[,1])+3*sigma
-ymax<-max(X[,2])+3*sigma
+xmin<-min(X[,1])-3*sigma[2]
+ymin<-min(X[,2])-3*sigma[2]
+xmax<-max(X[,1])+3*sigma[2]
+ymax<-max(X[,2])+3*sigma[2]
 
 ##for discrete state space, create 342 grid cells (center coordinates)
 gx <- rep(seq(xmin+0.5, xmax-0.5,1), 19)
@@ -87,7 +87,7 @@ G.sc <- sc.coord$coordsHabitatGridCenterScaled
 X.sc <- sc.coord$coordsDataScaled
 
 ###get cell coordinates for G.sc
-windowCoords <- getWindowCoords(G.sc)
+windowCoords <- getWindowCoords(G.sc, plot.check = FALSE)
 habitatGrid <- windowCoords$habitatGrid
 
 
@@ -132,7 +132,7 @@ for (t in 1:Tt){
 
 localTraps <- localTrapsNum.l <- MaxLocalTraps.l <- list()
 for (t in 1:Tt){
-  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma)
+  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma[2])
   localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalIndices
   MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalIndicesMax
 }
@@ -544,8 +544,6 @@ model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapCov.sigsex, constants = n
 model$calculate()
 model$initializeInfo()
 
-#  [Note] Ignoring non-NA values in inits for data nodes: sex?
-#  p.eff, y not initialized¿?
 
 
 #(2) Compile model in c++

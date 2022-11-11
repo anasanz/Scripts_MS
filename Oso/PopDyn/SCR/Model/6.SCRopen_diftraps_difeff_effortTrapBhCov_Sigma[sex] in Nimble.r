@@ -103,6 +103,10 @@ SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex<-nimbleCode({
     
   }#end yr loop for ACs, demographic model
   
+  for(i in 1:M){
+    sex[i]~dbern(omega)     # Sex is a latent variable
+  }
+  
   ##detection model
   for (t in 1:Nyr){
     
@@ -110,8 +114,6 @@ SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex<-nimbleCode({
     for (k in 1:K){
       
       for(i in 1:M){
-        
-        sex[i]~dbern(omega)     # Sex is a latent variable
         
         logit(p.eff[i,1:J[t],k,t]) <- p0 + b.effort1*effort[1:J[t],k,t,1] + b.effort2*effort[1:J[t],k,t,2] + b.trap*trap[1:J[t],t] +
           b.bh * prevcap[i,1:J[t],k,t]

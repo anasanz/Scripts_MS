@@ -52,6 +52,9 @@ b.effort2 <- -0.4 # Negative effect of effort on detection if in spain (cat 3)
 b.trap <- 0.3 # Positive effect if trap is composed by hair trap and camera trap ("both")
 # rather than only hair trap
 
+# 1 beta for behavioral response (effect of being already captured in that trap)
+b.bh <- 0.5
+
 ##trap array (ASP: All years)
 X<-as.matrix(expand.grid(seq(-6,6,1), seq(-6,7,1))) 
 colnames(X)<-c('x', 'y')
@@ -240,6 +243,8 @@ Sx<-Sy<-matrix(NA,n.all,Tt)
 
 ##first activity center is random
 
+z.all[c(41,44,83),]
+first[83]
 ##get first time alive
 first <- apply(z.all,1,function(x)min(which(x==1)))
 
@@ -331,59 +336,75 @@ n4 <- round(prod(dim(trap))*0.3, dig=0) #ASP: 30% will be traps of type "both
 trap[sample(1:prod(dim(trap)),n4, replace=FALSE)] <- 1
 
 # 3. Behavioural response
+# 1 if an individual i has been already captured in that year in any occasion in all traps
 
-b <- array(0, c(n.max.traps, K, Tt))
-n5 <- round(prod(dim(b))*0.2, dig=0) # Sample random detections?
-b[sample(1:prod(dim(b)),n5, replace=FALSE)] <- 1
-
-dim(b)
-#first <- apply(b,1,function(x)min(which(x==1)))
-
-# Is it per year? If I put a 1 in one year and occasion, there are no more ones? 
-# Do I do it randomly and then if z.all[i,t] = 0 (not alive) it doesn't take it?
+b <- array(0, c(n.all, n.max.traps, K, Tt)) # Default needs to be 0, otherwise NA enter in model
+                                            # when not observed that year, and gives NA logliklhood
 
 ## ARRAY FOR DETECTION DATA
 ## Because each year there is a different number of traps, the column dimension of the array is the maximum number of traps
 ## the rest is filled as NA 
 ##add 4th dimension, which is occasion 
 obs <- array(NA, c(n.all, n.max.traps, K, Tt))
+cap <- array(0, c(n.all, n.max.traps, K, Tt)) # FOr behavioral response (default is 0, not captured)
 
 for (t in 1:Tt){
   D <- e2dist(cbind(Sx[,t], Sy[,t]), Xt[[t]])
   ## ASP: Distance from each AC to each traps
   
   for (i in 1:n.all){
-    if(z.all[i,t]==0){obs[i,,,t] <- 0} else{
+    if(z.all[i,t]==0){obs[i,,,t] <- 0} else {
       
       ##calculate distance component of detection, which is constant over occasions
       p.d <- exp(-D[i,]^2/(2*sigma^2)) ## 
       
-      # Here K=1 is always 0
-      # Matrix (ind*oc) [,1] = always 0
-      ##loop over occasions
-      for (k in 1:K){
-        if(k>1)
-          {b[i,k] <- ifelse(sum(cap[i,1:(k-1)])>0, 1,0)}
-        #calculate effective baseline detection as function of effort (3 level)
-        p <- plogis(p0+b.effort1*effort.dummy[1:nrow(Xt[[t]]),k,t,1] + b.effort2*effort.dummy[1:nrow(Xt[[t]]),k,t,2] + b.trap*trap[1:nrow(Xt[[t]]),t]) 
-        p <- plogis(p0+b.effort1*effort.dummy[1:nrow(Xt[[t]]),k,t,1] + b.effort2*effort.dummy[1:nrow(Xt[[t]]),k,t,2] + b.trap*trap[1:nrow(Xt[[t]]),t] +
-                      b.beh*b[i,k])
+      for (j in 1:nrow(Xt[[t]])){
         
-        # Occasion is the second dimension, and because it 
-        #changes every year effort needs to be also indexed by year right?
-        for (j in 1:nrow(Xt[[t]])){
-          #combine the two components, resulting detection is individual, site
-          # and occasion specific
-          p.eff<-p[j]*p.d[j] 
+        for (k in 1:K){
+          if(k==1){
+            b[i,j,k,t] <- 0 # At k = 1 is always 0
+            p <- plogis(p0+b.effort1*effort.dummy[j,k,t,1] + b.effort2*effort.dummy[j,k,t,2] + b.trap*trap[j,t] +
+                          b.bh*b[i,j,k,t])
+            
+            p.eff <- p*p.d[j] 
+            obs[i,j,k,t] <- rbinom(1, 1, p.eff)
+            
+            if(obs[i,j,k,t] > 0){ # Check if has been detected in that trap, occasion and year
+              cap[i,j,k,t] <- 1                       
+            } 
+          } else { # if k>1
+          b[i,j,k,t] <- ifelse(sum(cap[i,j,1:(k-1),t]) > 0, 1, 0) # If it has been already captured before that k we put a 1
+          p <- plogis(p0+b.effort1*effort.dummy[j,k,t,1] + b.effort2*effort.dummy[j,k,t,2] + b.trap*trap[j,t] +
+                        b.bh*b[i,j,k,t])
+          
+          p.eff <- p*p.d[j] 
           obs[i,j,k,t] <- rbinom(1, 1, p.eff)
-        }
-        if(sum(obs[i,,k,t])>1){
-          cap[i,k] <- 1
-        }
-      }
-    }
-  }
-}
+          
+          if(obs[i,j,k,t] > 0){ # Check if has been detected in that trap, occasion and year
+            cap[i,j,k,t] <- 1 } 
+          }} # Loop k
+        } # Loop j
+      }} # Loop i
+  } # Loop t
+
+
+#### AQUI: NO FUNCIONA PORQUE FALTA AÑADIR LA DIMENSION J
+
+# Check: 
+# Check1
+obs[3,31,1,1] # obs[i,j,k,t] Individual 3 captured in j = 31, k = 1, in t = 1
+cap[3,31,1,1] # cap[i,k,t]. Capture should be 1
+b[3,31,1,1] # b here is 0, it is the first capture
+b[3,31,2:7,1] # But after that it should be 1
+
+obs[1,38,3,3]
+cap[1,38,3,3] 
+b[1,38,3,3] 
+b[1,38,4:7,3]
+
+# Check2
+z.all[2,1] # If its not alive that year, b is NA
+b[2,,,1]
 
 ##how many individuals detected?
 n <- sum(apply(obs, 1, sum, na.rm = TRUE) >0)
@@ -393,15 +414,35 @@ n <- sum(apply(obs, 1, sum, na.rm = TRUE) >0)
 seen <- which(apply(obs, 1, sum, na.rm = TRUE)>0)
 Y <- obs[seen,,,] ## ASP: Only detected individuals (capture histories)
 
-##this now has NAs - does that matter?? Should prob all be 0,
-##they won't enter the model anyway
+# b is an individual covariate, should have the i dimensions of Y
+b2 <- b[seen,,,]
 
+# Check4
+Y[3,,,1] # Accordying to Y the individual 3 is captured in t = 1, k=3, trap 43
+Y[3,43,3,1] 
+
+b2[3,43,3,1]  # It is normal that b appears as 0
+b2[3,43,4:7,1] # An the next occasions should be 1
 
 ##augment observed data to size Maug
 Maug <- 150 
 y.in <- array(0, c(Maug, n.max.traps,K, Tt)) # One array of nxJxK every year (5 years)
 y.in[1:n,,,] <- Y
 
+# NA loglikelihood in Individuals 31, 32, 61 in all occasions year 2
+sum(y.in[31:32,,,2]) # It has not been captured
+sum(y.in[61,,,2]) # It has not been captured
+b2[31:32,,,2] # NA? 
+seen[c(31,32,61)] # It is the individual 41, 44, 83 track it
+b[c(41,44,83),,,2]
+obs[c(41,44,83),,,2]
+cap[c(41,44,83),,,2] 
+z.all[c(41,44,83),2] # Not observed, not captured, NA in b, because it is dead
+
+
+##augment behavioral response (latent variable)
+b.aug <- array(0, c(Maug, n.max.traps, K, Tt)) 
+b.aug[1:n,,,] <- b2
 
 ##change to 'sparse' format - speeds up computation by reducing file size
 ## getSparseY cannot handle 4d arrays, so loop over years to get a 3d array per year
@@ -442,7 +483,8 @@ nimConstants <- list(
   M=Maug, J=Jyear, numHabWindows=numHabWindows, 
   numGridRows=numGridRows, numGridCols=numGridCols, 
   maxDetNums=maxDetNums, MaxLocalTraps=MaxLocalTraps,
-  nobs=n, Nyr=Tt, K=K , effort=effort.dummy, trap = trap
+  nobs=n, Nyr=Tt, K=K , effort=effort.dummy, trap = trap,
+  prevcap = b.aug
 )
 
 ##compile data
@@ -524,6 +566,7 @@ inits<-function(){list(gamma=c(0.5, rep(0.1, (Tt-1))),
                        b.effort1=runif(1, 0.5,1),
                        b.effort2=runif(1, 0.5,1),
                        b.trap=runif(1, 0.5,1),
+                       b.bh=runif(1, 0.5,1),
                        phi=runif(1,0.5,1),
                        z=z.in,
                        sxy=S.in.sc$coordsDataScaled,
@@ -532,17 +575,33 @@ inits<-function(){list(gamma=c(0.5, rep(0.1, (Tt-1))),
 
 ##source model code
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('4.2.SCRopen_diftraps_difeff_effortTrapCov in Nimble.r')
+source('4.4.2.SCRopen_diftraps_difeff_effortTrapBh(Cyril)Cov in Nimble.r')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
+params<-c('N', 'gamma', 'sigma', 'p0', 'b.effort1', 'b.effort2', 'b.trap', 'b.bh', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapCov, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapBhCov, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
 ##ignore error message, only due to missing initial values at this stage
 model$calculate()
+model$initializeInfo()
+
+model$logProb_p0
+model$logProb_sxy[which(is.na(model$logProb_sxy))]
+
+which(is.na(model$logProb_y))
+dim(model$logProb_y)
+model$logProb_y[,1,,2] # Individuals 31, 32, 61 in all occasions year 2
+
+
+#### THIS DOESN'T WORK BECAUSE B IS A LATENT VARIABLE AND NEEDS INITIAL VALUES (model$initializeInfo())
+#### ANYWAY IS WRONG. B IS NOT A LATENT VARIABLE. IS OBSERVED, SO PUT 0 FOR THE 
+#### AUGMENTED INDIVIDUALS AND ONLY NEED INITIAL VALUES IN BETA.
+#### ADD LIKE THIS IN MODEL AND DATA SIM + ADD THE TRAP DIMENSION IN BEHAVIORAL RESPONSE
+#### (1 WHEN IT HAS BEEN DETECTED IN EACH TRAP, NOT ONLY IN ALL THE YEAR)
+
 
 #(2) Compile model in c++
 #     In complex models, this step can take a while (as well as step 5)
@@ -564,7 +623,7 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 system.time(
   (samp <- runMCMC(cmcmc, niter = 5000, nburnin = 2000, nchains=3, inits = inits) )
 )
-##4471.98
+
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/4.openSCRdenscov_Age_difeff")
 save(samp, file = "samp_difeff_3d_efforCov.r")

@@ -103,6 +103,11 @@ SCRhab.Open.diftraps.3d.effortTrapCov.sigsex<-nimbleCode({
     
   }#end yr loop for ACs, demographic model
   
+  for(i in 1:M){
+    
+    sex[i]~dbern(omega) 
+  }
+  
   ##detection model
   for (t in 1:Nyr){
     
@@ -115,8 +120,6 @@ SCRhab.Open.diftraps.3d.effortTrapCov.sigsex<-nimbleCode({
       
       for(i in 1:M){
         
-        sex[i]~dbern(omega)     # Sex is a latent variable
-
         #detection model; data are from getSparseY()$y
         #maxDetNums = getSparseY()$maxDetNums - now one for each year
         #Note that in this example, the detection and the habitat grid have the same dimensions
