@@ -1,6 +1,6 @@
 ## -------------------------------------------------
 ##                      SCR + denscov
-##                  Final Systematic Data 2021 (fr+Sp)
+##                  Final Systematic Data 2020 (fr+Sp)
 ##                      Covs on p0
 ## ------------------------------------------------- 
 rm(list = ls())
@@ -22,7 +22,7 @@ setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 #---- 1. LOAD THE DETECTION DATA ---- 
 load("edf1721.RData")
 
-edf <- edf[which(edf$session == 5), ] 
+edf <- edf[which(edf$session == 5), ] # Keep only detections of 2017 (year 1)
 
 # As the model is set, there can be only one capture per trap and occasion
 # --> The number of trials is 7 (From may to November): So max number of captures per trap = 7
@@ -171,26 +171,6 @@ for (xxx in 1:length(covs)) {
   trap <- as.numeric(as.factor(as.matrix(tdf[,4])))
   trap[trap[] %in% c(2)] <- 0
   
-  #----   2.10. SEX COVARIATE ---- 
-  
-  setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-  info <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/info_individuals_2021.xlsx", sheet = 1)
-  
-  #setwd("~/data/data/Data_server")
-  #info <- readxl::read_xlsx("~/data/data/Data_server/info_individuals_2021.xlsx", sheet = 1)
-  
-  info <- info[,c(4,5)]
-  colnames(info)[1] <- "ind"
-  
-  # Arrange in the same order than detections data frame below
-  indsex <- data.frame(ind = unique(edf$ind))
-  indsex <- left_join(indsex,info, by = "ind")
-  
-  indsex$Sex[indsex$Sex == "F"] <- 0
-  indsex$Sex[indsex$Sex == "M"] <- 1
-  
-  sex <- as.numeric(indsex$Sex)
-  
   
   #---- 3. DETECTION DATA   ---- 
   #----   3.1 MAKE Y   ---- 
@@ -249,8 +229,6 @@ for (xxx in 1:length(covs)) {
   prevcap.in <- array(0, c(M, nrow(tdf), K))
   prevcap.in[1:n,,] <- prevcap
   
-  ##augment observed sex variable to size M (it becomes latent)
-  sex <- c(sex,rep(NA,length((n+1):M)))
   
   #----   3.3 USE SPARSE FORMAT FOR Y   ---- 
   #change to 'sparse' format - speeds up computation by reducing file size
@@ -306,8 +284,7 @@ for (xxx in 1:length(covs)) {
                   habitatGridDet = habitatGridDet,
                   detIndices = detIndices,
                   localTrapsIndex = localTrapsIndex, 
-                  localTrapsNum = localTrapsNum,
-                  sex = sex
+                  localTrapsNum = localTrapsNum
   )
   
   #----   4.2 INITIAL VALUES  ---- 
@@ -346,21 +323,15 @@ for (xxx in 1:length(covs)) {
     )
   }
   
-  #----     4.2.3 SEX  ---- 
-  
-  sex.in <- c(rep(NA,n), rep(0,length((n+1):M))) # NA for known values and 
-  sex.in[sample((n+1):M, 30, replace = FALSE)] <- 1 # random sex for augmented individuals
   
   #----     4.2.2 COMPILE INITIAL VALUES   ---- 
   inits <- function(){list(psi=runif(1,0.4, 0.6), 
-                           sigma=runif(2,0.5, 1.5),
+                           sigma=runif(1,0.5, 1.5),
                            p0=runif(1,0,0.1),
                            b.effort1 = runif(1, 0.5,1),
                            b.effort2 = runif(1, 0.5,1),
                            b.trap = runif(1, 0.5,1),
                            b.bh = runif(1, 0.5,1),
-                           omega = runif(1, 0.5,1),
-                           sex = sex.in,
                            z=z.in,
                            sxy=S.in,
                            beta.dens = runif(1,-0.1, 0.1))}
@@ -368,22 +339,20 @@ for (xxx in 1:length(covs)) {
   ##source model code
   setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
   #setwd("~/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/2.SCRdenscov")
-  source('2.1.SCRdenscov_p0Covs_Sigma[sex] in Nimble.r')
+  source('2.2.SCRdenscov_p0Covs in Nimble.r')
   
   ##determine which parameters to monitor
-  params <- c('N', 'psi', 'sigma', 'p0', 'beta.dens', 'b.effort1', 'b.effort2', 'b.trap', 'b.bh', 'omega')
+  params <- c('N', 'psi', 'sigma', 'p0', 'beta.dens', 'b.effort1', 'b.effort2', 'b.trap', 'b.bh')
   
   ###### SAVE FOR RUNNING #####
   
-  model = SCRhab_covsp0_sigSex
+  model = SCRhab_covsp0
   
-  setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/1.SCRdensCov/Data_server/2021")
+  setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/1.SCRdensCov/Data_server_Cyril_covsp0")
   save(nimData, nimConstants, 
-       inits, sex.in, z.in, S.in, 
-       params, run_MCMC_allcode, model, file = paste("Data_Model1-1_", covs[xxx], ".RData", sep = ""))
-  
+       inits, z.in, S.in, 
+       params, model, file = paste("Data_Model1-1_2021_", covs[xxx], ".RData", sep = ""))
 }
-  
   
   #### OPTION 1: PARALLEL ####
   detectCores()
@@ -420,13 +389,13 @@ for (xxx in 1:length(covs)) {
   
   setwd(paste("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/", covs[xxx], sep = ""))
   #setwd(paste("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/", covs[xxx], sep = ""))
-  save(chain_output, file = paste("Results2019_Model1-1_", covs[xxx], ".RData", sep = ""))
+  save(chain_output, file = paste("Results_Model1-1_", covs[xxx], ".RData", sep = ""))
   
   
   
   
   #### OPTION 2: NO PARALLEL (TO TRY INITIAL VALUES AND SEE IF MODEL WORKS) ####
-  model <- nimbleModel(SCRhab_covsp0_sigSex,
+  model <- nimbleModel(SCRhab_covsp0,
                        constants = nimConstants, 
                        data=nimData,
                        inits = inits(),

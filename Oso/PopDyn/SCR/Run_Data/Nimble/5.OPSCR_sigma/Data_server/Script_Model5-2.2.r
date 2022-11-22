@@ -7,8 +7,8 @@ library(nimbleSCR)
 library(parallel)
 
 setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
-#setwd("~/data/data/Scripts_MS/Stats/Nimble")
-source('dbinomLocal_normalBear.R')
+#source('dbinomLocal_normalBear.R')
+source('dbinomLocal_normalBear_rbinom.R')
 
 
 # Load data
@@ -38,8 +38,8 @@ chain_output <- parLapply(cl = this_cluster, X = 1:3,
                           Tt = Tt,                     ##additional objects needed within inits
                           z.in = z.in,
                           S.in.sc_coords = S.in.sc_coords,
-                          sex.in = sex.in,
-                          dbinomLocal_normalBear = dbinomLocal_normalBear
+                          sex.in = sex.in
+                          
 )
 new <- Sys.time() - old
 

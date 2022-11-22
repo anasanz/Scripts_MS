@@ -88,7 +88,7 @@ G.sc <- sc.coord$coordsHabitatGridCenterScaled
 X.sc <- sc.coord$coordsDataScaled
 
 ###get cell coordinates for G.sc
-windowCoords <- getWindowCoords(G.sc)
+windowCoords <- getWindowCoords(G.sc, plot.check = FALSE)
 habitatGrid <- windowCoords$habitatGrid
 
 
@@ -133,7 +133,7 @@ for (t in 1:Tt){
 
 localTraps <- localTrapsNum.l <- MaxLocalTraps.l <- list()
 for (t in 1:Tt){
-  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma[2])
+  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma[2], plot.check = FALSE)
   localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalIndices
   MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalIndicesMax
 }
@@ -606,6 +606,7 @@ model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex, constants =
 ##ignore error message, only due to missing initial values at this stage
 model$calculate()
 model$initializeInfo()
+#[Note] Missing values (NAs) or non-finite values were found in model variables: lifted_phi_times_z_oBi_comma_t_minus_1_cB_plus_gamma_oBt_cB_times_avail_oBi_comma_t_minus_1_cB_L29, avl, R, pc.gam, p.eff, y, detIndices, X.sc, localTrapsIndex.
 
 model$logProb_p0
 model$logProb_sxy[which(is.na(model$logProb_sxy))]
@@ -613,13 +614,6 @@ model$logProb_sxy[which(is.na(model$logProb_sxy))]
 which(is.na(model$logProb_y))
 dim(model$logProb_y)
 model$logProb_y[,1,,2] # Individuals 31, 32, 61 in all occasions year 2
-
-
-#### THIS DOESN'T WORK BECAUSE B IS A LATENT VARIABLE AND NEEDS INITIAL VALUES (model$initializeInfo())
-#### ANYWAY IS WRONG. B IS NOT A LATENT VARIABLE. IS OBSERVED, SO PUT 0 FOR THE 
-#### AUGMENTED INDIVIDUALS AND ONLY NEED INITIAL VALUES IN BETA.
-#### ADD LIKE THIS IN MODEL AND DATA SIM + ADD THE TRAP DIMENSION IN BEHAVIORAL RESPONSE
-#### (1 WHEN IT HAS BEEN DETECTED IN EACH TRAP, NOT ONLY IN ALL THE YEAR)
 
 
 #(2) Compile model in c++

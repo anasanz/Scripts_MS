@@ -1,4 +1,4 @@
-SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex<-nimbleCode({
+SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex.fast<-nimbleCode({
   
   ### PRIORS ###
   
@@ -15,7 +15,9 @@ SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex<-nimbleCode({
   
   ##detection parameter - intercept and effect of effort for baseline p
   ##on logit scale
-  p0~dnorm(0, 0.01)
+  p0~dunif(0, 1) # p0 needs to be this (and NOT p0~dnorm(0, 0.01), which is on the logit scale) when using Cyril's function
+                    # in Cyril's function is included as logit(p0), which means in the model
+                    # it needs to be entered in the probability scale 
   
   # Covariate effects on p (b.effort1, b.effort2, b.trap)
   for(c in 1:nTrapCovs){ 

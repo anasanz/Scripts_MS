@@ -17,7 +17,9 @@ library(dplyr)
 library(parallel)
 
 setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
-source('dbinomLocal_normalBear.R')
+#source('dbinomLocal_normalBear.R')
+source('dbinomLocal_normalBear_rbinom2.R')
+
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 #setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
@@ -392,7 +394,10 @@ ones <- rep(1, max(Jyear))
 ##source code to run model in parallel 
 setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
 #setwd("~/data/data/Scripts_MS/Stats/Nimble")
-source("Parallel Nimble function FOR aNA2_model5-2.2.r")
+#source("Parallel Nimble function FOR aNA2_model5-2.2.r")
+source("Parallel Nimble function FOR aNA2_model5-2.2_TRY2.r")
+
+
 
 #----   4.1 CONSTANT AND DATA    ---- 
 
@@ -507,7 +512,7 @@ S.in.sc_coords <- S.in.sc$coordsDataScaled
 
 inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))), 
                        sigma = runif(2,0.5, 1.5),
-                       p0 = runif(1,0,1),
+                       p0=runif(1,0,0.1), # Value for p0 on the probability scale (0-1)
                        trapBetas = runif(3, 0.5,1),
                       # b.effort2 = runif(1, 0.5,1),
                        #b.trap = runif(1, 0.5,1),
@@ -531,12 +536,12 @@ params<-c('N', 'gamma', 'sigma', 'p0', 'trapBetas', 'b.bh', 'omega', 'phi', 'bet
 
 ###### SAVE FOR RUNNING #####
 
-model = SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex
+#model = SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex.fast
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/5.OPSCR_sigma/Data_server")
-save(nimData, nimConstants, 
-     inits, Tt, sex.in, z.in, S.in.sc_coords, 
-     params, run_MCMC_allcode, model, file = "Data_Model5-2.2.RData")
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/5.OPSCR_sigma/Data_server")
+#save(nimData, nimConstants, 
+#     inits, Tt, sex.in, z.in, S.in.sc_coords, 
+#     params, run_MCMC_allcode, model, file = "Data_Model5-2.2.RData")
 
 
 #### OPTION 1: PARALLEL ####
@@ -554,7 +559,7 @@ old <- Sys.time()
 chain_output <- parLapply(cl = this_cluster, X = 1:3, 
                           fun = run_MCMC_allcode,      ##function in "Parallel Nimble function.R"
                           data = nimData,              ##your data list
-                          code = SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex,   ##your model code
+                          code = SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex.fast,   ##your model code
                           inits = inits,                 ##your inits function
                           constants = nimConstants,      ##your list of constants
                           params = params,               ##your vector with params to monitor
@@ -585,7 +590,7 @@ save(chain_output, file = "sampOpenSCR_diftraps_effortTrapBhCov_1721_FINALDATA_3
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapBhCov.sigSex.fast, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE,calculate = F)
 ##ignore error message, only due to missing initial values at this stage
 
@@ -615,7 +620,7 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 
 # (6) Run (monitor time just for fun) [takes 20 seconds on my computer]
 system.time(
-  (samp <- runMCMC(cmcmc, niter = 150000, nburnin = 100000, nchains=3, inits = inits) )
+  (samp <- runMCMC(cmcmc, niter = 5, nburnin = 0, nchains=3, inits = inits) )
 )
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/2.openSCRdenscov")

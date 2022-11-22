@@ -2759,6 +2759,1237 @@ for (i in 1:length(yrs)){
 setwd("D:/MargSalas/Oso/SCR/Exp_analysis")
 #openxlsx::write.xlsx(p0, 'p0_singleyear_allcovs.xlsx')
 
+
+
+## -------------------------------------------------
+##           SCRdenscov_singleyear
+##             FinalData17-21
+##           p0 = effort + trap + b / Sig[sex]
+## ------------------------------------------------- 
+
+# Data frame to store values of p0 accross models and years
+
+covs <- c("forest", "slope", "logDistcore", "roads1")
+
+yrs <- c("2017", "2018", "2019", "2020", "2021")
+
+p0 <- data.frame(matrix(NA, nrow = length(yrs), ncol = length(covs)))
+rownames(p0) <- yrs
+colnames(p0) <- covs
+
+## ---- Forest ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0")
+pdf("Topographic.pdf")
+
+par(mfrow = c(2,2))
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5,2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Forest",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril/forest")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+## ---- Slope ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0")
+pdf("Topographic.pdf")
+
+par(mfrow = c(2,2))
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5,2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Forest",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril/slope")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+## ---- logDistcore ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0")
+pdf("Topographic.pdf")
+
+par(mfrow = c(2,2))
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5,2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Forest",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril/logDistcore")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+## ---- roads1 ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0")
+pdf("Topographic.pdf")
+
+par(mfrow = c(2,2))
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5,2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Forest",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril/roads1")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+
+## -------------------------------------------------
+##           SCRdenscov_singleyear
+##             FinalData17-21
+##           p0 = effort + trap + b / NO sig[sex]
+##          I tried without sig sex because they didnt converge
+## ------------------------------------------------- 
+
+# Data frame to store values of p0 accross models and years
+
+covs <- c("forest", "slope", "logDistcore", "roads1")
+
+yrs <- c("2017", "2018", "2019", "2020", "2021")
+
+p0 <- data.frame(matrix(NA, nrow = length(yrs), ncol = length(covs)))
+rownames(p0) <- yrs
+colnames(p0) <- covs
+
+## ---- Forest ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0")
+pdf("Topographic.pdf")
+
+par(mfrow = c(2,2))
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5,2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Forest",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril_covsp0/forest")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_forest <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+## ---- Slope ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0")
+pdf("Topographic.pdf")
+
+par(mfrow = c(2,2))
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5,2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Forest",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril_covsp0/slope")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_slope <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+## ---- logDistcore ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril_covsp0")
+pdf("Distcore.pdf")
+
+# Load and plot at the same time
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5, 2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Distance to core (log)",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril_covsp0/logDistcore")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+#MCMCtrace(samp,
+#          ind = TRUE,
+#          pdf = FALSE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+#MCMCtrace(samp,
+#          ind = TRUE,
+#          pdf = FALSE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+#MCMCtrace(samp,
+#          ind = TRUE,
+#          pdf = FALSE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+#MCMCtrace(samp,
+#          ind = TRUE,
+#          pdf = FALSE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_logDistcore <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+#MCMCtrace(samp,
+#          ind = TRUE,
+#          pdf = FALSE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+dev.off()
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")}
+
+
+## ---- roads1 ----
+
+# Load and plot at the same time
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0")
+pdf("Topographic.pdf")
+
+par(mfrow = c(2,2))
+plot(1, ylim = c(0.5, 5+0.5), 
+     xlim = c(-1.5,2), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Forest",
+     cex.axis = 0.8)
+axis(2, c(1:5), labels = c("2017", "2018", "2019", "2020", "2021"), las = 2, cex.axis = 1)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/1.SCRdenscov_year/FinalData_covsp0/Results_server_cyril_covsp0/roads1")
+
+## 2017
+load("myResults_2017.RData")
+samp <- nimOutput
+summ17_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 1
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2018
+load("myResults_2018.RData")
+samp <- nimOutput
+summ18_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 2
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2019
+load("myResults_2019.RData")
+samp <- nimOutput
+summ19_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+i = 3
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2020
+load("myResults_2020.RData")
+samp <- nimOutput
+summ20_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 4
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+## 2021
+load("myResults_2021.RData")
+samp <- nimOutput
+summ21_roads1 <- MCMCsummary(samp)
+
+out <- ProcessCodaOutput(samp)
+
+MCMCtrace(samp,
+          ind = TRUE,
+          pdf = TRUE)
+
+
+i = 5
+plot.violins3(list(out$sims.list[names(out$sims.list) %in% "beta.dens"][[1]]),
+              x = i,
+              at = i,
+              violin.width = 0.2,
+              plot.ci = 0.95,
+              col = c("green"),
+              add = T,
+              alpha = 0.3,
+              scale.width = FALSE,
+              border.col = "darkgreen",
+              horizontal = TRUE)
+
+files <- list(summ17_forest, summ18_forest, summ19_forest, summ20_forest, summ21_forest)
+
+for (i in 1:length(yrs)){
+  p0[i,which(colnames(p0) %in% "forest")] <- paste(round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 1],3), 
+                                                   "(",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 3],3),
+                                                   "-",round(files[[i]][which(rownames(files[[i]]) %in% "p0"), 5],3),
+                                                   ")",sep = "")
+}
+
+
 ## -------------------------------------------------
 ##                  openSCRdenscov      
 ## ------------------------------------------------- 
