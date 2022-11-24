@@ -258,7 +258,7 @@ effortarray <- array(1, c(max(Jyear), K, Tt, 3))
 effortarray[,,,1] <- effort.dummy[,,,1]
 effortarray[,,,2] <- effort.dummy[,,,2]
 effortarray[,,,3] <- trap
-  
+
 
 #----   2.10. SEX COVARIATE ---- 
 
@@ -403,23 +403,23 @@ source("Parallel Nimble function FOR aNA2_model5-2.2_TRY3.r")
 
 #----   4.1 CONSTANT AND DATA    ---- 
 
-  ##compile constants
-  nimConstants <- list(
-    M = M,
-    J = Jyear,
-    numHabWindows = numHabWindows, 
-    numGridRows = numGridRows,
-    numGridCols = numGridCols, 
-    #maxDetNums = maxDetNums,
-    lengthYCombined = lengthYCombined,
-    MaxLocalTraps = MaxLocalTraps,
-    nobs = n, 
-    Nyr = Tt,
-    K = K,
-    effort = effortarray,
-    nTrapCovs = dim(effortarray)[4],
-    prevcap = prevcapArray.in
-  )
+##compile constants
+nimConstants <- list(
+  M = M,
+  J = Jyear,
+  numHabWindows = numHabWindows, 
+  numGridRows = numGridRows,
+  numGridCols = numGridCols, 
+  #maxDetNums = maxDetNums,
+  lengthYCombined = lengthYCombined,
+  MaxLocalTraps = MaxLocalTraps,
+  nobs = n, 
+  Nyr = Tt,
+  K = K,
+  effort = effortarray,
+  nTrapCovs = dim(effortarray)[4],
+  prevcap = prevcapArray.in
+)
 
 ##compile data
 nimData <- list(habDens = X.d_sc,
@@ -516,7 +516,7 @@ inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))),
                        sigma = runif(2,0.5, 1.5),
                        p0=runif(1,0,0.1), # Value for p0 on the probability scale (0-1)
                        trapBetas = runif(3, 0.5,1),
-                      # b.effort2 = runif(1, 0.5,1),
+                       # b.effort2 = runif(1, 0.5,1),
                        #b.trap = runif(1, 0.5,1),
                        b.bh = runif(1, 0.5,1),
                        omega = runif(1, 0.5,1),

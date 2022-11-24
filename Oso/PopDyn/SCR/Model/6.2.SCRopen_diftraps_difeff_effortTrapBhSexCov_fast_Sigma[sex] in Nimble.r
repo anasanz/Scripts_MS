@@ -1,4 +1,5 @@
-SCRhab.Open.effortTrapBhCov.sigSex.survCov<-nimbleCode({
+
+SCRhab.Open.diftraps.3d.effortTrapBhSexCov.sigSex.fast<-nimbleCode({
   
   ### PRIORS ###
   
@@ -22,24 +23,23 @@ SCRhab.Open.effortTrapBhCov.sigSex.survCov<-nimbleCode({
   # Covariate effects on p (b.effort1, b.effort2, b.trap)
   for(c in 1:nTrapCovs){ 
     trapBetas[c] ~ dnorm(0, 0.01)
-  }
-  b.bh~dnorm(0, 0.01) # Effect of behavioral response on p
+    }
   
+  for(c in 1:nIndTrapCovs){
+    indTrapBetas[c] ~ dnorm(0, 0.01)
+    }
+
   omega~dunif(0,1) # Prior for sex latent variable
   
   ##survival probability
-  mu.phi ~ dnorm(0,0.01)  #baseline, adult survival
-  beta.surv ~ dnorm(0,0.01) #effect of spatial covariate
-  
+  phi~dunif(0,1)
   
   ##effect of habitat cov on density
-  #beta.dens ~ dnorm(0, 0.01)
-  
+  beta.dens ~ dnorm(0, 0.01)
   
   ##model for density surface - vectorized, plus some other stuff for the function
   ##for initial AC 
-  #mu1[1:numHabWindows] <- exp(beta.dens * habDens[1:numHabWindows])
-  mu1[1:numHabWindows] <- 1
+  mu1[1:numHabWindows] <- exp(beta.dens * habDens[1:numHabWindows])
   sumHabIntensity <- sum(mu1[1:numHabWindows])
   logHabIntensity[1:numHabWindows] <- log(mu1[1:numHabWindows])
   logSumHabIntensity <- log(sumHabIntensity)
@@ -100,15 +100,7 @@ SCRhab.Open.effortTrapBhCov.sigSex.survCov<-nimbleCode({
     
     ###demographic model
     for (i in 1:M){
-      
-      # get habitat covariate value at previous ac location
-      COV[i,t]<-getcovAC(habitatGrid= habitatGrid[1:numGridRows,1:numGridCols],
-                         habcov = habSurv[1:numHabWindows], #habSurv is data
-                         AC = sxy[i, 1:2, t-1])
-      
-      logit(phi.eff[i,t]) <- mu.phi + beta.surv * COV[i,t] 
-      
-      z[i,t]~dbern(phi.eff[i,t]*z[i,t-1] + gamma[t]*avail[i,t-1])
+      z[i,t]~dbern(phi*z[i,t-1] + gamma[t]*avail[i,t-1])
       avl[i,t]<-sum(z[i,1:t])>0 #if true, individual was alive, no longer avail NEXT year
       avail[i,t]<-1-avl[i,t] #available for recruitment in following year
     }
@@ -151,8 +143,8 @@ SCRhab.Open.effortTrapBhCov.sigSex.survCov<-nimbleCode({
           habitatGrid = habitatGridDet[1:numGridRows,1:numGridCols],#from getLocalTraps()
           trapCovs = effort[1:J[t],k,t,1:nTrapCovs],
           trapBetas = trapBetas[1:nTrapCovs],
-          indTrapCov = prevcap[i,1:J[t],k,t],
-          indTrapBeta = b.bh,
+          indTrapCovs = indTrapCovs[i,1:J[t],k,t,1:nIndTrapCovs],
+          indTrapBetas = indTrapBetas[1:nIndTrapCovs],
           indicator = z[i,t]) #model parameter
       }#end occasion loop
     }#end ind loop
@@ -164,17 +156,3 @@ SCRhab.Open.effortTrapBhCov.sigSex.survCov<-nimbleCode({
   
   Nsuper<-sum(alive[1:M])
 })
-
-
-getcovAC <- nimbleFunction(
-  run=function(
-    habitatGrid     = double(2),
-    habcov          = double(1),
-    AC              = double(1) #current activity center
-  ){
-    returnType(double(0))
-    ## Find which windowcurrent AC falls within
-    windowInd <- habitatGrid[trunc(AC[2])+1, trunc(AC[1])+1]
-    ## return covariate value in that window
-    return(habcov[windowInd])
-  })

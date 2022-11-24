@@ -38,7 +38,7 @@ spcov2 <- function(D, alpha=2, standardize=TRUE) {
 
 ##detection parameters
 #sigma=movement
-sigma <- 1
+sigma <- c(0.6,1) #set to 1,1 for no sex effect
 #p0=baseline detection
 p0 <- 0.2
 
@@ -48,10 +48,10 @@ colnames(X)<-c('x', 'y')
 J<-dim(X)[1]
 
 ##state space coordinates, max trap coords (below) + 3*sigma
-xmin<-min(X[,1])-3*sigma
-ymin<-min(X[,2])-3*sigma
-xmax<-max(X[,1])+3*sigma
-ymax<-max(X[,2])+3*sigma
+xmin<-min(X[,1])-3*max(sigma)
+ymin<-min(X[,2])-3*max(sigma)
+xmax<-max(X[,1])+3*max(sigma)
+ymax<-max(X[,2])+3*max(sigma)
 
 ##for discrete state space, create 342 grid cells (center coordinates)
 gx <- rep(seq(xmin+0.5, xmax-0.5,1), 19)
@@ -121,7 +121,7 @@ Xt.sc.array[1:Jyear[1], 1:2, 1] # Example: to get traps from year 1
 
 localTraps <- localTrapsNum.l <- MaxLocalTraps.l <- list()
 for (t in 1:Tt){
-  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma, plot.check = FALSE)
+  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma[2], plot.check = FALSE)
   localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalIndices
   MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalIndicesMax
 }
@@ -199,7 +199,7 @@ z <- r <- al <-age <- matrix(0, nrow = M, ncol = Tt)
 r[,1] <- rbinom(M, 1, gamma[1]) ## ASP: Recruited/non-recruited, depends on prob.recruitment gamma 
 z[,1] <- r[,1]  ## ASP: Alive state
 
-## ASP: Individuals enter the model when they are first detected, so all individuals enter in year 1
+
 Sx<-Sy<-s.g<-matrix(NA,M,Tt) #activity centers
 #firs AC is random
 s.multi <- rmultinom(M, 1, p.cell) 
@@ -209,18 +209,11 @@ for (i in 1:M){
   Sy[i,1]<-G[s.g[i,1],2]       # Put into the first year when the individual was detected 
 }    
 
-## ASP: To integrate spatial covariate: 
-# integrate the activity center generation into the simulation of the alive states, because we need
-# to know where was the AC the previous year
+
 for (t in 2:Tt){
   # survival
   phi.eff<-plogis(mu.phi[t]+beta.surv*X.surv[s.g[,t-1]])
   surv <- rbinom(M, 1, z[,t-1] * phi.eff) 
-  
-  ## ASP: For each individual, whether it survives (surv = 1) in t=2 depends on 
-  # whether it was alive in t=1 and the survival probability in t=2. 
-  # This survival probability depends on the habitat covariates of the cells of the
-  # activity centers the previous year
   
   # recruitment
   al[,t] <- apply(matrix(z[,1:(t-1)], nrow = M, byrow = FALSE), 1, sum) > 0
@@ -269,13 +262,14 @@ K <-5 #number of sampling occasions
 
 n.max.traps <- max(Jyear)
 obs <- array(NA, c(n.all, n.max.traps, Tt))
+sex<-rbinom(n.all, 1, 0.5)
 
 for (t in 1:Tt){
   D <- e2dist(cbind(Sx[is.in,t], Sy[is.in,t]), Xt[[t]])
   ## ASP: Distance from each AC to each traps
   for (i in 1:n.all){
     if(z.all[i,t]==0){obs[i,,t] <- 0} else{
-      p.eff <- p0*exp(-D[i,]^2/(2*sigma^2)) ## ASP: The p is a function of the distance to the traps
+      p.eff <- p0*exp(-D[i,]^2/(2*sigma[sex[i]+1]^2)) ## ASP: The p is a function of the distance to the traps
       obs[i,1:nrow(Xt[[t]]),t] <- rbinom(nrow(Xt[[t]]), K, p.eff)
       }
   }
@@ -287,23 +281,35 @@ n <- sum(apply(obs, 1, sum, na.rm = TRUE) >0)
 ##subset obs to include only individuals detected at least once
 ##for CJS also exclude individuals seen first in occasion 5
 ##get first year an individual was detected
-y2d<-apply(obs,c(1,3),sum, na.rm=T )
-first<-apply(y2d,1, function(x){min(which(x>0))} )
+# y2d<-apply(obs,c(1,3),sum, na.rm=T )
+# first<-apply(y2d,1, function(x){min(which(x>0))} )
 ##Inf means never detected
 
+
 seen <- which(apply(obs, 1, sum, na.rm = TRUE)>0)
-early<-which(first %in% (1:4)) # to exclude individuals seen first in occasion 5
-keep<-which( (1:M) %in% seen & (1:M) %in% early)
-Y <- obs[keep,,] ## ASP: Only detected individuals (capture histories)
+#early<-which(first %in% (1:4))
+#keep<-which( (1:M) %in% seen & (1:M) %in% early)
+Y <- obs[seen,,] ## ASP: Only detected individuals (capture histories)
 n.obs<-dim(Y)[1]
 ##this now has NAs - does that matter?? Should prob all be 0,
 ##they won't enter the model anyway, tehy refer to inactive traps
 
 
+##check number of sites with captures for sex=0
+ysub<-Y[sex[seen]==0,,]
+ysub[ysub>1]<-1 
+apply(ysub, c(1,3), sum, na.rm=TRUE)
 
-##no augmentation for CJS
+##augment
+M.aug<-150
+Y.aug<-array(0, c(M.aug,n.max.traps, Tt ))
+Y.aug[1:n.obs,,]<-Y
+
+sex.d<-rep(NA, M.aug)
+sex.d[1:n.obs]<-sex[seen]
+
 ##change to 'sparse' format - speeds up computation by reducing file size
-y.sparse <- getSparseY(Y) 
+y.sparse <- getSparseY(Y.aug) 
 
 ## ASP: I have checked the function and there is no problem of having NA in the traps not sampled a given year
 
@@ -322,9 +328,7 @@ nimConstants <- list(
   J=Jyear, numHabWindows=numHabWindows, 
   numGridRows=numGridRows, numGridCols=numGridCols, 
   maxDetNums=maxDetNums, MaxLocalTraps=MaxLocalTraps,
-  nobs=n.obs, Nyr=Tt,
-  first=first[keep],
-  first.po=first[keep]+1 
+  nobs=n.obs, Nyr=Tt,M=M.aug
   #whichtrap.year = whichtrap.year, Jyear.index = Jyear.index # To map the year specific trap arrays
 )
 
@@ -335,27 +339,36 @@ nimData <- list(habDens=X.d, habSurv=X.surv,
                 habitatGrid=habitatGrid, K=rep(K, n.max.traps),  X.sc = Xt.sc.array, # ASP: Vector of k for bern trials with length = max number of traps
                 habitatGridDet=habitatGridDet,detIndices=detIndices,
                 detNums=detNums, localTrapsIndex=localTrapsIndex, 
-                localTrapsNum=localTrapsNum
+                localTrapsNum=localTrapsNum,
+                sex=sex.d
 )
 
 ##set up initial values
 ##in real data, get yr of first detection
-f.in <- first[keep]
-z.in <- matrix(NA, n.obs, Tt)
-for(i in 1:n.obs){
-  z.in[i,(f.in[i]+1):Tt]<-1
+first <- apply(z.all,1,function(x)min(which(x==1)))
+f.in <- first[seen] 
+
+z.in <- matrix(0, M.aug, Tt)
+for(i in 1:n){
+  z.in[i,f.in[i]:Tt]<-1
 }  ## ASP: From the first year detected fill as alive
 
+##sex
+sex.in<-rep(NA, M.aug)
+sex.in[(n.obs+1):M.aug]<-rbinom(M.aug-n.obs, 1, 0.5)
 
 ##because of local evaluation of possible detectors, activity center initial 
 ##values have to be specified, eg average capture location in 'model' space
 ##CORRECTION: Use random capture location to avoid ACs in non-habitat cells
 
-S.in<- array(NA, c(n.obs, 2, Tt))
+S.in<- array(NA, c(M.aug, 2, Tt))
 
-for ( i in 1:n.obs){
+#sum captures within year over occasions
+Yt<-Y
+
+for ( i in 1:n){
   for (t in 1:Tt){
-    caps <- which(Y[i, ,t] > 0) ## ASP: Get in which traps the ind was captured at year t
+    caps <- which(Yt[i, ,t] > 0) ## ASP: Get in which traps the ind was captured at year t
     
     if (length(caps)==0) next #fill in missing ACs with reasonable values later
     if (length(caps)==1){ ## ASP: If its only in 1 trap, a put the trap location as AC
@@ -364,13 +377,14 @@ for ( i in 1:n.obs){
       #ran.cap<-sample(caps,1)
       S.in[i,,t]<-apply(Xt[[t]][caps,],2,mean)}  ## ASP: If its > 1 trap average location
   }
-  }
+}
+
 
 
 ##fill in missing ACs as average of 'observed' ACs in nearby time step
 ##CORRECTION: use random nearby capture occasion
 
-for (i in 1:n.obs){
+for (i in 1:n){
   #which ACs unobserved
   nac <- which(is.na(S.in[i,1,]))
   wac <- (1:Tt)[-nac] ## ASP: Only the years that are observed
@@ -384,36 +398,55 @@ for (i in 1:n.obs){
     S.in[i,1,nac]<-S.in[i,1,ran.ac] ## ASP: Use the mean of the observed to fill unobserved
     S.in[i,2,nac]<-S.in[i,2,ran.ac] 
   }
-
 }
 
+for (i in 1:n){
+  #which ACs unobserved
+  nac <- which(is.na(S.in[i,1,]))
+  wac <- (1:Tt)[-nac] ## ASP: Only the years that are observed
+  #for those, use mean observed
+  S.in[i,1,nac]<-mean(S.in[i,1,wac]) ## ASP: Use the mean of the observed to fill unobserved
+  S.in[i,2,nac]<-mean(S.in[i,2,wac]) 
+}
+
+
+##random ACs for individuals never observed
+for(i in (n+1) : M.aug){
+  for (t in 1:Tt){
+    ssg<-sample(1:length(X.d), 1)
+    S.in[i,,t]<-G[ssg,]
+  }
+}
 colnames(S.in) <- c('x', 'y')
 S.in.sc <- scaleCoordsToHabitatGrid(S.in, G)
 
-inits<-function(){list(sigma=runif(1,0.5, 1.5),
+inits<-function(){list(gamma = c(0.5, rep(0.1, (Tt-1))), 
+                       sigma=runif(2,0.5, 1.5),
                        p.ad=runif(1,0,1),
                        mu.phi=runif(1,-0.2,0.2),
                        beta.cov=runif(1,-0.2,0.2),
                        z=z.in,
                        sxy=S.in.sc$coordsDataScaled,
                        sigD=runif(1, 1.5, 2.5),
-                       beta.dens=runif(1,-0.5, 0.5))}
+                       beta.dens=runif(1,-0.5, 0.5),
+                       sex=sex.in,
+                       omega=0.5)}
 
 ##source model code
 ##I prefer working on code in a separate script but you can also have everything in
 ##one script and just execute the code
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/3.openSCR")
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-
-source('7.CJS_SCR in Nimble_diftraps_SpatialCov.R')
+source('7.0. JS_SCR in Nimble_diftraps_SpatialCov.R')
 
 ##determine which parameters to monitor
-params<-c('sigma', 'p.ad', 'mu.phi', 'beta.dens', 'sigD','beta.cov')
+params<-c('N', 'gamma', 'sigma', 'p.ad', 'mu.phi', 'beta.dens', 'sigD','beta.cov',
+          'Nsuper', 'omega')
 
 #(1) set up model
 
-model <- nimbleModel(CJS.SCRhab.Open.diftraps, constants = nimConstants, 
+model <- nimbleModel(JS.SCRhab.Open.diftraps.sex, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
-model$initializeInfo
 ##ignore error message, only due to missing initial values at this stage
 
 #(2) Compile model in c++
@@ -434,7 +467,7 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 
 # (6) Run (monitor time just for fun) [takes 20 seconds on my computer]
 system.time(
-  (samp <- runMCMC(cmcmc, niter = 5000, nburnin = 2000, nchains=3, inits = inits) )
+  (samp <- runMCMC(cmcmc, niter = 5000, nburnin = 2000, nchains=2, inits = inits) )
 )
 
 # ##remove NAs

@@ -36,11 +36,11 @@ CJS.SCRhab.Open.diftraps<-nimbleCode({
   ##  FIRST YEAR
   ####activity centers, alive state, age yr 1
   for (i in 1:nobs){ #loop only over observed
-
+    
     ##state stuff for first observation year
     
     z[i,first[i]] <- 1  #always alive when first observed 
-
+    
     #activity centers according to density surface
     sxy[i, 1:2,first[i]] ~ dbernppAC(
       lowerCoords = lowerHabCoords[1:numHabWindows, 1:2],#not used; from getWindowCoords()
@@ -51,10 +51,10 @@ CJS.SCRhab.Open.diftraps<-nimbleCode({
       numGridRows =  numGridRows, #calculated from habitatGrid (data)
       numGridCols = numGridCols
     )
-  
-  ## FOLLOWING YEARS
-  ###activity centers, demographic model, t>1
-  for (t in first.po[i]:Nyr){
+    
+    ## FOLLOWING YEARS
+    ###activity centers, demographic model, t>1
+    for (t in first.po[i]:Nyr){
       #movement of activity centers
       sxy[i, 1:2, t] ~ dbernppACmovement_normal(
         lowerCoords            = lowerHabCoords[1:numHabWindows, 1:2],#data getWindowCoords()
@@ -67,28 +67,28 @@ CJS.SCRhab.Open.diftraps<-nimbleCode({
         numGridCols            = numGridCols,
         numWindows             = numHabWindows
       )
-
-    ###demographic model
-    
-    # get habitat covariate value at previous ac location
-    COV[i,t]<-getcovAC(habitatGrid= habitatGrid[1:numGridRows,1:numGridCols],
+      
+      ###demographic model
+      
+      # get habitat covariate value at previous ac location
+      COV[i,t]<-getcovAC(habitatGrid= habitatGrid[1:numGridRows,1:numGridCols],
                          habcov = habSurv[1:numHabWindows], #habSurv is data
                          AC = sxy[i, 1:2, t-1])
-    
+      
       # State process, only survival
       logit(phi.eff[i,t])<-mu.phi + #beta.cub*is.cub[i,f] + #is.cub binary data
-                      #beta.sub*is.sub[i,t] +               #is.sub binary data
-                      beta.cov*COV[i,t]                    # effect of covariate 
+        #beta.sub*is.sub[i,t] +               #is.sub binary data
+        beta.cov*COV[i,t]                    # effect of covariate 
       
       z[i,t] ~ dbern(z[i,t-1]*phi.eff[i,t])
-
-  }#end yr loop for ACs, demographic model
-  
-
-##################################################################################################################################
-  ##detection model
-  for (t in first[i]:Nyr){
-
+      
+    }#end yr loop for ACs, demographic model
+    
+    
+    ##################################################################################################################################
+    ##detection model
+    for (t in first[i]:Nyr){
+      
       #detection model; data are from getSparseY()$y
       #maxDetNums = getSparseY()$maxDetNums
       #Note that in this example, the detection and the habitat grid have the same dimensions
@@ -109,7 +109,7 @@ CJS.SCRhab.Open.diftraps<-nimbleCode({
     
   } #end individual loop
   
-
+  
 })
 
 

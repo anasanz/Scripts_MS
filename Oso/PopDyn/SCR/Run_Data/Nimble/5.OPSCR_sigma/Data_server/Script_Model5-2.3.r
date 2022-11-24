@@ -6,16 +6,12 @@ library(nimble)
 library(nimbleSCR)
 library(parallel)
 
-setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
-#source('dbinomLocal_normalBear.R')
-source('dbinomLocal_normalBear_rbinom2.R')
-
 
 # Load data
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/5.OPSCR_sigma/Data_server")
 #setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/5.OPSCR_sigma/Data_server")
 
-load("Data_Model5-2.2.RData")
+load("Data_Model5-2.3.RData")
 
 #### RUN IN PARALLEL ####
 detectCores()

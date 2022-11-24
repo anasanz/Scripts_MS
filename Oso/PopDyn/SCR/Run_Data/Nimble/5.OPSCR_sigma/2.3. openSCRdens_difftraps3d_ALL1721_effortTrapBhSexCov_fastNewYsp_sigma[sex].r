@@ -5,6 +5,8 @@
 ##          Cov in p0: Effort + Type of trap + Behavioral response
 ## -------------------------------------------------
 
+## WOOOORKKKKKS
+
 rm(list = ls())
 
 library(nimble)
@@ -18,7 +20,7 @@ library(parallel)
 
 setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
 #source('dbinomLocal_normalBear.R')
-source('dbinomLocal_normalBear_rbinom.R')
+source('dbinomLocal_normalBear_rbinom4.R')
 
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
@@ -91,7 +93,10 @@ distcoreMask <- rasterize(Xbuf, habitat.r, mask = TRUE)
 #RETAIN HABITAT COORDINATES THAT ARE WITHIN THE HABITAT
 G <- coordinates(distcoreMask)[!is.na(distcoreMask[]),]
 colnames(G) <- c("x","y")
-
+#PLOT CHECK 
+#plot(distcoreMask)
+#points(Xpoints)
+#points(G[,2]~G[,1],col="red",cex=0.5)
 
 #----   2.5 RESCALE HABITAT AND TRAP COORDINATES ---- 
 ###scale X and G so that bottom left corner of state space is origin (0,0)
@@ -149,6 +154,13 @@ for (t in 1:Tt){
 
 Xt.sc.array[1:Jyear[1], 1:2, 1] # Example: to get traps from year 1
 
+## Visualize traps per year before local evaluation
+#for (t in 1:Tt){
+#  plot(distcoreMask, main = t)
+#  points(Xpoints[J.year[[t]], ])
+#  points(G[,2]~G[,1], col="red", cex=0.5)
+#} # We will need to use a different dmax per year (in year 1 there are no traps in a region)
+
 
 # Get one localtraps per year
 
@@ -165,7 +177,7 @@ dmax <- c(20,10,10,10,8) ## PROBLEM: First year the local evaluation is almost u
 
 localTraps <- localTrapsNum.l <- MaxLocalTraps.l <- list()
 for (t in 1:Tt){
-  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = dmax[[t]])
+  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = dmax[[t]], plot.check = FALSE)
   localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalIndices
   MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalIndicesMax
 }
@@ -327,6 +339,7 @@ for(t in 1:dim(Y)[4]){
   prevcapArray[,,,t] <- prevcap[[t]]
 }
 
+
 #----   3.2 AUGMENT Y   ---- 
 ##augment observed data to size M
 M <- 400 
@@ -340,6 +353,19 @@ prevcapArray.in[1:n,,,] <- prevcapArray
 ##augment observed sex variable to size M (it becomes latent)
 sex <- c(sex,rep(NA,length((n+1):M)))
 
+# Sex in 3D array to store it together with prevcap (fast run)
+sex.array.in <- array(NA, c(M, max(Jyear), K, Tt)) 
+
+for (i in 1:M){
+  for (t in 1:Tt){
+    for(k in 1:K){
+    sex.array.in[i,1:Jyear[t],k,t] <- rep(sex[i], Jyear[t])
+    }}}
+
+#---- SEX + PREVCAP AS ARRAY FOR FAST FUNCTION ----#
+indTrapCovArray <- array(NA, c(M, max(Jyear), K, Tt, 2)) 
+indTrapCovArray[,,,,1] <- prevcapArray.in
+indTrapCovArray[,,,,2] <- sex.array.in
 
 #----   3.3 USE SPARSE FORMAT FOR Y   ---- 
 ##change to 'sparse' format - speeds up computation by reducing file size
@@ -385,7 +411,7 @@ ones <- rep(1, max(Jyear))
 setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
 #setwd("~/data/data/Scripts_MS/Stats/Nimble")
 #source("Parallel Nimble function FOR aNA2_model5-2.2.r")
-source("Parallel Nimble function FOR aNA2_model5-2.2_TRY2.r")
+source("Parallel Nimble function FOR aNA2_model5-2.2_TRY4.r")
 
 
 
@@ -406,12 +432,12 @@ nimConstants <- list(
   K = K,
   effort = effortarray,
   nTrapCovs = dim(effortarray)[4],
-  prevcap = prevcapArray.in
+  indTrapCovs = indTrapCovArray,
+  nIndTrapCovs = dim(indTrapCovArray)[5]
 )
 
 ##compile data
 nimData <- list(habDens = X.d_sc,
-                habSurv = X.d_sc,
                 y = y.sp,
                 #detNums = detNums, 
                 lowerHabCoords = lowerHabCoords,
@@ -505,12 +531,14 @@ inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))),
                        sigma = runif(2,0.5, 1.5),
                        p0=runif(1,0,0.1), # Value for p0 on the probability scale (0-1)
                        trapBetas = runif(3, 0.5,1),
-                       b.bh = runif(1, 0.5,1),
+                       # b.effort2 = runif(1, 0.5,1),
+                       #b.trap = runif(1, 0.5,1),
+                       indTrapBetas = runif(2, 0.5,1),
+                       #b.bh = runif(1, 0.5,1),
                        omega = runif(1, 0.5,1),
                        sex = sex.in,
-                       mu.phi = runif(1,-0.2,0.2),
-                       beta.dens = runif(1,-0.1, 0.1),
-                       beta.surv = runif(1,-0.2,0.2),
+                       phi = runif(1,0.5,1),
+                       beta.dens = runif(1,-0.1, 0.1), # Added
                        z = z.in,
                        sxy = S.in.sc_coords,
                        sigD = runif(1, 1.5, 2.5))}
@@ -518,20 +546,20 @@ inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))),
 ##source model code
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
 #setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('7.1.SCRopen_diftraps_difeff_effortTrapBhCov_fast_Sigma[sex]_survCov in Nimble.r')
+source('6.2.SCRopen_diftraps_difeff_effortTrapBhSexCov_fast_Sigma[sex] in Nimble.r')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'trapBetas', 'b.bh', 'omega', 'mu.phi', 'beta.dens', 'beta.surv', 'sigD', 'R', 'pc.gam', 'Nsuper')
+params<-c('N', 'gamma', 'sigma', 'p0', 'trapBetas', 'indTrapBetas', 'omega', 'phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper')
 
 
 ###### SAVE FOR RUNNING #####
 
-model = SCRhab.Open.effortTrapBhCov.sigSex.survCov
+modelcode = SCRhab.Open.diftraps.3d.effortTrapBhSexCov.sigSex.fast
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/6.OPSCR_survCov/Data_server")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/5.OPSCR_sigma/Data_server")
 save(nimData, nimConstants, 
      inits, Tt, sex.in, z.in, S.in.sc_coords, 
-     params, run_MCMC_allcode, model, file = "Data_Model5-2.2.RData")
+     params, run_MCMC_allcode, modelcode, file = "Data_Model5-2.3.RData")
 
 
 #### OPTION 1: PARALLEL ####
@@ -553,9 +581,9 @@ chain_output <- parLapply(cl = this_cluster, X = 1:3,
                           inits = inits,                 ##your inits function
                           constants = nimConstants,      ##your list of constants
                           params = params,               ##your vector with params to monitor
-                          niter = 150000,                  ##iterations per chain
-                          nburnin = 100000,                ##burn-in
-                          nthin = 10,                  ##thinning, main parameters
+                          niter = 5,                  ##iterations per chain
+                          nburnin = 1,                ##burn-in
+                          nthin = 1,                  ##thinning, main parameters
                           Tt = Tt,                     ##additional objects needed within inits
                           z.in = z.in,
                           S.in.sc_coords = S.in.sc_coords,
@@ -580,7 +608,7 @@ save(chain_output, file = "sampOpenSCR_diftraps_effortTrapBhCov_1721_FINALDATA_3
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.effortTrapBhCov.sigSex.survCov, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.3d.effortTrapBhSexCov.sigSex.fast, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE,calculate = F)
 ##ignore error message, only due to missing initial values at this stage
 
@@ -610,5 +638,22 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 
 # (6) Run (monitor time just for fun) [takes 20 seconds on my computer]
 system.time(
-  (samp <- runMCMC(cmcmc, niter = 150000, nburnin = 100000, nchains=3, inits = inits) )
+  (samp <- runMCMC(cmcmc, niter = 5, nburnin = 0, nchains=3, inits = inits) )
 )
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/2.openSCRdenscov")
+save(samp, file = "sampOpenSCR_diftraps.RData")
+
+##remove NAs
+inn<-colnames(samp[[1]])
+remm<-pmatch(c("R[1]", "pc.gam[1]"), inn)
+samp2<-lapply(samp, function(x)x[,-remm])
+
+##NOTE: summary command is from MCMCvis package; that also has good plotting options
+## summary table for everything in "params" vector
+summ<-MCMCsummary(samp2)
+MCMCtrace(samp)
+
+
+# Density
+summ$mean[1]/max(habitatGrid) # 65/605 = 0.1074799

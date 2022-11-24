@@ -364,9 +364,9 @@ dbinomLocal_normalBear <- nimbleFunction(
                   
                   trapBetas = double(1),
                   
-                  indTrapCov = double(1),
+                  indTrapCovs = double(2),
                   
-                  indTrapBeta = double(0),
+                  indTrapBetas = double(1),
                   
                   log = integer(0, default = 0)
                   
@@ -480,7 +480,9 @@ dbinomLocal_normalBear <- nimbleFunction(
         
         pZero <- ilogit(logit(p0) +
                           
-                          indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+                          #indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+                          
+                          inprod(indTrapBetas, indTrapCovs[theseLocalTraps[r],]) +
                           
                           inprod(trapBetas, trapCovs[theseLocalTraps[r],]))
         
@@ -500,7 +502,9 @@ dbinomLocal_normalBear <- nimbleFunction(
         
         pZero <- ilogit(logit(p0) +
                           
-                          indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+                          #indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+                          
+                          inprod(indTrapBetas, indTrapCovs[theseLocalTraps[r],]) +
                           
                           inprod(trapBetas, trapCovs[theseLocalTraps[r],]))
         
@@ -526,7 +530,7 @@ dbinomLocal_normalBear <- nimbleFunction(
     
     #       pZero <- ilogit(logit(p0) +
     
-    #                         indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+    #                         indTrapBeta*indTrapCovs[theseLocalTraps[r]] +
     
     #                         inprod(trapBetas, trapCovs[theseLocalTraps[r],]))
     
@@ -544,7 +548,7 @@ dbinomLocal_normalBear <- nimbleFunction(
     
     #       pZero <- ilogit(logit(p0) +
     
-    #                         indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+    #                         indTrapBeta*indTrapCovs[theseLocalTraps[r]] +
     
     #                         inprod(trapBetas, trapCovs[theseLocalTraps[r],]))
     
@@ -614,9 +618,9 @@ rbinomLocal_normalBear <- nimbleFunction(
                   
                   trapBetas = double(1),
                   
-                  indTrapCov = double(1),
+                  indTrapCovs = double(2),
                   
-                  indTrapBeta = double(0)
+                  indTrapBetas = double(1)
                   
   ) {
     
@@ -682,9 +686,12 @@ rbinomLocal_normalBear <- nimbleFunction(
       
       pZero <- ilogit(logit(p0) +
                         
-                        indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+                        #indTrapBeta*indTrapCov[theseLocalTraps[r]] +
+                        
+                        inprod(indTrapBetas, indTrapCovs[theseLocalTraps[r],]) +
                         
                         inprod(trapBetas, trapCovs[theseLocalTraps[r],]))
+      
       
       p <- pZero * exp(alpha * d2)
       
@@ -752,59 +759,59 @@ registerDistributions(
     
     dbinomLocal_normalBear = list(
       
-      BUGSdist ='dbinomLocal_normalBear(size, p0       , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      BUGSdist ='dbinomLocal_normalBear(size, p0       , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      # Rdist = c('dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      # Rdist = c('dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0 = -999, p0Traps    , sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
       #          
       
-      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor     , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices = s, size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)',
+      #           'dbinomLocal_normalBear(detNums = -999, detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)',
       
-      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCov, indTrapBeta)'
+      #           'dbinomLocal_normalBear(detNums       , detIndices    , size, p0       , p0Traps = s, sigma, s, trapCoords, localTrapsIndices, localTrapsNum, resizeFactor = 1 , habitatGrid, indicator, lengthYCombined = 0, trapCovs, trapBetas, indTrapCovs, indTrapBetas)'
       
       # ),
       
       types = c('value = double(1)', 'size = double(1)', 's = double(1)', 'trapCoords = double(2)', 'localTrapsIndices = double(2)', 'localTrapsNum = double(1)', 'habitatGrid = double(2)',"trapCovs = double(2)",
                 
-                'trapBetas = double(1)', 'indTrapCov = double(1)', 'indTrapBeta = double(0)'),
+                'trapBetas = double(1)', 'indTrapCovs = double(2)', 'indTrapBetas = double(1)'),
       
       discrete = TRUE,
       

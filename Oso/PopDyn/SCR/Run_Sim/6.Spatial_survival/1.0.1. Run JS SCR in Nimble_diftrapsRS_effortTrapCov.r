@@ -5,8 +5,8 @@ library(MCMCvis)
 library(nimbleSCR)
 ##NOTE: load two helper functions at bottom of script for script to run
 
-setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
-source('dbinomLocal_normalBear.R')
+
+# WWOOOOORKS!
 
 ################################################################################
 #### helper functions ##########################################################
@@ -41,16 +41,18 @@ spcov2 <- function(D, alpha=2, standardize=TRUE) {
 
 ##detection parameters
 #sigma=movement
-sigma <- c(0.5,1)
+sigma <- c(0.6,1) #set to 1,1 for no sex effect
+#p0=baseline detection
+p0 <- 0.2
 
-#p0=baseline detection, intercept on logit scale
-p0 <- -2.534601
+# 2 beta for 3 level effort covariate on p0
+# Intercept is 1 visit in France (cat 1)
+b.effort1 <- 0.8 # Positive effect of effort on detection if 2 visits in france (cat 2)
+b.effort2 <- -0.4 # Negative effect of effort on detection if in spain (cat 3)
 
-#   # Covariate effects on p (b.effort1, b.effort2, b.trap)
-trapBetas <- c(0.8,-0.4, 0.3)
-
-# 1 beta for behavioral response (effect of being already captured in that trap)
-b.bh <- 0.5
+# 1 beta for "type of trap" covariate on p0
+b.trap <- 0.3 # Positive effect if trap is composed by hair trap and camera trap ("both")
+# rather than only hair trap
 
 ##trap array (ASP: All years)
 X<-as.matrix(expand.grid(seq(-6,6,1), seq(-6,7,1))) 
@@ -58,10 +60,10 @@ colnames(X)<-c('x', 'y')
 J<-dim(X)[1]
 
 ##state space coordinates, max trap coords (below) + 3*sigma
-xmin<-min(X[,1])-3*sigma[2]
-ymin<-min(X[,2])-3*sigma[2]
-xmax<-max(X[,1])+3*sigma[2]
-ymax<-max(X[,2])+3*sigma[2]
+xmin<-min(X[,1])-3*max(sigma)
+ymin<-min(X[,2])-3*max(sigma)
+xmax<-max(X[,1])+3*max(sigma)
+ymax<-max(X[,2])+3*max(sigma)
 
 ##for discrete state space, create 342 grid cells (center coordinates)
 gx <- rep(seq(xmin+0.5, xmax-0.5,1), 19)
@@ -72,7 +74,7 @@ G <- cbind(gx, gy)
 colnames(G) <- c('x','y')
 
 ##remove some as non-habitat
-### ASP: Make sure that there are no traps in non-habitat!!
+###YOU HAD TRAPS IN NON-HABITAT
 rem <- which(G[,2]>2 & G[,1]<(-6.5))
 G <- G[-rem,]
 
@@ -103,7 +105,7 @@ Yrs <- seq(1:Tt)
 
 # Set it up so that there are a few number of traps not sampled every year 
 # (otherwise local evaluation does not work because it doesn't find traps, need a very high dmax param)
-#set.seed(2022)
+set.seed(2022)
 J.year <- list() # Which traps from X.sc are sampled every year
 for (t in 1:Tt){
   trap.year <- rbinom(nrow(X.sc),1, 0.75)
@@ -112,8 +114,9 @@ for (t in 1:Tt){
 Jyear <- unlist(lapply(J.year,length)) # Number of traps per year
 
 
-# Format trap array for nimble: ARRAY WITH TRAP MATRIX PER YEAR
+# Trap array for nimble
 
+## OPTION 3: ARRAY WITH TRAP MATRIX PER YEAR, WORKS
 Xt <- Xt.sc <- list() 
 for (t in 1:Tt){
   Xt.sc[[t]] <- X.sc[J.year[[t]],] # For the getLocalTraps function
@@ -124,7 +127,7 @@ Xt.sc.array <- array(NA, c(max(Jyear), 2, Tt))
 for (t in 1:Tt){
   Xt.sc.array[1:Jyear[t],,t] <- Xt.sc[[t]]
 }
-#Xt.sc.array[1:Jyear[1], 1:2, 1] # Example: to get traps from year 1
+Xt.sc.array[1:Jyear[1], 1:2, 1] # Example: to get traps from year 1
 
 # Get one localtraps per year
 
@@ -151,6 +154,9 @@ for (t in 1:Tt){
   localTrapsIndex[,1:MaxLocalTraps[t],t] <- localTraps[[t]]$localIndices
 }
 
+#c <- localTrapsIndex[,,1]
+
+
 ##some characteristics of S, not affected by changing trap array
 numHabWindows <- sum(habitatGrid !=0) #number of cells in S
 numGridRows <- nrow(localTraps[[1]]$habitatGrid) # I take the first year of local traps but it doesn't matter, all the same
@@ -170,15 +176,11 @@ dg <- e2dist(G, G)
 
 ##generate spatially correlated covariates, one for density, one for survival
 X.d <- spcov2(dg)
-X.d[1:length(X.d)] <- 1
 X.surv<-spcov2(dg)
-
-
 
 ##effect of covariate on density and survival
 beta.d <- 1
 beta.surv <- 0.5
-
 
 ## calculate cell probabilities
 p.cell <- exp(beta.d*X.d)/sum(exp(beta.d*X.d))
@@ -205,15 +207,11 @@ gamma[1] <- N/M
 
 ###demographic model
 
-# Before, the demographic process was independent from the activity center location
-# But now it is linked (survival depends on the spatial covariate where was the activity center the previous year)
-# So we need to simulate the demographic process and AC creation at the same time
-
 z <- r <- al <-age <- matrix(0, nrow = M, ncol = Tt)
 r[,1] <- rbinom(M, 1, gamma[1]) ## ASP: Recruited/non-recruited, depends on prob.recruitment gamma 
 z[,1] <- r[,1]  ## ASP: Alive state
 
-## ASP: Individuals enter the model when they are first detected, so all individuals enter in year 1
+
 Sx<-Sy<-s.g<-matrix(NA,M,Tt) #activity centers
 #firs AC is random
 s.multi <- rmultinom(M, 1, p.cell) 
@@ -223,18 +221,11 @@ for (i in 1:M){
   Sy[i,1]<-G[s.g[i,1],2]       # Put into the first year when the individual was detected 
 }    
 
-## ASP: To integrate spatial covariate: 
-# integrate the activity center generation into the simulation of the alive states, because we need
-# to know where was the AC the previous year
+
 for (t in 2:Tt){
   # survival
   phi.eff<-plogis(mu.phi[t]+beta.surv*X.surv[s.g[,t-1]])
   surv <- rbinom(M, 1, z[,t-1] * phi.eff) 
-  
-  ## ASP: For each individual, whether it survives (surv = 1) in t=2 depends on 
-  # whether it was alive in t=1 and the survival probability in t=2. 
-  # This survival probability depends on the habitat covariates of the cells of the
-  # activity centers the previous year
   
   # recruitment
   al[,t] <- apply(matrix(z[,1:(t-1)], nrow = M, byrow = FALSE), 1, sum) > 0
@@ -257,7 +248,6 @@ for (t in 2:Tt){
       s.g[i,t]<-apply(ssg,2, function(x){which(x==1)})
       Sx[i,t]<-G[s.g[i,t],1]
       Sy[i,t]<- G[s.g[i,t],2] 
-      
     }else{
       
       s.multi <- rmultinom(1, 1, p.cell) 
@@ -273,12 +263,19 @@ n.all <- sum(apply(z,1,sum)>0) ##
 z.all <- z[apply(z,1,sum)>0,] ## 
 is.in<-which(apply(z,1,sum)>0)
 
+###if this throws an error, M may have to be increased
 
 ##generate detection data
 
-K <-7 #number of sampling occasions, here, constant for all traps in all years
+K <-5 #number of sampling occasions
 
-## COVARIATES IN DETECTION
+## Because each year there is a different number of traps, the column dimension of the array is the maximum number of traps
+## the rest is filled as NA 
+
+n.max.traps <- max(Jyear)
+
+
+# COVARIATES IN DETECTION
 # 1. effort covariate
 ## create an effort array (trap by occasion per year), leaving most at 1, but setting some to 2
 ## here, randomly set ca. 30% of active occasions to 2
@@ -315,172 +312,137 @@ for (t in 1:Tt){
 
 # 2. trap covariate (Type of trap: 0 -> Hair, 1 -> Both)
 
-trap <- array(0, c(n.max.traps, K, Tt)) 
+trap <- matrix(0, nrow = n.max.traps, ncol = Tt)
 n4 <- round(prod(dim(trap))*0.3, dig=0) #ASP: 30% will be traps of type "both
 trap[sample(1:prod(dim(trap)),n4, replace=FALSE)] <- 1
 
-#---- TRAP + EFFORT AS ARRAY FOR FAST FUNCTION ----#
-
-effortarray <- array(1, c(n.max.traps, K, Tt, 3))
-effortarray[,,,1] <- effort.dummy[,,,1]
-effortarray[,,,2] <- effort.dummy[,,,2]
-effortarray[,,,3] <- trap
-
-#3. Sex covariate (Female = 0; Male = 1)
-
-sex0 <- rep(0,n.all)
-sex0[sample(1:length(sex0), 50, replace = FALSE)] <- 1 # Sex ratio around 1:1
-
-# 4. Behavioural response
-# 1 if an individual i has been already captured in that year in any occasion in all traps
-
-b <- array(0, c(n.all, n.max.traps, K, Tt)) # Default needs to be 0, otherwise NA enter in model
-# when not observed that year, and gives NA logliklhood
-
 ## ARRAY FOR DETECTION DATA
-## Because each year there is a different number of traps, the column dimension of the array is the maximum number of traps
-## the rest is filled as NA 
-##add 4th dimension, which is occasion 
+
 obs <- array(NA, c(n.all, n.max.traps, K, Tt))
-cap <- array(0, c(n.all, n.max.traps, K, Tt)) # FOr behavioral response (default is 0, not captured)
-
-#x <- model$logProb_y[,1,,1] # Individuals 1:4, 6:8 in all occasions year 1
-
-# All years same NA until id 54 (not augmented individuals). Year 5 all are NA
-
+sex<-rbinom(n.all, 1, 0.5)
 
 for (t in 1:Tt){
-  D <- e2dist(cbind(Sx[,t], Sy[,t]), Xt[[t]])
+  D <- e2dist(cbind(Sx[is.in,t], Sy[is.in,t]), Xt[[t]])
   ## ASP: Distance from each AC to each traps
   
   for (i in 1:n.all){
-    if(z.all[i,t]==0){obs[i,,,t] <- 0} else {
+    if(z.all[i,t]==0){obs[i,,,t] <- 0} else{
       
-      ##calculate distance component of detection, which is constant over occasions
-      p.d <- exp(-D[is.in[i],]^2/(2*sigma[sex0[i]+1]^2)) ## 
+      p.d <- exp(-D[i,]^2/(2*sigma[sex[i]+1]^2)) ## ASP: The p is a function of the distance to the traps
       
-      for (j in 1:nrow(Xt[[t]])){
+      for (k in 1:K){
+        #calculate effective baseline detection as function of effort (3 level)
+        p <- plogis(p0+b.effort1*effort.dummy[1:nrow(Xt[[t]]),k,t,1] + b.effort2*effort.dummy[1:nrow(Xt[[t]]),k,t,2] + 
+                      b.trap*trap[1:nrow(Xt[[t]]),t]) 
         
-        for (k in 1:K){
-          if(k==1){
-            b[i,j,k,t] <- 0 # At k = 1 is always 0
-            p <- plogis(p0+trapBetas[1]*effortarray[j,k,t,1] + trapBetas[2]*effortarray[j,k,t,2] + trapBetas[3]*effortarray[j,k,t,3]+
-                          b.bh*b[i,j,k,t])
-            
-            p.eff <- p*p.d[j] 
-            obs[i,j,k,t] <- rbinom(1, 1, p.eff)
-            
-            if(obs[i,j,k,t] > 0){ # Check if has been detected in that trap, occasion and year
-              cap[i,j,k,t] <- 1                       
-            } 
-          } else { # if k>1
-            b[i,j,k,t] <- ifelse(sum(cap[i,j,1:(k-1),t]) > 0, 1, 0) # If it has been already captured before that k we put a 1
-            p <- plogis(p0+trapBetas[1]*effortarray[j,k,t,1] + trapBetas[2]*effortarray[j,k,t,2] + trapBetas[3]*effortarray[j,k,t,3]+
-                          b.bh*b[i,j,k,t])
-            
-            p.eff <- p*p.d[j] 
-            obs[i,j,k,t] <- rbinom(1, 1, p.eff)
-            
-            if(obs[i,j,k,t] > 0){ # Check if has been detected in that trap, occasion and year
-              cap[i,j,k,t] <- 1 } 
-          }} # Loop k
-      } # Loop j
-    }} # Loop i
-} # Loop t
+        # Occasion is the second dimension, and because it 
+        #changes every year effort needs to be also indexed by year right?
+        for (j in 1:nrow(Xt[[t]])){
+          #combine the two components, resulting detection is individual, site
+          # and occasion specific
+          p.eff<-p[j]*p.d[j] 
+          obs[i,j,k,t] <- rbinom(1, 1, p.eff)
+        }
+      }
+    }
+  }
+}
 
+### AQUI
 
 ##how many individuals detected?
 n <- sum(apply(obs, 1, sum, na.rm = TRUE) >0)
 
 ##subset obs to include only individuals detected at least once
+##for CJS also exclude individuals seen first in occasion 5
+##get first year an individual was detected
+# y2d<-apply(obs,c(1,3),sum, na.rm=T )
+# first<-apply(y2d,1, function(x){min(which(x>0))} )
+##Inf means never detected
+
 
 seen <- which(apply(obs, 1, sum, na.rm = TRUE)>0)
+#early<-which(first %in% (1:4))
+#keep<-which( (1:M) %in% seen & (1:M) %in% early)
 Y <- obs[seen,,,] ## ASP: Only detected individuals (capture histories)
-
-# Sex of seen individuals
-sex1 <- sex0[seen]
-
-# b is an individual covariate, should have the i dimensions of Y
-b2 <- b[seen,,,]
+n.obs<-dim(Y)[1]
+##this now has NAs - does that matter?? Should prob all be 0,
+##they won't enter the model anyway, tehy refer to inactive traps
 
 
-##augment observed data to size Maug
-Maug <- 160 
-y.in <- array(0, c(Maug, n.max.traps,K, Tt)) # One array of nxJxK every year (5 years)
-y.in[1:n,,,] <- Y
+##check number of sites with captures for sex=0
+ysub<-Y[sex[seen]==0,,,]
+ysub[ysub>1]<-1 
+apply(ysub, c(1,3), sum, na.rm=TRUE)
 
-##augment sex with NA
-sex <- c(sex1,rep(NA,length((n+1):Maug)))
+##augment
+M.aug<-150
+Y.aug<-array(0, c(M.aug,n.max.traps,K, Tt ))
+Y.aug[1:n.obs,,,]<-Y
 
-
-##augment behavioral response (latent variable)
-b.aug <- array(0, c(Maug, n.max.traps, K, Tt)) 
-b.aug[1:n,,,] <- b2
+sex.d<-rep(NA, M.aug)
+sex.d[1:n.obs]<-sex[seen]
 
 ##change to 'sparse' format - speeds up computation by reducing file size
+## getSparseY cannot handle 4d arrays, so loop over years to get a 3d array per year
 y.sparse <- list()
 for (t in 1:Tt){
-  y.sparse[[t]] <- getSparseY(y.in[,,,t]) 
+  y.sparse[[t]] <- getSparseY(Y.aug[,,,t]) 
 }
+## ASP: I have checked the function and there is no problem of having NA in the traps not sampled a given year
 
-##extract pieces to be passed to Nimble 
-## Cyril changed this part of the code, so that we can use the function dbinomLocal_normal that speeds up the
-# model. Now the detIndices and detNums are also contained within y.sp (lengthYCombined).
-# This formulation is also necesary for making predictions
+##extract pieces to be passed to Nimble - this is now a little more complex
+##because each year's data has different dimensions
+#get max(maxDetNums) over years
+max.max<-max(sapply(y.sparse, function(x)x$maxDetNums)) # ASP: Maximun of the maxDetNums
 
-max.max <- max(sapply(y.sparse, function(x)x$lengthYCombined)) # ASP: Maximun of the maxDetNums
-
-y.sp <- array(NA, c(Maug, max.max, K, Tt))
+y.sp <- detIndices <- array(NA, c(M.aug, max.max, K, Tt))
 
 for (t in 1:Tt){
-  y.sp[,1:y.sparse[[t]]$lengthYCombined,,t] <- y.sparse[[t]]$yCombined
-  #detIndices[,1:y.sparse[[t]]$maxDetNums,,t] <- y.sparse[[t]]$detIndices
+  y.sp[,1:y.sparse[[t]]$maxDetNums,,t] <- y.sparse[[t]]$y
+  detIndices[,1:y.sparse[[t]]$maxDetNums,,t] <- y.sparse[[t]]$detIndices
 }
 
-# detNums<-array(NA, c(M, K, Tt))
-# for (t in 1:Tt){
-#   detNums[,,t] <- y.sparse[[t]]$detNums 
-# }
-# 
-lengthYCombined <- sapply(y.sparse, function(x)x$lengthYCombined)
+detNums<-array(NA, c(M.aug, K, Tt))
+for (t in 1:Tt){
+  detNums[,,t] <- y.sparse[[t]]$detNums 
+}
+
+maxDetNums <- sapply(y.sparse, function(x)x$maxDetNums)
 
 ##number of trials per trap - now always 1 but needs to be passed to Nimble
 # always 1, because we model each occasion separately
 ones <- rep(1, n.max.traps)
+
 
 ################################################################################
 #### fit Nimble model ##########################################################
 
 ##compile constants
 nimConstants <- list(
-  M = Maug, 
-  J = Jyear, 
-  numHabWindows = numHabWindows, 
-  numGridRows = numGridRows, 
-  numGridCols = numGridCols, 
-  lengthYCombined = lengthYCombined,
-  MaxLocalTraps = MaxLocalTraps,
-  nobs = n, 
-  Nyr = Tt, 
-  K = K , 
-  effort = effortarray, 
-  nTrapCovs = dim(effortarray)[4],
-  prevcap = b.aug
+  M=M.aug,
+  J=Jyear, 
+  numHabWindows=numHabWindows, 
+  numGridRows=numGridRows,
+  numGridCols=numGridCols, 
+  maxDetNums=maxDetNums, 
+  MaxLocalTraps=MaxLocalTraps,
+  nobs=n.obs, 
+  Nyr=Tt,
+  K=K , 
+  effort=effort.dummy, 
+  trap = trap
 )
 
 ##compile data
-nimData <- list(habDens = X.d,
-                habSurv = X.surv, 
-                y = y.sp,
-                lowerHabCoords = lowerHabCoords, 
-                upperHabCoords = upperHabCoords,
-                habitatGrid = habitatGrid, 
-                ones = ones,  
-                X.sc = Xt.sc.array, 
-                habitatGridDet = habitatGridDet,
-                localTrapsIndex = localTrapsIndex, 
-                localTrapsNum = localTrapsNum, 
-                sex = sex
+nimData <- list(habDens=X.d, habSurv=X.surv, 
+                y=y.sp,
+                lowerHabCoords=lowerHabCoords, upperHabCoords=upperHabCoords,
+                habitatGrid=habitatGrid, ones=ones,  X.sc = Xt.sc.array, # ASP: Vector of k for bern trials with length = max number of traps
+                habitatGridDet=habitatGridDet,detIndices=detIndices,
+                detNums=detNums, localTrapsIndex=localTrapsIndex, 
+                localTrapsNum=localTrapsNum,
+                sex=sex.d
 )
 
 ##set up initial values
@@ -488,25 +450,27 @@ nimData <- list(habDens = X.d,
 first <- apply(z.all,1,function(x)min(which(x==1)))
 f.in <- first[seen] 
 
-z.in <- matrix(0, Maug, Tt)
+z.in <- matrix(0, M.aug, Tt)
 for(i in 1:n){
   z.in[i,f.in[i]:Tt]<-1
 }  ## ASP: From the first year detected fill as alive
 
-# LIKELIHOOD PROBLEM: There seems to be a problem when they are all started as alive
+##sex
+sex.in<-rep(NA, M.aug)
+sex.in[(n.obs+1):M.aug]<-rbinom(M.aug-n.obs, 1, 0.5)
 
 ##because of local evaluation of possible detectors, activity center initial 
 ##values have to be specified, eg average capture location in 'model' space
 ##CORRECTION: Use random capture location to avoid ACs in non-habitat cells
 
-S.in<- array(NA, c(Maug, 2, Tt))
+S.in<- array(NA, c(M.aug, 2, Tt))
 
 #sum captures within year over occasions
 Yt<-apply(Y, c(1,2,4), sum)
 
 for ( i in 1:n){
   for (t in 1:Tt){
-    caps <- which(Yt[i, ,t] > 0) ## ASP: Get in which traps the ind was captured at year t
+    caps <- which(Yt[i,,t] > 0) ## ASP: Get in which traps the ind was captured at year t
     
     if (length(caps)==0) next #fill in missing ACs with reasonable values later
     if (length(caps)==1){ ## ASP: If its only in 1 trap, a put the trap location as AC
@@ -549,58 +513,47 @@ for (i in 1:n){
 
 
 ##random ACs for individuals never observed
-for(i in (n+1) : Maug){
+for(i in (n+1) : M.aug){
   for (t in 1:Tt){
     ssg<-sample(1:length(X.d), 1)
     S.in[i,,t]<-G[ssg,]
   }
 }
-
-## initial values for sex
-sex.in <- c(rep(NA,n),rep(0,length((n+1):Maug)))
-sex.in[sample((n+1):Maug, 30, replace = FALSE)] <- 1 # Random sex for augmented individuals
-
-##INITIAL VALUES
-
 colnames(S.in) <- c('x', 'y')
 S.in.sc <- scaleCoordsToHabitatGrid(S.in, G)
-S.in.sc_coords <- S.in.sc$coordsDataScaled
-
 
 inits<-function(){list(gamma = c(0.5, rep(0.1, (Tt-1))), 
-                       sigma = runif(2,0.5, 1.5),
-                       p0 = runif(1,0,0.1), # Value for p0 on the probability scale (0-1)
-                       trapBetas = runif(3, 0.5,1),
-                       b.bh = runif(1, 0.5,1),
-                       omega = runif(1, 0.5,1),
-                       sex = sex.in,
-                       mu.phi = runif(1,-0.2,0.2),
-                       z = z.in,
-                       sxy = S.in.sc_coords,
-                       sigD = runif(1, 1.5, 2.5),
-                       #beta.dens = runif(1,-0.5, 0.5),
-                       beta.surv = runif(1,-0.2,0.2))}
+                       sigma=runif(2,0.5, 1.5),
+                       p.ad=runif(1,0,1),
+                       b.effort1=runif(1, 0.5,1),
+                       b.effort2=runif(1, 0.5,1),
+                       b.trap=runif(1, 0.5,1),
+                       mu.phi=runif(1,-0.2,0.2),
+                       beta.cov=runif(1,-0.2,0.2),
+                       z=z.in,
+                       sxy=S.in.sc$coordsDataScaled,
+                       sigD=runif(1, 1.5, 2.5),
+                       beta.dens=runif(1,-0.5, 0.5),
+                       sex=sex.in,
+                       omega=0.5)}
 
 ##source model code
+##I prefer working on code in a separate script but you can also have everything in
+##one script and just execute the code
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/3.openSCR")
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-#setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('7.2.SCRopen_diftraps_difeff_effortTrapBhCov_fast_Sigma[sex]_survCov_NOdens in Nimble.r')
+source('7.0.1. JS_SCR in Nimble_diftraps_SpatialCov.R')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'trapBetas', 'b.bh', 'omega', 'mu.phi', 
-          #'beta.dens', 
-          'beta.surv', 'sigD','R', 'pc.gam', 'Nsuper')
+params<-c('N', 'gamma', 'sigma', 'p.ad', 'b.effort1', 'b.effort2', 'b.trap', 'mu.phi', 'beta.dens', 'sigD','beta.cov',
+          'Nsuper', 'omega')
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.effortTrapBhCov.sigSex.survCov, constants = nimConstants, 
+model <- nimbleModel(JS.SCRhab.Open.diftraps.sex.effortTrapCov, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
-##ignore error message, only due to missing initial values at this stage
 model$calculate()
-
-model$initializeInfo()
-
-
+##ignore error message, only due to missing initial values at this stage
 
 #(2) Compile model in c++
 #     In complex models, this step can take a while (as well as step 5)
@@ -620,27 +573,21 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 
 # (6) Run (monitor time just for fun) [takes 20 seconds on my computer]
 system.time(
-  (samp <- runMCMC(cmcmc, niter = 5000, nburnin = 2000, nchains=3, inits = inits) )
+  (samp <- runMCMC(cmcmc, niter = 5000, nburnin = 2000, nchains=2, inits = inits) )
 )
 
-
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/6.OPSCR_survCov")
-save(samp, file = "samp_2.RData")
-
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/6.OPSCR_survCov")
-load("samp_2.RData")
-
-library(secr)
-invlogit(-2.534601) # p0 was on the logit scale, but you model it in the non-logit scale
-
-library(MCMCvis)
-##remove NAs
-inn<-colnames(samp[[1]])
-remm<-pmatch(c("R[1]", "pc.gam[1]"), inn)
-samp2<-lapply(samp, function(x)x[,-remm])
+# ##remove NAs
+# inn<-colnames(samp[[1]])
+# remm<-pmatch(c("R[1]", "pc.gam[1]"), inn)
+# samp2<-lapply(samp, function(x)x[,-remm])
 
 ##NOTE: summary command is from MCMCvis package; that also has good plotting options
 ## summary table for everything in "params" vector
-summ<-MCMCsummary(samp2)
-summ
-#MCMCtrace(samp)
+summ<-MCMCsummary(samp)
+MCMCtrace(samp)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/6.OPSCR_survCov")
+save(samp, file = "samp1.0.1.r")
+
+
+

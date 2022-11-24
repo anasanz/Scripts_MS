@@ -549,14 +549,14 @@ for (i in 1:n){
   }
 }
 
-for (i in 1:n){
-  #which ACs unobserved
-  nac <- which(is.na(S.in[i,1,]))
-  wac <- (1:Tt)[-nac] ## ASP: Only the years that are observed
-  #for those, use mean observed
-  S.in[i,1,nac]<-mean(S.in[i,1,wac]) ## ASP: Use the mean of the observed to fill unobserved
-  S.in[i,2,nac]<-mean(S.in[i,2,wac]) 
-}
+#for (i in 1:n){
+#  #which ACs unobserved
+#  nac <- which(is.na(S.in[i,1,]))
+#  wac <- (1:Tt)[-nac] ## ASP: Only the years that are observed
+#  #for those, use mean observed
+#  S.in[i,1,nac]<-mean(S.in[i,1,wac]) ## ASP: Use the mean of the observed to fill unobserved
+#  S.in[i,2,nac]<-mean(S.in[i,2,wac]) 
+#}
 
 
 ##random ACs for individuals never observed
