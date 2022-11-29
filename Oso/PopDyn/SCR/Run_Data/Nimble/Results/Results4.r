@@ -373,3 +373,82 @@ MCMCtrace(out.list,   # Convergence: beffort2 and sigma do not mix great
 
 summ_EffortTrapSex <- MCMCsummary(out.list) # 0 females / 1 males: it seems like males have higher detection probability
 
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+##                   FAST RUN
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/5.OPSCR_sigma")
+load("Results_Model5-2.2.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/5.OPSCR_sigma")
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_fast <- MCMCsummary(out.list)
+
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+##                   FAST RUN
+##              SURVIVAL COVARIATE
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/6.OPSCR_survCov")
+load("Results_Model6-1.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/5.OPSCR_sigma")
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_SURVcOV_fast <- MCMCsummary(out.list)
+plogis(-16.59278183)

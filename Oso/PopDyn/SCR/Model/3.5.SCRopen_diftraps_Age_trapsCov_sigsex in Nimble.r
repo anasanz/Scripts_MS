@@ -1,8 +1,7 @@
-
 # This model is a combination of the age-structured JS model (code_JS_AGEcatV3.1)
 # and the open SCR model with different trap arrays/year (SCR in Nimble_diftraps)
 
-SCRhab.Open.diftraps.age.effortTrapCov<-nimbleCode({
+SCRhab.Open.diftraps.age.effortTrapCov.sigsex<-nimbleCode({
   
   ### PRIORS ###
   psi~ dbeta(1,1)           # data augmentation
@@ -20,7 +19,10 @@ SCRhab.Open.diftraps.age.effortTrapCov<-nimbleCode({
   piAGEuncond[1:(max.age+1)] <- c( (1-eta[1] ), eta[1]*piAGE[1:max.age] )  
   
   ##movement parameters: detection model and between-year AC movement model
-  sigma~dunif(0,5) #adjust to units of trap array and space use of species
+
+  sigma[1]~dunif(0,5) 
+  sigma[2]~dunif(0,5) 
+  
   sigD~dunif(0,5)  #dispersal Kernel SD, adjust to units of trap array
   
   ##detection parameter - p0 (baseline detection probability), per age category
@@ -38,6 +40,9 @@ SCRhab.Open.diftraps.age.effortTrapCov<-nimbleCode({
   b.effort1~dnorm(0, 0.01)
   b.effort2~dnorm(0, 0.01)
   b.trap~dnorm(0, 0.01)
+  
+  omega~dunif(0,1) # Prior for sex latent variable
+  
   
   ##survival probability, per age category
   phi.ad ~ dbeta(1,1)          # survival adults
@@ -169,29 +174,35 @@ SCRhab.Open.diftraps.age.effortTrapCov<-nimbleCode({
   Nsuper <- sum(w[1:M])            # Superpopulation size
   
   ##################################################################################################################################
+  
+  for(i in 1:M){
+    
+    sex[i]~dbern(omega) 
+  }
+  
   ##detection model
   for (t in 1:Nyr){
     
     for (k in 1:K){
-    
       
-    for(i in 1:M){
       
-      logit(p.eff[1:J[t],k,t]) <- p0[age.cat[i,t]+1] + b.effort1*effort[1:J[t],k,t,1] + b.effort2*effort[1:J[t],k,t,2] + b.trap*trap[1:J[t],t]
-      
-      y[i,1:maxDetNums[t],k,t]~dbinomLocal_normal(detNums = detNums[i,k,t],#getSparseY()$detNums
-                                             detIndices = detIndices[i,1:maxDetNums[t],k,t],#getSparseY()$detIndices; ASP: Links with trapID
-                                             size = ones[1:J[t]], ##NOW: always 1, because we model each occasion separately
-                                             p0Traps = p.eff[1:J[t],k,t], #model parameter
-                                             sigma = sigma, #model parameter
-                                             s = sxy[i,1:2,t], #model parameter
-                                             trapCoords = X.sc[1:J[t],1:2,t], #trap coordinates (data); ASP: Year specific trap array
-                                             localTrapsIndices = localTrapsIndex[1:numHabWindows,1:MaxLocalTraps[t],t], #from getLocalTraps()
-                                             localTrapsNum = localTrapsNum[1:numHabWindows,t], #from getLocalTraps()
-                                             resizeFactor = 1, #no resizing
-                                             habitatGrid = habitatGridDet[1:numGridRows,1:numGridCols],#from getLocalTraps()
-                                             indicator = z[i,t]) #model parameter
-    }#end occasion loop
+      for(i in 1:M){
+        
+        logit(p.eff[1:J[t],k,t]) <- p0[age.cat[i,t]+1] + b.effort1*effort[1:J[t],k,t,1] + b.effort2*effort[1:J[t],k,t,2] + b.trap*trap[1:J[t],t]
+        
+        y[i,1:maxDetNums[t],k,t]~dbinomLocal_normal(detNums = detNums[i,k,t],#getSparseY()$detNums
+                                                    detIndices = detIndices[i,1:maxDetNums[t],k,t],#getSparseY()$detIndices; ASP: Links with trapID
+                                                    size = ones[1:J[t]], ##NOW: always 1, because we model each occasion separately
+                                                    p0Traps = p.eff[1:J[t],k,t], #model parameter
+                                                    sigma = sigma[sex[i]+1], #model parameter
+                                                    s = sxy[i,1:2,t], #model parameter
+                                                    trapCoords = X.sc[1:J[t],1:2,t], #trap coordinates (data); ASP: Year specific trap array
+                                                    localTrapsIndices = localTrapsIndex[1:numHabWindows,1:MaxLocalTraps[t],t], #from getLocalTraps()
+                                                    localTrapsNum = localTrapsNum[1:numHabWindows,t], #from getLocalTraps()
+                                                    resizeFactor = 1, #no resizing
+                                                    habitatGrid = habitatGridDet[1:numGridRows,1:numGridCols],#from getLocalTraps()
+                                                    indicator = z[i,t]) #model parameter
+      }#end occasion loop
     }#end ind loop
   }
-  })
+})

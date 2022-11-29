@@ -422,7 +422,8 @@ nimConstants <- list(
 )
 
 ##compile data
-nimData <- list(habDens = X.d_sc,
+nimData <- list(
+                #habDens = X.d_sc,
                 habSurv = X.d_sc,
                 y = y.sp,
                 #detNums = detNums, 
@@ -524,7 +525,7 @@ inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))),
                        sex = sex.in,
                        mu.phi=runif(1,-0.2,0.2),
                        beta.cov=runif(1,-0.2,0.2),
-                       beta.dens = runif(1,-0.1, 0.1), # Added
+                       #beta.dens = runif(1,-0.1, 0.1), # Added
                        z = z.in,
                        sxy = S.in.sc_coords,
                        sigD = runif(1, 1.5, 2.5))}
@@ -532,10 +533,10 @@ inits<-function(){list(gamma =c(0.5, rep(0.1, (Tt-1))),
 ##source model code
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
 #setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('7.0.3. JS_OPSCR in Nimble_survCov_effortTrapBhCov_fastNewY.r')
+source('7.0.4. JS_OPSCR in Nimble_survCov_effortTrapBhCov_fastNewY_NoDENS.r')
 
 ##determine which parameters to monitor
-params<-c('N', 'gamma', 'sigma', 'p0', 'trapBetas', 'b.bh', 'omega', 'mu.phi', 'beta.dens', 'sigD','R', 'pc.gam', 'Nsuper', 'beta.cov')
+params<-c('N', 'gamma', 'sigma', 'p0', 'trapBetas', 'b.bh', 'omega', 'mu.phi', 'sigD','R', 'pc.gam', 'Nsuper', 'beta.cov')
 
 
 ###### SAVE FOR RUNNING #####
@@ -545,7 +546,7 @@ modelcode = JS.SCRhab.Open.diftraps.sex.effortTrapBhCov.fast
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/6.OPSCR_survCov/Data_server")
 save(nimData, nimConstants, 
      inits, Tt, sex.in, z.in, S.in.sc_coords, 
-     params, run_MCMC_allcode, modelcode, file = "Data_Model6-1.RData")
+     params, run_MCMC_allcode, modelcode, file = "Data_Model6-2.RData")
 
 
 #### OPTION 1: PARALLEL ####
