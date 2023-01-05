@@ -24,6 +24,8 @@ os <- read.csv("Data_os_96_21_cubLocations.csv", header = TRUE, row.names = NULL
   filter(Confirmed_Individual != "Indetermined") %>%
   st_as_sf(coords = c("x_long","y_lat"), crs = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
 
+os <- os[,-which(colnames(os) %in% c("ID_obs"))] # So that the script runs, because this column was added later and it doesn't fit otherwise
+
 # Mellba y Ziva reintroducidas en 1996
 
 R_fem96_97 <- os %>%
@@ -132,6 +134,7 @@ core <- os %>%
          & Confirmed_Individual %in% c("Mellba", "Ziva", "Hvala", "Sorita") 
          & With_cubs_estimated %in% c("<6month", "1", "2"))
 
+
 mapview(os) + 
   mapview(core, col.regions = "red") +
   mapview(fem98_05, col.regions = "green")
@@ -149,6 +152,8 @@ dev.off()
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
 os_spatial <- read.csv("Data_os_96_21_cubLocations.csv", header = TRUE, row.names = NULL)  %>% 
   filter(Confirmed_Individual != "Indetermined") 
+
+os_spatial <- os_spatial[,-which(colnames(os_spatial) %in% c("ID_obs"))]
 
 core_spatial <- os_spatial %>%
   filter(Year %in% c(1997,1998, 2007,2008, 2019, 2020) 
@@ -237,6 +242,7 @@ core_kernel_n1n2 <- bind(core_area_kernelpol_n1, core_area_kernelpol_n2)
 core_kernel_n1n2 <- aggregate(core_kernel_n1n2, dissolve = TRUE)
 plot(core_kernel_n1n2)
 
+
 ## BETTER TO CALCULATE A KERNEL PER POPULATION NUCLEUS
 
 # 3. Sum of individuals MCP total MCP
@@ -265,18 +271,28 @@ values(rs) <- NA # Raster to calculate
 
 # Rasterize polygon core area
 core_area_kernelpol <- spTransform(core_kernel_n1n2, crs(rs) )
+core_area_kernelpol <- as(core_area_kernelpol, "SpatialPolygonsDataFrame")
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
+writeOGR(core_area_kernelpol, "corepol", dsn = "D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore/corepol", driver = "ESRI Shapefile")
+
 r <- rasterize(core_area_kernelpol,rs)
 plot(r)
+# To save as raster with 1 = core, 0 = not core
+#values(r)[is.na(values(r))] <- 0
+#setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
+#writeRaster(r, filename = 'core', format = 'GTiff')
+
 # Calculate distance
 dist_corekernel <- distance(r)
 
-setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe")
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
 writeRaster(dist_corekernel, filename = 'dist_corekernel', format = 'GTiff')
 plot(dist_corekernel)
 plot(st_geometry(map), add = TRUE)
 
 # Calculate the logaritmic distance (To give less importance to far locations)
-setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe")
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
 distcore <- raster("dist_corekernel.tif")
 plot(distcore)
 
@@ -286,7 +302,7 @@ logDistcore <- distcore # Create layer to store the log
 logDistcore@data@values <- log(logDistcore@data@values) # Transform and store (2 ways)
 logDistcore[] <- log(distcore[])
 
-setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe")
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
 writeRaster(logDistcore, filename = 'dist_corekernel_log', format = 'GTiff')
 
 plot(logDistcore)

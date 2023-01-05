@@ -20,7 +20,9 @@ SCRhab.Open.diftraps.age<-nimbleCode({
   piAGEuncond[1:(max.age+1)] <- c( (1-eta[1] ), eta[1]*piAGE[1:max.age] )  
   
   ##movement parameters: detection model and between-year AC movement model
-  sigma~dunif(0,5) #adjust to units of trap array and space use of species
+  sigma[1]~dunif(0,5) # Sex-specific sigma (1 = Females; 2 = Males)
+  sigma[2]~dunif(0,5) 
+  
   sigD~dunif(0,5)  #dispersal Kernel SD, adjust to units of trap array
   
   ##detection parameter - p0 (baseline detection probability), per age category

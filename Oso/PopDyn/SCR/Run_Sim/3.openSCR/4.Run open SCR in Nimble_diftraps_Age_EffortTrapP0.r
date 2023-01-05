@@ -89,7 +89,7 @@ G.sc <- sc.coord$coordsHabitatGridCenterScaled
 X.sc <- sc.coord$coordsDataScaled
 
 ###get cell coordinates for G.sc
-windowCoords <- getWindowCoords(G.sc)
+windowCoords <- getWindowCoords(G.sc, plot.check = FALSE)
 habitatGrid <- windowCoords$habitatGrid
 
 
@@ -133,7 +133,7 @@ Xt.sc.array[1:Jyear[1], 1:2, 1] # Example: to get traps from year 1
 
 localTraps <- localTrapsNum.l <- MaxLocalTraps.l <- list()
 for (t in 1:Tt){
-  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma)
+  localTraps[[t]] <- getLocalObjects(habitatMask, Xt.sc[[t]], resizeFactor = 1, dmax = 5*sigma, plot.check = FALSE)
   localTrapsNum.l[[t]]  <- localTraps[[t]]$numLocalIndices
   MaxLocalTraps.l[[t]]  <- localTraps[[t]]$numLocalIndicesMax
 }
@@ -642,7 +642,7 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 
 # (6) Run (monitor time just for fun) [takes 20 seconds on my computer]
 system.time(
-  (samp <- runMCMC(cmcmc, niter = 1000, nburnin = 500, nchains=2, inits = inits) )
+  (samp <- runMCMC(cmcmc, niter = 2000, nburnin = 500, nchains=3, inits = inits) )
 )
 
 ##remove NAs
@@ -656,7 +656,8 @@ summ<-MCMCsummary(samp)
 MCMCtrace(samp)
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/4.OPSCR_Age")
-save(samp, file = "Results3-1.RData")
+save(samp, file = "Results3-4.RData")
 ## Cubs are a bit of in their p, the rest look okay
 plogis(-1.67914640) # It was 0.1
 
+p0

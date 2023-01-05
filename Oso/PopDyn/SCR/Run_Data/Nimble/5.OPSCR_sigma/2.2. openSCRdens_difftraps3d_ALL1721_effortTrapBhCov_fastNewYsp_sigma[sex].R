@@ -5,7 +5,6 @@
 ##          Cov in p0: Effort + Type of trap + Behavioral response
 ## -------------------------------------------------
 
-## WOOOORKKKKKS
 
 rm(list = ls())
 

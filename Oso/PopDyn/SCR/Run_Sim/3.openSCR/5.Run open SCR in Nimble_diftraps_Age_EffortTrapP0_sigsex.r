@@ -613,6 +613,7 @@ inits<-function(){list(beta=c(0.15,rep(0.85/(Tt-1), Tt-1)),
                        w=w.in,
                        agePlusOne=age.cat.in,
                        psi=0.7,
+                       sex = sex.in,
                        sxy=S.in.sc$coordsDataScaled,
                        sigD=runif(1, 1.5, 2.5))}
 
@@ -658,7 +659,7 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 
 # (6) Run (monitor time just for fun) [takes 20 seconds on my computer]
 system.time(
-  (samp <- runMCMC(cmcmc, niter = 1000, nburnin = 500, nchains=2, inits = inits) )
+  (samp <- runMCMC(cmcmc, niter = 2000, nburnin = 500, nchains=3, inits = inits) )
 )
 
 ##remove NAs
@@ -672,7 +673,7 @@ summ<-MCMCsummary(samp)
 MCMCtrace(samp)
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/Results/4.OPSCR_Age")
-save(samp, file = "Results3-1.RData")
+save(samp, file = "Results3-5.RData")
 ## Cubs are a bit of in their p, the rest look okay
 plogis(-1.67914640) # It was 0.1
 

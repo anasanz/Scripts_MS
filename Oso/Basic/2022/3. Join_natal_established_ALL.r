@@ -272,6 +272,15 @@ os <- os[,c(1,24,26,25,6:22,2:5)]
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
 openxlsx::write.xlsx(os@data, 'Natal_established_coordinates_cubLocations.xlsx')
 
+# Load the one where Elena added the new age classes
+
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+os <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Tablas_finales/2022/Natal_established_coordinates_cubLocations_EPS.xlsx", sheet = 1)
+id <- unique(os$Confirmed_Individual_cub)
+coordinates(os) <- os[,c("x_long","y_lat")] # Spatial object
+os@proj4string <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+
+
 # Save different GIS layer per individual to explore in arcgis (including positions of the mother their first year)
 
 setwd("D:/MargSalas/Oso/Datos/GIS/2022/Identified_individuals")
@@ -279,3 +288,5 @@ for (i in 1:length(id)){
   os_id <- os[which(os$Confirmed_Individual_cub == id[i]), ] # Select individual
   writeOGR(os_id, "D:/MargSalas/Oso/Datos/GIS/2022/Identified_individuals", paste("ID_", id[i], sep = ""), driver = "ESRI Shapefile")
 }
+
+

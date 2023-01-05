@@ -4463,10 +4463,11 @@ out.list[[2]] <- as.mcmc(chain_output[[2]])
 out.list[[3]] <- as.mcmc(chain_output[[3]])
 
 out.list <- as.mcmc.list(out.list)
-
 out2 <- ProcessCodaOutput(out.list)
-out1$mean
-out2$mean
+
+summOpen1 <- MCMCsummary(out.list)
+
+
 # Convergence
 
 library(MCMCvis)
@@ -4480,7 +4481,6 @@ MCMCtrace(out$sims.list,
 
 out$mean
 
-summOpen1 <- MCMCsummary(out)
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021")
 pdf("openSCRdenscov_Age_final1721.pdf", 7, 7)
@@ -4593,4 +4593,41 @@ for (i in 1:ncol(out$sims.list$N)){
                 border.col = "black",
                 horizontal = TRUE)}
 dev.off()
+
+## -------------------------------------------------
+##        openSCRdenscov + Age structure + different trap arrays 
+##                EFFORT Covariates
+##               2017 - 2021 FINAL DATA 
+##                 Time: 3.31 days
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021")
+load("Results_Model3-2.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_age <- MCMCsummary(out.list)
 

@@ -444,11 +444,220 @@ for (i in 1:3){
 
 out2 <- ProcessCodaOutput(out.list)
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/5.OPSCR_sigma")
-
 MCMCtrace(out.list,   
           ind = TRUE,
           pdf = TRUE)
 
 summ_EffortTrapBh_sigSex_SURVcOV_fast <- MCMCsummary(out.list)
-plogis(-16.59278183)
+plogis(7.905529209) # Mean survival when covariate = 0
+
+# Check how survival changes for a range of covariate values
+# Load data
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/6.OPSCR_survCov/Data_server")
+load("Data_Model6-2.RData")
+nimData$habSurv
+
+cov <- seq(min(nimData$habSurv), max(nimData$habSurv), length.out = 200)
+b.dens <- summ_EffortTrapBh_sigSex_SURVcOV_fast$mean[13]
+mu.phi <- summ_EffortTrapBh_sigSex_SURVcOV_fast$mean[20]
+logit.phi <- mu.phi + b.dens*cov
+phi <- plogis(logit.phi)
+plot(phi ~ cov)
+
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+##                   FAST RUN
+##          SURVIVAL COVARIATE, NO DENS COV
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/6.OPSCR_survCov")
+load("Results_Model6-2.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_SURVcOV_noDENS_fast <- MCMCsummary(out.list)
+plogis(8.304298046) # Mean survival when covariate = 0
+
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+##                   FAST RUN
+##        SURVIVAL (ROADS) COVARIATE, NO DENS COV
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/6.OPSCR_survCov")
+load("Results_Model6-2.1.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_SURVcOVroads_noDENS_fast <- MCMCsummary(out.list)
+plogis(9.031203273 ) # Mean survival when covariate = 0
+
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+##                   FAST RUN
+##             COUNTRY SURVIVAL COVARIATE 
+##                  Time: 1,71 days
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/6.OPSCR_survCov")
+load("Results_Model6-3.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_SURVcOVcount_DENS_fast <- MCMCsummary(out.list)
+plogis(2.916949729) # Mean survival when covariate = 0
+
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+##                   FAST RUN
+##             DISTCORE SURVIVAL COVARIATE 1
+##                  Time: 1,7 days
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/6.OPSCR_survCov")
+load("Results_Model6-3.1.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_dist1cOVcount_DENS_fast <- MCMCsummary(out.list)
+
+## -------------------------------------------------
+##    openSCRdenscov + different trap arrays
+##             2017 - 2021 FINAL DATA 
+##              p0 = effort + trap + behav. response
+##                   FAST RUN
+##             DISTCORE SURVIVAL COVARIATE 2
+##                  Time: 1,7 days
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/6.OPSCR_survCov")
+load("Results_Model6-3.2.RData")
+
+out.list<- list()
+out.list[[1]] <- as.mcmc(chain_output[[1]])
+out.list[[2]] <- as.mcmc(chain_output[[2]])
+out.list[[3]] <- as.mcmc(chain_output[[3]])
+
+out.list <- as.mcmc.list(out.list)
+
+# There are NA and the function ProcessCodaOutput doesnt work.
+# I need to substitute them as deleting the columns with NA don't work
+
+na <- function(x){which(!complete.cases(x))}
+lapply(out.list, na)
+lapply(out.list, function(x){print(x[1,])}) # Its pc-gam[1] and R[1], set to 0
+
+for (i in 1:3){
+  out.list[[i]][1,'R[1]'] <- 0
+  out.list[[i]][1,'pc.gam[1]'] <- 0
+}
+
+out2 <- ProcessCodaOutput(out.list)
+
+MCMCtrace(out.list,   
+          ind = TRUE,
+          pdf = TRUE)
+
+summ_EffortTrapBh_sigSex_dist2cOVcount_DENS_fast <- MCMCsummary(out.list)
+
+

@@ -173,16 +173,15 @@ SCRhab.Open.diftraps.age.effortTrapCov<-nimbleCode({
   for (t in 1:Nyr){
     
     for (k in 1:K){
-    
       
     for(i in 1:M){
       
-      logit(p.eff[1:J[t],k,t]) <- p0[age.cat[i,t]+1] + b.effort1*effort[1:J[t],k,t,1] + b.effort2*effort[1:J[t],k,t,2] + b.trap*trap[1:J[t],t]
+      logit(p.eff[i,1:J[t],k,t]) <- p0[age.cat[i,t]+1] + b.effort1*effort[1:J[t],k,t,1] + b.effort2*effort[1:J[t],k,t,2] + b.trap*trap[1:J[t],t]
       
       y[i,1:maxDetNums[t],k,t]~dbinomLocal_normal(detNums = detNums[i,k,t],#getSparseY()$detNums
                                              detIndices = detIndices[i,1:maxDetNums[t],k,t],#getSparseY()$detIndices; ASP: Links with trapID
                                              size = ones[1:J[t]], ##NOW: always 1, because we model each occasion separately
-                                             p0Traps = p.eff[1:J[t],k,t], #model parameter
+                                             p0Traps = p.eff[i,1:J[t],k,t], #model parameter
                                              sigma = sigma, #model parameter
                                              s = sxy[i,1:2,t], #model parameter
                                              trapCoords = X.sc[1:J[t],1:2,t], #trap coordinates (data); ASP: Year specific trap array

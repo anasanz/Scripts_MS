@@ -160,7 +160,7 @@ dem <- raster("dem_WGS84_31N_Clip.tif")
 slope <- raster("clip_slope.tif")
 rough <- raster("clip_roughness.tif")
 
-setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe")
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
 distcore <- raster("dist_corekernel.tif")
 logDistcore <- raster("dist_corekernel_log.tif")
 
@@ -343,6 +343,63 @@ corr_matrix <- jnk$'pearson correlation coefficient'
 # So maybe try models with LogDistCore, Dem/roughness/slope/Forest, roads1/6/4 and roads5
 # BUT they are actually all kind of correlated (Except roads with the rest)
 
+## -------------------------------------------------
+##          Spain/France variable (survival)
+## ------------------------------------------------- 
 
-  
-  
+borders <- readOGR("D:/MargSalas/Oso/Datos/GIS/Countries", layer = "clip_pyros2_WGS84_31N_all")
+
+plot(r)  
+plot(borders, add = TRUE)
+
+borders$NAME_0[which(borders$NAME_0 == "Andorra")] <- "Spain" # Join Andorra to Spain
+
+borders$NAME_0 <- as.numeric(as.factor(borders$NAME_0))
+b <- rasterize(borders, r, field = "NAME_0")
+values(b)[which(values(b) == 1)] <- 0
+values(b)[which(values(b) == 2)] <- 1
+
+proj4string(b) <- proj4string(forest)
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+writeRaster(b, filename = "country.tif", overwrite = TRUE)
+
+## -------------------------------------------------
+##              Core/Not core (survival)
+## ------------------------------------------------- 
+# Raster
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
+core <- raster("core.tif")
+# Poligon
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
+corepol <- readOGR("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore/corepol", layer = "corepol")
+
+# Re-scale (home range size bear)
+core2 <- hrscale(data = core)
+
+plot(core2)
+plot(corepol, add = TRUE)
+
+# 2 layers, restrive (only 1 inside core) and non-restrictive (1 around, re-scaled)
+
+## Non-restrictive
+
+values(core2)[values(core2)>0] <- 1
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+writeRaster(core2, filename = "core_hrbear_nonrest.tif")
+
+## Rrestrictive
+
+core3 <- resample(core,r,method='bilinear') # I only put it at the scale of 5000 x 5000, without moving window
+values(core3)[values(core3)>0] <- 1
+
+plot(core3)
+plot(corepol, add = TRUE)
+
+sum(values(core2)) - sum(values(core3)) # 46 pixels more belinging to core are in non restrictive (core 2)
+
+proj4string(core3) <- proj4string(core)
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+writeRaster(core3, filename = "core_hrbear_rest.tif")
