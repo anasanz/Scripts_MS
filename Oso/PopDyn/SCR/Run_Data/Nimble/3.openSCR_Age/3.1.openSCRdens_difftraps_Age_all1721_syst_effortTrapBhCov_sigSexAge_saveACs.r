@@ -742,45 +742,95 @@ system.time(
 ##                   PROCESS RESULTS
 ## ------------------------------------------------- 
 
+library(MCMCvis)
+library(rgdal)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+load("myResults_3-3.1_param.RData")
+
 #----  1. WHICH STUDY AREA WILL I KEEP TO ESTIMATE ABUNDANCE? ---- 
-# Buffer around traps (5*sigma = 33200)
-#Xpoints <- X
-#coordinates(Xpoints) <- Xpoints[,c(1,2)]
-#Xbuf <- gBuffer(Xpoints, width = 25000) # Already calculated
 
-# Convex hull
-hpts <- chull(coordinates(Xpoints))
-hpts <- c(hpts, hpts[1])
 
-# Smaller buffer
-Xbuf2 <- gBuffer(Xpoints, width = 8500)
+setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
+Xbuf <- readOGR("Buffer_statespace.shp")
+osbuf <- readOGR("Buffer_8500_allobs.shp")
+Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+
 
 # Plots to decide
-plot(e)
-plot(Xbuf, col = "lightblue", add = TRUE)
-points(Xpoints)
-lines(X[hpts, ], col = "red")
-plot(Xbuf2, col = adjustcolor("pink", alpha = 0.5), add = TRUE)
 
-# I think inside xbuf2
+plot(Xbuf, col = "lightblue")
+plot(Xbuf2, col = adjustcolor("pink", alpha = 0.5), add = TRUE)
+plot(osbuf, col = adjustcolor("green", alpha = 0.5), add = TRUE)
+
+
 
 #---- 2.  UNSCALE SXY COORDINATES ---- 
 
 # Load results
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1_sxy_6000")
-load("myResults_3-3.1_sxy_6000.RData")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+load("myResults_3-3.1_sxy.RData")
 
-dim(nimOutputSXY[[1]]) # 9145 elements (e.g., z[1,5]) * 6000 iterations???
-5*300 + 5*300 + 5*300*2 # ??? 6000 elements
+dim(nimOutputSXY[[1]]) # 9145 iterations * 6000 elements (e.g., z[1,5]) ???
+5*300 + 5*300 + 5*300*2 # 6000 elements
 
-dim(myResultsSXYZ$sims.list$sxy) # 9145 elements*3 chains
+
+dim(myResultsSXYZ$sims.list$sxy) # 9145 iterations *3 chains
 dim(myResultsSXYZ$sims.list$z)
+
+
+# 2.1. Select only the iterations where the individual was alive (z=1)
+ite=1
+t=1
+dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
+myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
+                                                        coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
+                                                        scaleToGrid = FALSE)$coordsDataScaled
+
+
+NIn <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3])
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+  which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1)
+  
+  which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t]
+  
+  ##CONVERT SXY TO SPATIAL POINTS 
+  sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(osbuf)))
+  
+  which.In <- over(sp, osbuf)
+   NIn[ite,t] <- sum(which.In,na.rm = T)
+  }
+}
+
+#average number of individuals without the buffer for each year 
+colMeans(NIn)
+NIn[,1]#posterior distrib for the first year
+
+f
+NALL<- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
+colMeans(NALL)
+
+
+dim([myResultsSXYZ$sims.list$z)
+
+
+
+length(myResultsSXYZ$sims.list$sxy[myResultsSXYZ$sims.list$z == 1])
+
+iter_alive <- which(myResultsSXYZ$sims.list$z == 1)
+length(myResultsSXYZ$sims.list$sxy[iter_alive])
+
+array(myResultsSXYZ$sims.list$sxy[iter_alive], dim = c(length(iter_alive), )
+
+
+      
+
+myResultsSXYZ$sims.list$sxy[myResultsSXYZ$sims.list$z == 0] <- NA
 
 dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c("x", "y") # first add "x", "y" to the dimension of the sxy
 
-myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
-                                                    coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
-                                                    scaleToGrid = FALSE)$coordsDataScaled
 
 myResultsSXYZ$sims.list$sxy[myResultsSXYZ$sims.list$z == 0] <- NA # First right????? replace coordinates with NA for phantoms
 
