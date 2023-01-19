@@ -19,7 +19,7 @@ map <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2.shp")
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
 os <- read.csv("Data_os_96_21_cubLocations.csv", header = TRUE, row.names = NULL)  %>% 
   filter(Confirmed_Individual != "Indetermined") %>%
-  mutate(date = as.Date(Date_register, format = "%d/%m/%Y"),
+  mutate(date = as.Date(Date, format = "%d/%m/%Y"),
          an = year(date),
          month = month(date)) %>%
   st_as_sf(coords = c("x_long","y_lat"), crs = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
