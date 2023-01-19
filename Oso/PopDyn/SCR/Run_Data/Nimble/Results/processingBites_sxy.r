@@ -6,20 +6,23 @@
 ##          1.2. Sxy, z, age.cat (params2)
 ## ------------------------------------------------- 
 
+rm(list = ls())
 
 library(coda)
 library(MCMCvis)
 
 
 #setwd("C:/Users/cymi/Downloads/AnaNimbleSCR")
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
-#Nsetwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-4")
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1_sxy_6000")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-4")
+
+# Number of iter ran: Bite size = 100: 1000 iterations per bite, thinned by 10
+# 39 bites * 1000 iter / 10 = 3900
+
 
 ### ====  1.GET AND COMPILE BITES ====
 # COMPILE CHARACTERISTICS 
-bitesize <- 1000
-burnin <- 2000
+bitesize <- 100
+burnin <- 1000
 NSkipBites <- burnin/bitesize
 
 ### ====    1.1 MODEL PARAMETERS ====
@@ -56,18 +59,22 @@ for(p in 1:length(path.list)){
 
 ## COMPILE THE RESULTS
 nimOutput <- as.mcmc.list(nimOutput)
+summary(nimOutput)
 
 setwd("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions")
 source("ProcessCodaOutput.R")
 
 myResults <- ProcessCodaOutput(nimOutput,params.omit = c("sxy","z"))
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1_sxy_6000")
-#save(nimOutput,myResults, file = "myResults_3-3.1_param_6000.RData")
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1_sxy_6000")
-library(MCMCvis)
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-4")
+save(nimOutput,myResults, file = "myResults_4_param.RData")
+
 MCMCtrace(nimOutput,   
           ind = TRUE)
+
+library(boot)
+inv.logit(0.004) # Adults
+inv.logit(0.0009198) # Subadults
 
 ### ====    1.2 SXY,Z,AGE.CAT ====
 
@@ -98,9 +105,6 @@ source("ProcessCodaOutput.R")
 myResultsSXYZ <- ProcessCodaOutput(nimOutputSXY)
 
 # Export to process
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1_sxy_6000")
-save(myResultsSXYZ, nimOutputSXY, file = "myResults_3-3.1_sxy_6000.RData")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-4")
+save(myResultsSXYZ, nimOutputSXY, file = "myResults_4_sxy.RData")
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1_sxy_6000")
-MCMCtrace(nimOutput,   
-          ind = TRUE)

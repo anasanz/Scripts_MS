@@ -1,7 +1,7 @@
 # This model is a combination of the age-structured JS model (code_JS_AGEcatV3.1)
 # and the open SCR model with different trap arrays/year (SCR in Nimble_diftraps)
 
-SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage <- nimbleCode({
+SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.psex <- nimbleCode({
   
   ### PRIORS ###
   psi~ dbeta(1,1)           # data augmentation
@@ -28,28 +28,28 @@ SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage <- nimbleCode({
   ##detection parameter - p0 (baseline detection probability), per age category
   p.ad ~ dnorm(0, 0.01)            # detection per age class. Now in logit scale
   p.sub ~ dnorm(0, 0.01) 
-  p.cub ~ dnorm(0, 0.01)
-  p.sex ~ dnorm(0, 0.01)
+  p.cub ~ dnorm(0, 0.01) # Remove
+  p.sex ~ dnorm(0, 0.01) # Extra effect of being male. Remove
+  
+  # p0 specific by age (rows) and sex (columns; 1 = Females, 2 = Males)
+
+  p0[1,1]<-0  #not recruited yet, placeholder to make indexing work
+  p0[2,1]<-p.cub # pcub =  p of the mother always
+  p0[3,1]<-p.cub# p.ad
+  p0[4,1]<-p.sub
+  p0[5,1]<-p.sub
+  p0[6,1]<-p.ad
+  
+  # If females is 0, you would always set p.cub as p.adult in both columns (females)
+  
+  p0[1,2]<-0  #not recruited yet, placeholder to make indexing work
+  p0[2,2]<-p.cub # p.ad
+  p0[3,2]<-p.cub
+  p0[4,2]<-p.sub + p.sex # Remove p.sex
+  p0[5,2]<-p.sub + p.sex # Remove p.sex
+  p0[6,2]<-p.ad + p.sex # Remove p.sex
   
 
-    p0[1,1]<-0  #not recruited yet, placeholder to make indexing work
-    p0[2,1]<-p.cub
-    p0[3,1]<-p.cub
-    p0[4,1]<-p.sub
-    p0[5,1]<-p.sub
-    p0[6,1]<-p.ad
-    
-    # If females is 0, you would always set p.cub as p.adult in both columns (females)
-    
-    p0[1,2]<-0  #not recruited yet, placeholder to make indexing work
-    p0[2,2]<-p.cub
-    p0[3,2]<-p.cub
-    p0[4,2]<-p.sub + p.sex
-    p0[5,2]<-p.sub + p.sex
-    p0[6,2]<-p.ad + p.sex
-  
-
-  
   # Covariate effects on p (b.effort1, b.effort2, b.trap)
   for(c in 1:nTrapCovs){ 
     trapBetas[c] ~ dnorm(0, 0.01)
@@ -216,7 +216,7 @@ SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage <- nimbleCode({
           #detIndices = detIndices[i,1:maxDetNums[t],k,t],#getSparseY()$detIndices; ASP: Links with trapID
           size = ones[1:J[t]], ##NOW: always 1, because we model each occasion separately
           #p0Traps = p.eff[i,1:J[t],k,t], #model parameter
-          p0 = p0[age.cat[i,t]+1, sex[i]+1],
+          p0 = p0[age.cat[i,t]+1, sex[i]+1], # p specific to age category and sex
           sigma = sigma[sex.age[i,t]+1], #model parameter
           s = sxy[i,1:2,t], #model parameter
           trapCoords = X.sc[1:J[t],1:2,t], #trap coordinates (data); ASP: Year specific trap array

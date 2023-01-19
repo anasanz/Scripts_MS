@@ -12,7 +12,7 @@ library(parallel)
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 #setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 
-load("Data_Model3-3.1_CYRIL.RData")
+load("Data_Model3-3.2_CYRIL.RData")
 
 setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
 source('dbinomLocal_normalBear_rbinom2.R')

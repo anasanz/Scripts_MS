@@ -635,14 +635,23 @@ params<-c("p.ad", "p.sub","p.cub","phi.ad","phi.sub","phi.cub",
           'sigma', 'beta.dens', 'sigD',
           'trapBetas', 'b.bh', 'omega')
 
+params2 <- c("sxy", "z", "age.cat") 
+
+
 ###### SAVE FOR RUNNING #####
 
 modelcode = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
+#save(nimData, nimConstants, 
+#     inits, Tt, sex.in, piAGE.in, zstAGE, w.in, age.cat.in ,S.in.sc_coords, 
+#     params, params2, run_MCMC_allcode, modelcode, file = "Data_Model3-3.0.RData")
+
+# For Cyril
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 save(nimData, nimConstants, 
      inits, Tt, sex.in, piAGE.in, zstAGE, w.in, age.cat.in ,S.in.sc_coords, 
-     params, run_MCMC_allcode, modelcode, file = "Data_Model3-3.RData")
+     params, params2, modelcode, file = "Data_Model3-3.0_CYRIL.RData")
 
 #### OPTION 1: PARALLEL ####
 detectCores()
@@ -693,6 +702,8 @@ save(chain_output, file = "sampOpenSCR_diftraps_age_2021.RData")
 
 model <- nimbleModel(SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
+
+
 ##ignore error message, only due to missing initial values at this stage
 
 model$initializeInfo()
@@ -721,21 +732,89 @@ system.time(
   (samp <- runMCMC(cmcmc, niter = 10, nburnin = 5, nchains=3, inits = inits) )
 )
 
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/2.openSCRdenscov")
-setwd("~/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age")
+## -------------------------------------------------
+##                   PROCESS RESULTS
+## ------------------------------------------------- 
 
-save(samp, file = "sampOpenSCR_diftraps_age2.RData")
+library(MCMCvis)
+library(rgdal)
+library(coda)
+library(nimbleSCR)
 
-##remove NAs
-inn<-colnames(samp[[1]])
-remm<-pmatch(c("R[1]", "pc.gam[1]"), inn)
-samp2<-lapply(samp, function(x)x[,-remm])
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.0")
+load("myResults_3-3.0_param.RData")
+summary(nimOutput)
 
-##NOTE: summary command is from MCMCvis package; that also has good plotting options
-## summary table for everything in "params" vector
-summ<-MCMCsummary(samp2)
-MCMCtrace(samp)
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+load("habcoord.RData")
 
 
-# Density
-summ$mean[1]/max(habitatGrid) # 65/605 = 0.1074799
+#----  1. WHICH STUDY AREA WILL I KEEP TO ESTIMATE ABUNDANCE? ---- 
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
+Xbuf <- readOGR("Buffer_statespace.shp")
+osbuf <- readOGR("Buffer_8500_allobs.shp")
+Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+
+# Plots to decide
+
+plot(Xbuf, col = "lightblue")
+plot(Xbuf2, col = adjustcolor("pink", alpha = 0.5), add = TRUE)
+plot(osbuf, col = adjustcolor("green", alpha = 0.5), add = TRUE)
+
+#---- 2.  ESTIMATE ABUNDANCE IN BUFFER ---- 
+
+# Load results
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.0")
+load("myResults_3-3.0_sxy.RData")
+
+dim(nimOutputSXY[[1]]) #  iterations * 6000 elements (e.g., z[1,5]) ???
+5*300 + 5*300 + 5*300*2 # 6000 elements
+
+dim(myResultsSXYZ$sims.list$sxy) 
+dim(myResultsSXYZ$sims.list$z)
+
+# Unscale the sxy coordinates
+
+dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
+myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
+                                                        coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
+                                                        scaleToGrid = FALSE)$coordsDataScaled
+
+# Each iteration is a reality of the model, so for each iteration I take the activity center of alive individuals, test
+# if its in the buffer and sum them to get abundance.
+
+# Matrix to store abundance in the buffer each iteration and year
+NIn <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+ite=1
+t=1
+
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+    which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
+    
+    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+    
+    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(osbuf))) # CONVERT SXY TO SPATIAL POINTS 
+    
+    which.In <- over(sp, osbuf) # Check which ones are in the buffer
+    
+    NIn[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
+  }
+}
+
+#average number of individuals without the buffer for each year 
+colMeans(NIn)
+NIn[,1]#posterior distrib for the first year
+
+par(mfrow = c(2,3))
+for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  plot(density(NIn[,t]), main = t)
+  abline(v = colMeans(NIn)[t], col = "blue")
+}
+
+# Sum of individuals alive in total each year (without buffer)
+NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
+colMeans(NALL)

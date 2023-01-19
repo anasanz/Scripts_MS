@@ -87,6 +87,7 @@ distcoreMask <- rasterize(Xbuf, habitat.r, mask = TRUE)
 #RETAIN HABITAT COORDINATES THAT ARE WITHIN THE HABITAT
 G <- coordinates(distcoreMask)[!is.na(distcoreMask[]),]
 colnames(G) <- c("x","y")
+
 #PLOT CHECK 
 plot(distcoreMask)
 points(Xpoints)
@@ -747,96 +748,173 @@ library(rgdal)
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
 load("myResults_3-3.1_param.RData")
+summary(nimOutput)
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+load("habcoord.RData")
 
 #----  1. WHICH STUDY AREA WILL I KEEP TO ESTIMATE ABUNDANCE? ---- 
 
-
 setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
 Xbuf <- readOGR("Buffer_statespace.shp")
-osbuf <- readOGR("Buffer_8500_allobs.shp")
 Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+osbuf <- readOGR("Buffer_8500_allobs.shp")
+osbuf2 <- readOGR("Buffer_8000_allobs_cropped_noOut.shp")
+osMAE <- readOGR("Min_Pol_Maelis_clip.shp")
 
+osbuf2@data$ID <- 1
+osMAE@data$ID <- 1
+osMAE@data <- osMAE@data[2]
 
 # Plots to decide
 
 plot(Xbuf, col = "lightblue")
 plot(Xbuf2, col = adjustcolor("pink", alpha = 0.5), add = TRUE)
 plot(osbuf, col = adjustcolor("green", alpha = 0.5), add = TRUE)
+plot(osbuf2, col = adjustcolor("yellow", alpha = 0.5), add = TRUE)
 
 
 
-#---- 2.  UNSCALE SXY COORDINATES ---- 
+
+#---- 2.  ESTIMATE ABUNDANCE IN BUFFER ---- 
 
 # Load results
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
 load("myResults_3-3.1_sxy.RData")
 
-dim(nimOutputSXY[[1]]) # 9145 iterations * 6000 elements (e.g., z[1,5]) ???
+dim(nimOutputSXY[[1]]) #  iterations * 6000 elements (e.g., z[1,5]) ???
 5*300 + 5*300 + 5*300*2 # 6000 elements
 
 
-dim(myResultsSXYZ$sims.list$sxy) # 9145 iterations *3 chains
+dim(myResultsSXYZ$sims.list$sxy) 
 dim(myResultsSXYZ$sims.list$z)
 
 
-# 2.1. Select only the iterations where the individual was alive (z=1)
-ite=1
-t=1
+# Unscale the sxy coordinates
+
+
 dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
 myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
                                                         coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
                                                         scaleToGrid = FALSE)$coordsDataScaled
 
+# Each iteration is a reality of the model, so for each iteration I take the activity center of alive individuals, test
+# if its in the buffer and sum them to get abundance.
 
-NIn <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3])
+#---- 2.1.  ESTIMATE ABUNDANCE IN BUFFER OF ALL BEAR OBSERVATIONS (OSBUF2, Buffer of 8000 m) ---- 
+
+# Matrix to store abundance in the buffer each iteration and year
+NIn_obsBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+ite=1
+t=1
+
 for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
   for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
     
-  which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1)
+  which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
+
+  which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
   
-  which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t]
+  sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(osbuf2))) # CONVERT SXY TO SPATIAL POINTS 
   
-  ##CONVERT SXY TO SPATIAL POINTS 
-  sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(osbuf)))
+  which.In <- over(sp, osbuf2) # Check which ones are in the buffer
   
-  which.In <- over(sp, osbuf)
-   NIn[ite,t] <- sum(which.In,na.rm = T)
+  NIn_obsBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
   }
 }
 
 #average number of individuals without the buffer for each year 
-colMeans(NIn)
-NIn[,1]#posterior distrib for the first year
+colMeans(NIn_obsBuf)
+NIn_obsBuf[,1]#posterior distrib for the first year
 
-f
-NALL<- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
+par(mfrow = c(2,3))
+for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  plot(density(NIn_obsBuf[,t]), main = t)
+  abline(v = colMeans(NIn_obsBuf)[t], col = "blue")
+}
+
+# Sum of individuals alive in total each year (without buffer)
+NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
 colMeans(NALL)
 
 
-dim([myResultsSXYZ$sims.list$z)
+#---- 2.2.  ESTIMATE ABUNDANCE IN BUFFER OF THE TRAPS (Xbuf2) ---- 
+
+# Matrix to store abundance in the buffer each iteration and year
+NIn_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+ite=1
+t=1
+
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+    which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
+    
+    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+    
+    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
+    
+    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
+    
+    NIn_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
+  }
+}
+
+#average number of individuals without the buffer for each year 
+colMeans(NIn_trapBuf)
+NIn_trapBuf[,1]#posterior distrib for the first year
+
+par(mfrow = c(2,3))
+for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  plot(density(NIn_trapBuf[,t]), main = t)
+  abline(v = colMeans(NIn_trapBuf)[t], col = "blue")
+}
+
+# Sum of individuals alive in total each year (without buffer)
+NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
+colMeans(NALL)
+
+#---- 2.3.  ESTIMATE ABUNDANCE INSIDE THE MINIMUN POLYGON CONTAINING TRAPS AND PREDATIONS (maelis) ---- 
+
+# Matrix to store abundance in the buffer each iteration and year
+NIn_MAE <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+ite=1
+t=1
+
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+    which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
+    
+    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+    
+    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(osMAE))) # CONVERT SXY TO SPATIAL POINTS 
+    
+    which.In <- over(sp, osMAE) # Check which ones are in the buffer
+    
+    NIn_MAE[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
+  }
+}
+
+#average number of individuals without the buffer for each year 
+colMeans(NIn_MAE)
+NIn_MAE[,1]#posterior distrib for the first year
+
+par(mfrow = c(2,3))
+for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  plot(density(NIn_MAE[,t]), main = t)
+  abline(v = colMeans(NIn_MAE)[t], col = "blue")
+}
+
+# Sum of individuals alive in total each year (without buffer)
+NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
+colMeans(NALL)
 
 
-
-length(myResultsSXYZ$sims.list$sxy[myResultsSXYZ$sims.list$z == 1])
-
-iter_alive <- which(myResultsSXYZ$sims.list$z == 1)
-length(myResultsSXYZ$sims.list$sxy[iter_alive])
-
-array(myResultsSXYZ$sims.list$sxy[iter_alive], dim = c(length(iter_alive), )
-
-
-      
-
-myResultsSXYZ$sims.list$sxy[myResultsSXYZ$sims.list$z == 0] <- NA
-
-dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c("x", "y") # first add "x", "y" to the dimension of the sxy
-
-
-myResultsSXYZ$sims.list$sxy[myResultsSXYZ$sims.list$z == 0] <- NA # First right????? replace coordinates with NA for phantoms
-
-meanSXY <- colMeans(myResultsSXYZ$sims.list$sxy, na.rm = TRUE)
-
-dim(meanSXY)
+# Maybe this code is useful in the future:
 coord_years <- list()
 for (i in 1:Tt){
   coord_years[[i]] <- as.data.frame(meanSXY[,c(1,2),i])
