@@ -785,13 +785,10 @@ load("myResults_3-3.1_sxy.RData")
 dim(nimOutputSXY[[1]]) #  iterations * 6000 elements (e.g., z[1,5]) ???
 5*300 + 5*300 + 5*300*2 # 6000 elements
 
-
 dim(myResultsSXYZ$sims.list$sxy) 
 dim(myResultsSXYZ$sims.list$z)
 
-
 # Unscale the sxy coordinates
-
 
 dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
 myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
