@@ -27,15 +27,15 @@ Xbuf2 <- readOGR("Buffer_8500_traps.shp")
 
 setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
 r <- raster("logDistcore_hrbear.tif")
-values(r) <- NA
+raster::values(r) <- NA
 r <- crop(r,Xbuf) 
 
 Xbuf_raster <- rasterize(Xbuf, r)
-values(Xbuf_raster)[which(is.na(values(Xbuf_raster)))] <- 0 # Raster of 0 and 1
+raster::values(Xbuf_raster)[which(is.na(raster::values(Xbuf_raster)))] <- 0 # Raster of 0 and 1
 
 Xbuf2_raster <- rasterize(Xbuf2, r)
-values(Xbuf2_raster)[which(values(Xbuf2_raster) == 1)] <- 2
-values(Xbuf2_raster)[which(is.na(values(Xbuf2_raster)))] <- 0 # Raster of 0 and 2
+raster::values(Xbuf2_raster)[which(raster::values(Xbuf2_raster) == 1)] <- 2
+raster::values(Xbuf2_raster)[which(is.na(raster::values(Xbuf2_raster)))] <- 0 # Raster of 0 and 2
 
 ras <- overlay(Xbuf_raster, Xbuf2_raster, fun = max)
 f <- rasterize(Xbuf, ras, mask = TRUE)
@@ -58,8 +58,8 @@ dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c("x","y")
 
 ## first rescale the coordinates to the original scale 
 myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,
-  coordsHabitatGridCenter = G,
-  scaleToGrid = FALSE)$coordsDataScaled
+                                                        coordsHabitatGridCenter = G,
+                                                        scaleToGrid = FALSE)$coordsDataScaled
 
 f1 <- f
 f1[f1%in%c(1,2)] <-  1
@@ -75,7 +75,16 @@ densityInputRegions <- getDensityInput(
 ## extract density
 yearnames <- c("2017", "2018", "2019", "2020", "2021")
 
+setwd("D:/MargSalas/Oso/Results/Plots/model3.1")
+pdf("density.pdf",12,6)
+
+
 ######  ALL INDIVIDUALS  #####
+
+par(mfrow = c(4,5),
+    mar = c(0,1,0,3),
+    oma = c(0.5,1.5,2,1),
+    bty = "n")
 
 DensityCountriesRegions <- list()
 n.years = 5
@@ -99,14 +108,8 @@ for(t in 1:n.years){
   ACDens[[t]] <- densityInputRegions$regions.r
   ACDens[[t]][] <- NA
   ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
-  plot(ACDens[[t]], main = paste(yearnames[t], "ALL"))
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
 }
-
-DensityCountriesRegions[[1]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[2]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
 
 ######  CUBS  #####
 
@@ -135,14 +138,8 @@ for(t in 1:n.years){
   ACDens[[t]] <- densityInputRegions$regions.r
   ACDens[[t]][] <- NA
   ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
-  plot(ACDens[[t]], main = paste(yearnames[t], "CUBS"))
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
 }
-
-DensityCountriesRegions[[1]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[2]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
 
 ######  SUBADULTS  #####
 
@@ -171,14 +168,8 @@ for(t in 1:n.years){
   ACDens[[t]] <- densityInputRegions$regions.r
   ACDens[[t]][] <- NA
   ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
-  plot(ACDens[[t]], main = paste(yearnames[t], "SUBADULTS"))
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
 }
-
-DensityCountriesRegions[[1]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[2]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
 
 
 ######  ADULTS  #####
@@ -208,12 +199,10 @@ for(t in 1:n.years){
   ACDens[[t]] <- densityInputRegions$regions.r
   ACDens[[t]][] <- NA
   ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
-  plot(ACDens[[t]], main = paste(yearnames[t], "ADULTS"))
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
 }
 
-DensityCountriesRegions[[1]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[2]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
-DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+mtext(yearnames, at = c(0.1,0.3,0.5,0.7,0.9), outer = TRUE, line = -1, side = 3)
+mtext(c("Adult", "Subadult", "Cub", "All"), at = c(0.17,0.45,0.67,0.92), outer = TRUE, line = 0, side = 2, adj = 1)
 
+dev.off()
