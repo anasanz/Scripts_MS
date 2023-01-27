@@ -462,7 +462,7 @@ for(i in 1:n){
 ### running a model in parallel ############################################################
 
 ##source code to run model in parallel 
-setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
+setwd("D:/MargSalas/Scripts_MS/Functions/Nimble")
 source("Parallel Nimble function FOR aNA2_model3-3.1.r") ##sorry, caps lock...
 
 #----   4.1 CONSTANT AND DATA    ---- 
@@ -635,7 +635,7 @@ params <- c("p.ad", "p.sub","p.cub","phi.ad","phi.sub","phi.cub",
           "beta", "psi", "piAGE", "Nsuper", "N", "B", "N.cub", "N.sub", "N.ad",
           'sigma', 'beta.dens', 'sigD',
           'trapBetas', 'b.bh', 'omega')
-params2 <- c("sxy", "z", "age.cat") 
+params2 <- c("sxy", "z", "age.cat", "sex") 
 
 ## Check how many elements I would save if I save sxy, z and age.cats
 M*Tt # 1500 ACs (matrix of two columns, so 3000 in total) + 1500 z + 1500 age.cat
@@ -659,7 +659,7 @@ save(nimData, nimConstants,
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 save(nimData, nimConstants, 
      inits, Tt, sex.in, piAGE.in, zstAGE, w.in, age.cat.in ,S.in.sc_coords, 
-     params, params2, modelcode, file = "Data_Model3-3.1_CYRIL.RData")
+     params, params2, modelcode, file = "Data_Model3-3.1_CYRIL_allparams.RData")
 
 #### OPTION 1: PARALLEL ####
 detectCores()
@@ -746,7 +746,7 @@ system.time(
 library(MCMCvis)
 library(rgdal)
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
 load("myResults_3-3.1_param.RData")
 summary(nimOutput)
 
@@ -779,7 +779,7 @@ plot(osbuf2, col = adjustcolor("yellow", alpha = 0.5), add = TRUE)
 #---- 2.  ESTIMATE ABUNDANCE IN BUFFER ---- 
 
 # Load results
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
 load("myResults_3-3.1_sxy.RData")
 
 dim(nimOutputSXY[[1]]) #  iterations * 6000 elements (e.g., z[1,5]) ???

@@ -12,9 +12,9 @@ library(parallel)
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 #setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 
-load("Data_Model3-3.2_CYRIL.RData")
+load("Data_Model3-3.1_CYRIL_allparams.RData")
 
-setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
+setwd("D:/MargSalas/Scripts_MS/Functions/Nimble")
 source('dbinomLocal_normalBear_rbinom2.R')
 source('getSexSigma.R')
 
