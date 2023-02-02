@@ -480,7 +480,7 @@ save(out, file = "PTALC_HDS_HQ_10_20.RData")
 
 # ---- Results ----
 
-setwd("D:/Ana/Model/Ganga/10_20")
+setwd("D:/Otros/Ganga/Trend_HDS_model_ch2/6. 10_20_AF/10_20")
 load("PTALC_HDS_HQ_10_20.RData")
 
 
