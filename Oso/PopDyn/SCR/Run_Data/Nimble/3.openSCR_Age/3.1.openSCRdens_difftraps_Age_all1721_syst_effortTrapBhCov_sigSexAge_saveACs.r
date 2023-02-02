@@ -745,8 +745,9 @@ system.time(
 
 library(MCMCvis)
 library(rgdal)
+library(nimbleSCR)
 
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
 load("myResults_3-3.1_param.RData")
 summary(nimOutput)
 
@@ -927,3 +928,39 @@ points(coord_years[[4]], col = "darkgreen", pch = 19)
 points(coord_years[[5]], col = "black", pch = 19)
 
 
+
+## ---- 3. AGE STRUCTURE ----
+
+#---- 2.2.  ESTIMATE ABUNDANCE IN BUFFER OF THE TRAPS (Xbuf2) ---- 
+
+# Matrix to store abundance in the buffer each iteration and year
+ad_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+subad_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+cub_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+
+ite=1
+t=1
+
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+    which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
+    
+    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+    
+    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
+    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
+    
+    which.aliveAGE <- myResultsSXYZ$sims.list$age.cat[ite,which.alive,t] # Retrieve the age category for those individuals
+    which.aliveAGE.In <- 
+    
+    ad_trapBuf[ite,t] <- length(which.aliveAGE[which.aliveAGE == 5])/length(which.aliveAGE)
+    subad_trapBuf[ite,t] <- length(which.aliveAGE[which.aliveAGE == 3 | which.aliveAGE == 4])/length(which.aliveAGE)
+    cub_trapBuf[ite,t] <- length(which.aliveAGE[which.aliveAGE == 1 | which.aliveAGE == 2])/length(which.aliveAGE)
+    
+    
+    
+    ad_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
+  }
+}

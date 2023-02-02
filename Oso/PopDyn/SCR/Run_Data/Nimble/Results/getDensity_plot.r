@@ -206,3 +206,230 @@ mtext(yearnames, at = c(0.1,0.3,0.5,0.7,0.9), outer = TRUE, line = -1, side = 3)
 mtext(c("Adult", "Subadult", "Cub", "All"), at = c(0.17,0.45,0.67,0.92), outer = TRUE, line = 0, side = 2, adj = 1)
 
 dev.off()
+
+###############################################################################
+#####         PLOT ONLY OBSERVED INDIVIDUALS: FIRST 61
+#############################################################################
+
+rm(list = ls())
+
+library(Rcpp)
+library(RcppArmadillo)
+library(RcppProgress)
+library(rgdal)
+library(raster)
+
+setwd("D:/MargSalas/Scripts_MS/Functions/Nimble")
+
+# Load functions
+#sourceCpp("GetSpaceUse_PD.cpp")
+sourceCpp("GetDensity_PD.cpp")
+source("getDensityInput.R")
+
+# Load buffers
+setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
+Xbuf <- readOGR("Buffer_statespace.shp")
+Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+
+# Conver to rasters
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+r <- raster("logDistcore_hrbear.tif")
+raster::values(r) <- NA
+r <- crop(r,Xbuf) 
+
+Xbuf_raster <- rasterize(Xbuf, r)
+raster::values(Xbuf_raster)[which(is.na(raster::values(Xbuf_raster)))] <- 0 # Raster of 0 and 1
+
+Xbuf2_raster <- rasterize(Xbuf2, r)
+raster::values(Xbuf2_raster)[which(raster::values(Xbuf2_raster) == 1)] <- 2
+raster::values(Xbuf2_raster)[which(is.na(raster::values(Xbuf2_raster)))] <- 0 # Raster of 0 and 2
+
+ras <- overlay(Xbuf_raster, Xbuf2_raster, fun = max)
+f <- rasterize(Xbuf, ras, mask = TRUE)
+#values(f)[which(values(f) == 1)] <- 0
+#values(f)[which(values(f) == 2)] <- 1
+
+# Load posterior distribution
+library(nimbleSCR) # Load nimbleSCR here, otherwise it gets in conflict with raster package, weird
+
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
+load("myResults_3-3.1_sxy.RData")
+
+# SUBSET: ONLY SEEN INDIVIDUALS (FIRST 61)
+
+dim(myResultsSXYZ$sims.list) # YOURPOSTERIORSXY 
+
+myResultsSubset<- myResultsSXYZ
+
+dim(myResultsSubset$sims.list$age.cat)
+myResultsSubset$sims.list$age.cat <- myResultsSubset$sims.list$age.cat[ ,1:61,]
+
+dim(myResultsSubset$sims.list$sex)
+myResultsSubset$sims.list$sex <- myResultsSubset$sims.list$sex[ ,1:61]
+
+dim(myResultsSubset$sims.list$sxy)
+myResultsSubset$sims.list$sxy <- myResultsSubset$sims.list$sxy[ ,1:61,,]
+
+dim(myResultsSubset$sims.list$z)
+myResultsSubset$sims.list$z <- myResultsSubset$sims.list$z[ ,1:61,]
+
+# Load original habitat coordinates
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+load("habcoord.RData")
+
+#give dim names to your posteriors sxy
+dim(myResultsSubset$sims.list$sxy) # YOURPOSTERIORSXY 
+dimnames(myResultsSubset$sims.list$sxy)[[3]] <- c("x","y")
+
+## first rescale the coordinates to the original scale 
+myResultsSubset$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSubset$sims.list$sxy,
+                                                        coordsHabitatGridCenter = G,
+                                                        scaleToGrid = FALSE)$coordsDataScaled
+
+f1 <- f
+f1[f1%in%c(1,2)] <-  1
+f[] <- as.factor(as.character(f[]))
+
+##GET OBJECTS IN SHAPE
+densityInputRegions <- getDensityInput( 
+  regions = f,## THIS  A RASTER FILE WITH 0/1 HABITAT VS BUFFER, OR 1/2 fRANCE SPAIN... WHATEVER YOU WANT. 
+  habitat = f1,## here put the same than regions argument. 
+  s = myResultsSubset$sims.list$sxy,
+  plot.check = TRUE)
+
+## extract density
+yearnames <- c("2017", "2018", "2019", "2020", "2021")
+
+setwd("D:/MargSalas/Oso/Results/Plots/model3.1")
+pdf("density_observed.pdf",12,6)
+
+
+######  ALL INDIVIDUALS  #####
+
+par(mfrow = c(4,5),
+    mar = c(0,1,0,3),
+    oma = c(0.5,1.5,2,1),
+    bty = "n")
+
+DensityCountriesRegions <- list()
+n.years = 5
+for(t in 1:n.years){
+  DensityCountriesRegions[[t]] <- GetDensity_PD(
+    sx = densityInputRegions$sx[,,t],# X COORDINATES
+    sy =  densityInputRegions$sy[,,t],# Y COORDINATES
+    z = myResultsSubset$sims.list$z[,,t],# Z 
+    IDmx = densityInputRegions$habitat.id,
+    aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+    regionID = densityInputRegions$regions.rgmx,
+    returnPosteriorCells = F)
+}#t
+
+#mean density in each cell 
+DensityCountriesRegions[[1]]$MeanCell
+
+#plot()
+ACDens<-list()
+for(t in 1:n.years){
+  ACDens[[t]] <- densityInputRegions$regions.r
+  ACDens[[t]][] <- NA
+  ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
+}
+
+######  CUBS  #####
+
+ZZcubs <- myResultsSubset$sims.list$z
+ZZcubs[!myResultsSubset$sims.list$age.cat %in% c(1,2) ]  <- 3 # Considers all individuals that are not 1 and 2 as dead
+
+DensityCountriesRegions <- list()
+n.years = 5
+for(t in 1:n.years){
+  DensityCountriesRegions[[t]] <- GetDensity_PD(
+    sx = densityInputRegions$sx[,,t],# X COORDINATES
+    sy =  densityInputRegions$sy[,,t],# Y COORDINATES
+    z = ZZcubs[,,t],# Z 
+    IDmx = densityInputRegions$habitat.id,
+    aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+    regionID = densityInputRegions$regions.rgmx,
+    returnPosteriorCells = F)
+}#t
+
+#mean density in each cell 
+DensityCountriesRegions[[1]]$MeanCell
+
+#plot()
+ACDens<-list()
+for(t in 1:n.years){
+  ACDens[[t]] <- densityInputRegions$regions.r
+  ACDens[[t]][] <- NA
+  ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
+}
+
+######  SUBADULTS  #####
+
+ZZsub <- myResultsSubset$sims.list$z
+ZZsub[!myResultsSubset$sims.list$age.cat %in% c(3,4) ]  <- 3 # Considers all individuals that are not 3 and 4 (SUBADULTS) as dead
+
+DensityCountriesRegions <- list()
+n.years = 5
+for(t in 1:n.years){
+  DensityCountriesRegions[[t]] <- GetDensity_PD(
+    sx = densityInputRegions$sx[,,t],# X COORDINATES
+    sy =  densityInputRegions$sy[,,t],# Y COORDINATES
+    z = ZZsub[,,t],# Z 
+    IDmx = densityInputRegions$habitat.id,
+    aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+    regionID = densityInputRegions$regions.rgmx,
+    returnPosteriorCells = F)
+}#t
+
+#mean density in each cell 
+DensityCountriesRegions[[1]]$MeanCell
+
+#plot()
+ACDens<-list()
+for(t in 1:n.years){
+  ACDens[[t]] <- densityInputRegions$regions.r
+  ACDens[[t]][] <- NA
+  ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
+}
+
+
+######  ADULTS  #####
+
+ZZad <- myResultsSubset$sims.list$z
+ZZad[!myResultsSubset$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 3 and 4 (SUBADULTS) as dead
+
+DensityCountriesRegions <- list()
+n.years = 5
+for(t in 1:n.years){
+  DensityCountriesRegions[[t]] <- GetDensity_PD(
+    sx = densityInputRegions$sx[,,t],# X COORDINATES
+    sy =  densityInputRegions$sy[,,t],# Y COORDINATES
+    z = ZZad[,,t],# Z 
+    IDmx = densityInputRegions$habitat.id,
+    aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+    regionID = densityInputRegions$regions.rgmx,
+    returnPosteriorCells = F)
+}#t
+
+#mean density in each cell 
+DensityCountriesRegions[[1]]$MeanCell
+
+#plot()
+ACDens<-list()
+for(t in 1:n.years){
+  ACDens[[t]] <- densityInputRegions$regions.r
+  ACDens[[t]][] <- NA
+  ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
+  plot(ACDens[[t]], xaxt = "n", yaxt = "n", bty="n")
+}
+
+mtext(yearnames, at = c(0.1,0.3,0.5,0.7,0.9), outer = TRUE, line = -1, side = 3)
+mtext(c("Adult", "Subadult", "Cub", "All"), at = c(0.17,0.45,0.67,0.92), outer = TRUE, line = 0, side = 2, adj = 1)
+
+dev.off()
+

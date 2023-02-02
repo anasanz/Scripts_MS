@@ -13,7 +13,7 @@ library(MCMCvis)
 
 
 #setwd("C:/Users/cymi/Downloads/AnaNimbleSCR")
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-4")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
 
 # Number of iter ran: Bite size = 100: 1000 iterations per bite, thinned by 10
 # 39 bites * 1000 iter / 10 = 3900
@@ -66,8 +66,8 @@ source("ProcessCodaOutput.R")
 
 myResults <- ProcessCodaOutput(nimOutput,params.omit = c("sxy","z"))
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-4")
-save(nimOutput,myResults, file = "myResults_4_param.RData")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
+save(nimOutput,myResults, file = "myResults_3-3.2.1_param.RData")
 
 MCMCtrace(nimOutput,   
           ind = TRUE)
@@ -105,6 +105,6 @@ source("ProcessCodaOutput.R")
 myResultsSXYZ <- ProcessCodaOutput(nimOutputSXY)
 
 # Export to process
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-4")
-save(myResultsSXYZ, nimOutputSXY, file = "myResults_4_sxy.RData")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
+save(myResultsSXYZ, nimOutputSXY, file = "myResults_3-3.2.1_sxy.RData")
 

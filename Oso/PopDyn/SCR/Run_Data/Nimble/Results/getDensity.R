@@ -45,7 +45,7 @@ f <- rasterize(Xbuf, ras, mask = TRUE)
 # Load posterior distribution
 library(nimbleSCR) # Load nimbleSCR here, otherwise it gets in conflict with raster package, weird
 
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
 load("myResults_3-3.1_sxy.RData")
 
 # Load original habitat coordinates
@@ -184,7 +184,7 @@ DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sa
 ######  ADULTS  #####
 
 ZZad <- myResultsSXYZ$sims.list$z
-ZZad[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 3 and 4 (SUBADULTS) as dead
+ZZad[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (adults) as dead
 
 DensityCountriesRegions <- list()
 n.years = 5
@@ -217,3 +217,110 @@ DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sa
 DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
 DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
 
+######  FEMALES  #####
+# Sex: 0 Females; 1 Males
+ZZfem <- myResultsSXYZ$sims.list$z
+ZZfem[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 3 # Considers all individuals that are not 0 (females) as dead
+
+DensityCountriesRegions <- list()
+n.years = 5
+for(t in 1:n.years){
+  DensityCountriesRegions[[t]] <- GetDensity_PD(
+    sx = densityInputRegions$sx[,,t],# X COORDINATES
+    sy =  densityInputRegions$sy[,,t],# Y COORDINATES
+    z = ZZfem[,,t],# Z 
+    IDmx = densityInputRegions$habitat.id,
+    aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+    regionID = densityInputRegions$regions.rgmx,
+    returnPosteriorCells = F)
+}#t
+
+#mean density in each cell 
+DensityCountriesRegions[[1]]$MeanCell
+
+#plot()
+ACDens<-list()
+for(t in 1:n.years){
+  ACDens[[t]] <- densityInputRegions$regions.r
+  ACDens[[t]][] <- NA
+  ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
+  plot(ACDens[[t]], main = paste(yearnames[t], "FEMALES"))
+}
+
+DensityCountriesRegions[[1]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[2]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+
+######  MALES  #####
+# Sex: 0 Females; 1 Males
+ZZmal <- myResultsSXYZ$sims.list$z
+ZZmal[!myResultsSXYZ$sims.list$sex %in% c(1) ]  <- 3 # Considers all individuals that are not 0 (females) as dead
+
+DensityCountriesRegions <- list()
+n.years = 5
+for(t in 1:n.years){
+  DensityCountriesRegions[[t]] <- GetDensity_PD(
+    sx = densityInputRegions$sx[,,t],# X COORDINATES
+    sy =  densityInputRegions$sy[,,t],# Y COORDINATES
+    z = ZZmal[,,t],# Z 
+    IDmx = densityInputRegions$habitat.id,
+    aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+    regionID = densityInputRegions$regions.rgmx,
+    returnPosteriorCells = F)
+}#t
+
+#mean density in each cell 
+DensityCountriesRegions[[1]]$MeanCell
+
+#plot()
+ACDens<-list()
+for(t in 1:n.years){
+  ACDens[[t]] <- densityInputRegions$regions.r
+  ACDens[[t]][] <- NA
+  ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
+  plot(ACDens[[t]], main = paste(yearnames[t], "MALES"))
+}
+
+DensityCountriesRegions[[1]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[2]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+
+######  ONLY OBSERVED INDIVIDUALS  #####
+
+ZZad <- myResultsSXYZ$sims.list$z
+ZZad[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (SUBADULTS) as dead
+
+DensityCountriesRegions <- list()
+n.years = 5
+for(t in 1:n.years){
+  DensityCountriesRegions[[t]] <- GetDensity_PD(
+    sx = densityInputRegions$sx[,,t],# X COORDINATES
+    sy =  densityInputRegions$sy[,,t],# Y COORDINATES
+    z = ZZad[,,t],# Z 
+    IDmx = densityInputRegions$habitat.id,
+    aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+    regionID = densityInputRegions$regions.rgmx,
+    returnPosteriorCells = F)
+}#t
+
+#mean density in each cell 
+DensityCountriesRegions[[1]]$MeanCell
+
+#plot()
+ACDens<-list()
+for(t in 1:n.years){
+  ACDens[[t]] <- densityInputRegions$regions.r
+  ACDens[[t]][] <- NA
+  ACDens[[t]][!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions[[t]]$MeanCell
+  plot(ACDens[[t]], main = paste(yearnames[t], "ADULTS"))
+}
+
+DensityCountriesRegions[[1]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[2]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[3]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[4]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)
+DensityCountriesRegions[[5]]$summary # 1 = habitat (state-space); 2 = buffer (sampling area)

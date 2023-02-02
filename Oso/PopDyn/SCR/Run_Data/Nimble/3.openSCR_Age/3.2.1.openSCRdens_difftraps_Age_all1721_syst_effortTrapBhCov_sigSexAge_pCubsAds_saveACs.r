@@ -744,8 +744,8 @@ library(rgdal)
 library(coda)
 library(nimbleSCR)
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.2")
-load("myResults_3-3.2_param.RData")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
+load("myResults_3-3.2.1_param.RData")
 summary(nimOutput)
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
@@ -768,7 +768,7 @@ plot(osbuf, col = adjustcolor("green", alpha = 0.5), add = TRUE)
 #---- 2.  ESTIMATE ABUNDANCE IN BUFFER ---- 
 
 # Load results
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021/Cyril/3-3.2")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
 load("myResults_3-3.2_sxy.RData")
 
 dim(nimOutputSXY[[1]]) #  iterations * 6000 elements (e.g., z[1,5]) ???
@@ -822,4 +822,40 @@ for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
 NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
 colMeans(NALL)
 
+#---- 2.2.  ESTIMATE ABUNDANCE IN BUFFER OF THE TRAPS (Xbuf2) ---- 
+
+# Matrix to store abundance in the buffer each iteration and year
+NIn_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+ite=1
+t=1
+
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+    which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
+    
+    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+    
+    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
+    
+    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
+    
+    NIn_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
+  }
+}
+
+#average number of individuals without the buffer for each year 
+colMeans(NIn_trapBuf)
+NIn_trapBuf[,1]#posterior distrib for the first year
+
+par(mfrow = c(2,3))
+for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  plot(density(NIn_trapBuf[,t]), main = t)
+  abline(v = colMeans(NIn_trapBuf)[t], col = "blue")
+}
+
+# Sum of individuals alive in total each year (without buffer)
+NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
+colMeans(NALL)
 
