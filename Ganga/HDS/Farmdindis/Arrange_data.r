@@ -87,6 +87,49 @@ for (t in 1:length(years)){
        main = paste("PTALC", years[t]), col = "grey", freq = FALSE) 
 }
 
+dat$Species <- "PTALC"
+dat <- dat[ ,c(9,1:8,10:15)]
+
+
 setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
 write.csv(dat, file = "Data_HDS_Farmdindis.csv")
+
+## -------------------------------------------------
+##            Remove obs from hq = 0
+##        I still don't know if I want to do it
+## ------------------------------------------------- 
+
+setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
+dat <- read.csv(file = "Data_HDS_Farmdindis.csv")
+
+# Delete AF39, only 2 observations and doesn't appear in transect list
+dat <- dat[-which(dat$transectID == "AF39"), ]
+
+all.sites <- unique(dat$transectID)
+
+yrs <- c(2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022) # I HAVE TO CONVERT THIS FROM 0-12 (but nyrs is still 13)
+nyrs <- length(yrs)
+
+hq_dat2011 <- read.csv(file = "HQvariable2011.csv") 
+hq_dat2021 <- read.csv(file = "HQvariable2021.csv") 
+hq_dat <- left_join(hq_dat2011, hq_dat2021, "transectID")
+
+hq <- matrix(NA, nrow = length(all.sites), ncol = nyrs)
+rownames(hq) <- all.sites
+colnames(hq) <- yrs
+
+for (i in 1:nrow(hq_dat)) {
+  hq[which(rownames(hq) %in% hq_dat$transectID[i]), 1:6] <- hq_dat$WeightedQuality2011[i]
+  hq[which(rownames(hq) %in% hq_dat$transectID[i]), 7:13] <- hq_dat$WeightedQuality2021[i]
+}
+
+delete <- NULL
+for (i in 1:nrow(dat)){
+  habqual <- hq[which(rownames(hq) %in% dat$transectID[i]), which(colnames(hq) %in% dat$Year[i])]
+  if(habqual == 0) {
+    delete <- c(delete,i)
+  }
+}
+
+dat <- dat[-delete,]
 

@@ -12,7 +12,13 @@ cat("model{
     
     # Informative priors for sigma
     
-    # log.sig <- rnorm(1, mu.sig, sig.sig): Deterministic coefficient (mu and sig come from model 2010-2020)
+    ###########################################################################
+    # RS: either use detection estimates from previous model as fixed parameters
+    # meaning, provide them both as data (log.sig=mu.sig, bTemp=mu.bTemp)
+    # or give both of them an informative prior, like you do here for bTemp
+    
+    log.sig ~ dnorm(mu.sig, sig.sig) #: Deterministic coefficient (mu and sig come from model 2010-2020)
+    
     bTemp ~ dnorm(mu.bTemp, sig.bTemp)
     
     for(i in 1:nind){
