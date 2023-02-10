@@ -88,7 +88,7 @@ for (t in 1:length(years)){
 }
 
 dat$Species <- "PTALC"
-dat <- dat[ ,c(9,1:8,10:15)]
+dat <- dat[ ,c(9,1:8,10:16)]
 
 
 setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")

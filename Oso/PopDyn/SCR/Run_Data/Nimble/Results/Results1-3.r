@@ -4454,7 +4454,7 @@ dev.off()
 ##          2017 - 2021 FINAL DATA (Cross check Elena)
 ## ------------------------------------------------- 
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age/2021")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021")
 load("sampOpenSCR_diftraps_age_final1721.RData")
 
 out.list<- list()
@@ -4463,7 +4463,7 @@ out.list[[2]] <- as.mcmc(chain_output[[2]])
 out.list[[3]] <- as.mcmc(chain_output[[3]])
 
 out.list <- as.mcmc.list(out.list)
-out2 <- ProcessCodaOutput(out.list)
+out <- ProcessCodaOutput(out.list)
 
 summOpen1 <- MCMCsummary(out.list)
 

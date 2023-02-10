@@ -291,7 +291,8 @@ print(out)
 setwd("~/Model_results")
 save(out, file = "2.HDS_trendmodel_lam[hq].RData") # 60000 iter, 4 thining
 
-load("6.TRIM.RData")
+setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
+load("2.Sim_HDS_trendmodel_lam[hq].RData")
 
 out$summary
 data_comp <- list(lam.tot = lam.tot, 

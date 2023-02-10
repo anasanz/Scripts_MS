@@ -746,7 +746,7 @@ library(nimbleSCR)
 
 setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
 load("myResults_3-3.2.1_param.RData")
-summary(nimOutput)
+sum_pcubpad <- summary(nimOutput)
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 load("habcoord.RData")

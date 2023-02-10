@@ -80,6 +80,25 @@ for (i in 1:nyrs){
 # Observer 
 ### DATA DAVID ###
 
+# Observer 
+# Format
+obs <- matrix(NA, nrow = length(all.sites), ncol = nyrs)
+rownames(obs) <- all.sites
+colnames(obs) <- yrs
+
+# Add observers for fields with counts > 0
+for (i in 1:nrow(dat)){
+  obs[which(rownames(obs) %in% dat$transectID[i]), which(colnames(obs) %in% dat$Year[i])] <- dat$Observador[i]
+}
+
+# Add observers for fields with absences (0)
+for (i in 1:nrow(absent)){
+  obs[which(rownames(obs) %in% absent$transectID[i]), which(colnames(obs) %in% absent$Year[i])] <- absent$Observer[i]
+}
+unique(obs)
+
+
+
 # Habitat quality
 
 hq_dat2011 <- read.csv(file = "HQvariable2011.csv") 
@@ -115,7 +134,7 @@ yrs <- 1:13
 year_number <- 0:12
 
 # Matrix with observers
-ob <- matrix(as.numeric(factor(obs)), nrow = max.sites, ncol = nyrs) # JAGS doesn't accept categorical variables
+ob <- matrix(as.numeric(factor(obs)), nrow = nSites, ncol = nyrs) # JAGS doesn't accept categorical variables
 unique(factor(ob))
 obs_id <- unique(factor(ob))[-3]
 ob[which(is.na(ob))] <- sample(obs_id, length(which(is.na(ob))), replace = TRUE) # No NA in covariate
@@ -145,3 +164,42 @@ for (t in 1:nyrs){ # sites has to be nested on years because dclass first indexe
     year.dclass <- c(year.dclass, rep(t, m_index[j,t]))
   } }
 
+# ---- Compile data for JAGS model ----
+
+data1 <- list(nyears = nyrs, nsites = nSites, nG=nG, int.w=int.w, strip.width = strip.width, midpt = midpt, db = dist.breaks,
+              year.dclass = year.dclass, site.dclass = site.dclass, y = m, nind=nind, dclass=dclass,
+              hqCov = hq_sc, ob = ob, nobs = nobs, year1 = year_number, site = site, year_index = yrs)
+
+## ---- Inits ----
+
+Nst <- m + 1
+inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1), sig.sig.year = runif(1),
+                         mu.lam.site = runif(1), sig.lam.site = 0.2, sig.lam.year = 0.3, 
+                         bYear.lam = runif(1), bHQ = runif(1),
+                         N = Nst)} 
+## ---- Params ----
+
+params <- c( "mu.sig", "sig.sig", "log.sigma.year", 
+             "mu.lam.site", "sig.lam.site", "sig.lam.year", "bYear.lam", "log.lambda.year", "bHQ",  # Save year effect
+             "popindex", "sd", "rho", "w", "lam.tot",'Bp.Obs', 'Bp.N')
+
+
+## ---- MCMC settings ----
+
+nc <- 3 ; ni <- 700000 ; nb <- 100000 ; nt <- 5
+
+## ---- Run model ----
+
+#setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
+setwd("~/Scripts_MS/Ganga/HDS/Farmdindis/Model")
+source("2.HDS_trendmodel_lam[hq].r")
+
+# With jagsUI 
+out <- jags(data1, inits, params, "2.HDS_trendmodel_lam[hq].txt", n.chain = nc,
+            n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
+
+summary <- out$summary
+print(out)
+
+setwd("~/Model_results")
+save(out, file = "2.Dat_HDS_trendmodel_lam[hq].RData") # 60000 iter, 4 thining
