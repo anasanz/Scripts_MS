@@ -749,7 +749,7 @@ library(nimbleSCR)
 
 setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
 load("myResults_3-3.1_param.RData")
-sum_orig <- summary(nimOutput)
+summary(nimOutput)
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 load("habcoord.RData")
@@ -1047,9 +1047,7 @@ for(i in 1:ncol(prop_years[[t]])){
                 alpha = 0.3,
                 scale.width = FALSE,
                 border.col = "black",
-                horizontal = TRUE)}
-
-}
+                horizontal = TRUE)}}
 
 dev.off()
 
@@ -1096,9 +1094,29 @@ for(i in 1:ncol(prop_years[[1]])){ # Look into cubs
                   alpha = 0.3,
                   scale.width = FALSE,
                   border.col = "black",
-                  horizontal = TRUE)}
-  
-}
-
-
+                  horizontal = TRUE)}}
 dev.off()
+
+
+
+## ---- 3.6. Compare with age structure of data ----
+# This is to see where the model placed the undetected individuals (if is especially in one age cat)
+
+zdatAGE.det <- zdatAGE[1:61,]
+zdatAGE.det[is.na(zdatAGE.det)] <- 0
+zdatAGE
+
+
+prop_det <- data.frame(matrix(NA, nrow = 5, ncol = 3))
+rownames(prop_det) <- c("2017", "2018", "2019", "2020", "2021")
+colnames(prop_det) <- c("Cub", "Subadult", "Adult")
+t = 1
+
+for(t in 1:5){
+  alive.age <- age.cat.z[,t]*zdatAGE.det[,t]
+  prop_det[t,1] <- length(alive.age[which(alive.age == 3 | alive.age == 2)])/length(alive.age[which(alive.age != 0)])
+  prop_det[t,2] <- length(alive.age[which(alive.age == 5 | alive.age == 4)])/length(alive.age[which(alive.age != 0)])
+  prop_det[t,3] <- length(alive.age[which(alive.age == 6)])/length(alive.age[which(alive.age != 0)])
+}
+ rowSums(prop_det)
+
