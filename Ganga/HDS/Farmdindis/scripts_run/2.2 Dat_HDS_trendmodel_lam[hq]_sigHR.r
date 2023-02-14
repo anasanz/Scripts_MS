@@ -226,14 +226,6 @@ save(out, file = "2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData") # 60000 iter, 4 t
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
 load("2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData")
-summary <- out$summary
-
-# Parameters to predict abundance in each hq zone
-mu.site <- summary[which(rownames(summary) %in% "mu.lam.site"), 1]
-random.year.2022 <- summary[which(rownames(summary) %in% "log.lambda.year[13]"), 1]
-bYear.lam <- summary[which(rownames(summary) %in% "bYear.lam"), 1]
-year1 <- 0:12
-bHQ <- summary[which(rownames(summary) %in% "bHQ"), 1]
 
 # Load hq areas
 
@@ -242,8 +234,156 @@ hq_area <- read.csv(file = "HQ_area.csv")
 
 area_transect <- 500*1000 # m2
 
+mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
 
-## ---- 1. Predict ignoring w ----
+## ---- 1. Predictions from posterior distribution ----
+
+## ---- 1.1. Ignoring w ----
+
+plot(density(out$sims.list$popindex[,13]))
+max(out$sims.list$popindex[,13])
+mean(out$sims.list$popindex[,13])
+min(out$sims.list$popindex[,13])
+# It is very skewed....
+
+# Parameters to predict abundance in each hq zone
+mu.site <- out$sims.list$mu.lam.site
+random.year.2022 <- out$sims.list$log.lambda.year[,13]
+bYear.lam <- out$sims.list$bYear.lam
+year1 <- 12
+bHQ <- out$sims.list$bHQ
+
+hqzones <- c("hq1", "hq2", "hq3")
+
+ab <- data.frame(matrix(NA, nrow = length(hqzones), ncol = 6))
+rownames(ab) <- hqzones
+colnames(ab) <- c("mean_lambda", "density", "abundance", "total_abundance", "total_abundance_lci", "total_abundance_uci")
+
+for (i in 1:length(hqzones)) {
+  
+  lambda <- exp(mu.site + random.year.2022 + bYear.lam*year1 + bHQ * i) # Expected abundance
+  
+  mean.pred  <- mean(lambda)
+  dens_obs <- density(lambda)
+  mode.pred <- dens_obs$x[dens_obs$y == max(dens_obs$y)]
+  
+  plot(density(lambda), main = hqzones[i])
+  abline(v = mean.pred, col = "red")
+  abline(v = mode.pred, col = "blue")
+  
+  
+  # Mean
+  
+  #mean.pred  <- mean(lambda)
+  #
+  #dens <- mean.pred/area_transect
+  #abundance <- dens*hq_area$x[i]
+  #total_abundance <- abundance*average_clus
+  
+  # Mode
+  
+  dens <- mode.pred/area_transect
+  abundance <- dens*hq_area$x[i]
+  total_abundance <- abundance*average_clus
+  
+  # LCI
+  
+  lci <- quantile(lambda,probs = 0.025)
+  
+  dens_lci <- lci/area_transect
+  abundance_lci <- dens_lci*hq_area$x[i]
+  total_abundance_lci <- abundance_lci*average_clus
+  
+  # UCI
+  
+  uci <- quantile(lambda,probs = 0.975)
+  
+  dens_uci <- uci/area_transect
+  abundance_uci <- dens_uci*hq_area$x[i]
+  total_abundance_uci <- abundance_uci*average_clus
+  
+  #ab[i,1] <- mean.pred 
+  ab[i,1] <- mode.pred 
+  ab[i,2] <- dens
+  ab[i,3] <- abundance
+  ab[i,4] <- total_abundance
+  ab[i,5] <- total_abundance_lci
+  ab[i,6] <- total_abundance_uci
+}
+
+ta <- colSums(ab[,c(3:6)]) 
+
+# Abundance can be estimated
+# 1. Multiplying by average cluster size
+average_clus # Result: 135.74363 [ 17.49625 - 293.34180]
+# 2. Multiplying by median cluster size
+median_clust # Result: 67.761811 [ 8.733949 - 146.433183]
+
+## ---- 1.2. Including w ----
+
+dim(out$sims.list$w) # Take last year
+
+w.2022.sites <- out$sims.list$w[,,13] # Mean of w accross sites per iteration
+w.2022 <- rowMeans(w.2022.sites)
+
+ab_w <- data.frame(matrix(NA, nrow = length(hqzones), ncol = 6))
+rownames(ab_w) <- hqzones
+colnames(ab_w) <- c("mean_lambda", "density", "abundance", "total_abundance", "total_abundance_lci", "total_abundance_uci")
+
+for (i in 1:length(hqzones)) {
+  
+  lambda <- exp(mu.site + random.year.2022 + bYear.lam*year1 + bHQ * i + w.2022) # Expected abundance
+  
+  # Mean
+  
+  mean.pred  <- mean(lambda)
+  
+  dens <- mean.pred/area_transect
+  abundance <- dens*hq_area$x[i]
+  total_abundance <- abundance*average_clus
+  
+  # LCI
+  
+  lci <- quantile(lambda,probs = 0.025)
+  
+  dens_lci <- lci/area_transect
+  abundance_lci <- dens_lci*hq_area$x[i]
+  total_abundance_lci <- abundance_lci*average_clus
+  
+  # UCI
+  
+  uci <- quantile(lambda,probs = 0.975)
+  
+  dens_uci <- uci/area_transect
+  abundance_uci <- dens_uci*hq_area$x[i]
+  total_abundance_uci <- abundance_uci*average_clus
+  
+  ab_w[i,1] <- mean.pred 
+  ab_w[i,2] <- dens
+  ab_w[i,3] <- abundance
+  ab_w[i,4] <- total_abundance
+  ab_w[i,5] <- total_abundance_lci
+  ab_w[i,6] <- total_abundance_uci
+}
+
+ta_w <- colSums(ab_w[,c(3:6)]) 
+
+# It doesn't change much in any case
+
+## ---- 2. Predictions from summary ----
+
+# Parameters to predict abundance in each hq zone
+mu.site <- summary[which(rownames(summary) %in% "mu.lam.site"), 1]
+random.year.2022 <- summary[which(rownames(summary) %in% "log.lambda.year[13]"), 1]
+bYear.lam <- summary[which(rownames(summary) %in% "bYear.lam"), 1]
+year1 <- 0:12
+bHQ <- summary[which(rownames(summary) %in% "bHQ"), 1]
+
+
+## ---- 2.1. Predict ignoring w ----
 
 # Model: lambda[j,t] <- exp(log.lambda.site[site[j]] + log.lambda.year[year_index[t]] + bYear.lam*year1[t] + bHQ*hqCov[j,t] + w[j,t])
 
@@ -283,13 +423,46 @@ for (i in 1:length(hqzones)) {
 
 total_abundance <- sum(ab[,4])
 
-## ---- 2. Predict taking into account w ----
+## ---- 2.2. Predict taking into account w ----
 
 # w in a year t depends on the overdispersion and ac that year, and the previous one 
 # Explore how it changes each year
+wvec <- summary[grep("w", rownames(summary)), 1]
+w <- matrix(wvec, nrow = nSites, ncol = nyrs, byrow = FALSE)
 
-w <- 
+setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
+save(w, file = "w.RData")
 
+library("RColorBrewer")
 
+plot(colMeans(w) , type = "l")
 
+plot(0, xlim = c(0,13), ylim = c(-1,1))
+cl <- rainbow(nSites)
+for (i in 1:nSites){
+  m <- lm(w[i,] ~ c(1:13))
+  points(w[i,] ~ c(1:13), col = cl[i])
+  abline(m, col = cl[i])
+}
 
+# They don't follow a clear pattern...take the mean site w of the last year
+
+# Zone 1 (example on how to calculate it)
+lambda1 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 1 + colMeans(w)[13])
+dens1 <- lambda1/area_transect
+abundance1 <- dens1*hq_area$x[1]
+total_abundance1 <- abundance1*average_clus
+
+lambda2 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 2 + colMeans(w)[13])
+dens2 <- lambda2/area_transect
+abundance2 <- dens2*hq_area$x[2]
+total_abundance2 <- abundance2*average_clus
+
+lambda3 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 3 + colMeans(w)[13])
+dens3 <- lambda3/area_transect
+abundance3 <- dens3*hq_area$x[3]
+total_abundance3 <- abundance3*average_clus
+
+ta_w <- total_abundance1 + total_abundance2 + total_abundance3
+
+# It doesn't change much, difference of 1 individual

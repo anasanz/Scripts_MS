@@ -295,7 +295,7 @@ out <- jags(data1, inits, params, "2.HDS_trendmodel_lam[hq].txt", n.chain = nc,
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
-save(out, file = "2.Sim_HDS_trendmodel_lam[hq]_2.RData")
+save(out, file = "2.Sim_HDS_trendmodel_lam[hq].RData")
 
 summary <- out$summary
 
