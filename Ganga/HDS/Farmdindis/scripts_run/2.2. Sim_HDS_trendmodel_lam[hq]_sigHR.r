@@ -1,4 +1,3 @@
-
 rm(list=ls())
 
 library(rjags)
@@ -23,8 +22,8 @@ library(plyr)
 #####
 # ---- Distance sampling data ----
 
-# Half-normal detection function
-g <- function(x, sig) exp(-x^2/(2*sig^2))
+# HAZARD RATE DETECTION FUNCTION
+g <- function(x, sig, b) 1 - exp(-(x/sig)^-b)
 
 # Number of transects per year (unbalanced)
 nSites <- rep(100,9)			# Same number of transects by year
@@ -72,6 +71,9 @@ temp_sc <- (temp - temp_mean) / temp_sd
 sigma <- exp(ob + bTemp.sig * temp_sc + 
                matrix(rep(sig.year, each = max.sites), nrow = max.sites, ncol = nyrs))
 
+#BETA
+b <- 2
+
 #####
 # ----  Abundance component: Site effect, Year effect and Year trend
 
@@ -98,12 +100,7 @@ for (i in 0:nyrs){
 # HQ COVARIATE
 
 bHQ <- 0.5
-
-# Realist hq covariate:
-hqvalues <- abs(rnorm(max.sites*2, 1.5, 0.7))
-hq <- matrix(rep(hqvalues, each = 4), nrow = max.sites, ncol = nyrs-1, byrow = TRUE)
-hq <- cbind(hq, hq[,8]) # Last year has the same values than year 8
-
+hq <- matrix(runif(max.sites*nyrs, 0, 3), nrow = max.sites, ncol = nyrs)
 #SCALED
 hq_mean <- mean(hq)
 hq_sd <- sd(hq)
@@ -198,7 +195,7 @@ for (t in 1:nyrs){
     # Distance from observer to the individual
     d <- runif(N[j,t], 0, strip.width) 		# Uniform distribution of animals
     # Simulates one distance for each individual in the site (N[j])
-    p <- g(x=d, sig=sigma[j,t])   		# Detection probability. Sigma is site-time specific
+    p <- g(x=d, sig=sigma[j,t], b = b)   		# Detection probability. Sigma is site-time specific
     seen <- rbinom(N[j,t], 1, p)
     if(all(seen == 0))
       next
@@ -272,12 +269,12 @@ data1 <- list(nyears = nyrs, nsites = max.sites, nG=nG, int.w=int.w, strip.width
 
 # Inits
 Nst <- y.sum + 1
-inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1),
+inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1), b = runif(1),
                          mu.lam.site = runif(1), sig.lam.site = 0.2, sig.lam.year = 0.3, bYear.lam = runif(1), bHQ = runif(1),
                          N = Nst)} 
 
 # Params
-params <- c( "mu.sig", "sig.sig", "bTemp.sig", "sig.obs", "log.sigma.year", # Save also observer effect
+params <- c( "mu.sig", "sig.sig", "bTemp.sig", "sig.obs", "log.sigma.year", "b", # Save also observer effect
              "mu.lam.site", "sig.lam.site", "sig.lam.year", "bYear.lam", "log.lambda.year", "bHQ", # Save year effect
              "popindex", "sd", "rho", "lam.tot",'Bp.Obs', 'Bp.N'
 )
@@ -288,14 +285,14 @@ nc <- 3 ; ni <- 70000 ; nb <- 3000 ; nt <- 5
 
 setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
 #setwd("~/Scripts_MS/Ganga/HDS/Farmdindis/Model")
-source("2.HDS_trendmodel_lam[hq].r")
+source("2.2.HDS_trendmodel_lam[hq]_sigHR.r")
 
 # With jagsUI 
-out <- jags(data1, inits, params, "2.HDS_trendmodel_lam[hq].txt", n.chain = nc,
+out <- jags(data1, inits, params, "2.2.HDS_trendmodel_lam[hq]_sigHR.txt", n.chain = nc,
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
-save(out, file = "2.Sim_HDS_trendmodel_lam[hq]_2.RData")
+save(out, file = "2.2.Sim_HDS_trendmodel_lam[hq]_sigHR.RData")
 
 summary <- out$summary
 

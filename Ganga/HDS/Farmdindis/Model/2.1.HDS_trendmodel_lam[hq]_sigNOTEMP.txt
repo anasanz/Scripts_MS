@@ -31,8 +31,7 @@ model{
     }
     
     # PRIORS FOR SIGMA
-    bTemp.sig ~ dnorm(0, 0.001)
-    
+
     mu.sig ~ dunif(-10, 10) # Random effects for sigma per observer
     sig.sig ~ dunif(0, 10)
     tau.sig <- 1/(sig.sig*sig.sig)
@@ -67,7 +66,7 @@ model{
     # FIRST YEAR
     for(j in 1:nsites){ 
     
-    sigma[j,1] <- exp(sig.obs[ob[j,1]] + bTemp.sig*tempCov[j,1] + log.sigma.year[year_index[1]])
+    sigma[j,1] <- exp(sig.obs[ob[j,1]] + log.sigma.year[year_index[1]])
     
     # Construct cell probabilities for nG multinomial cells (distance categories) PER SITE
     
@@ -107,7 +106,7 @@ model{
     for(j in 1:nsites){ 
     for (t in 2:nyears){
     
-    sigma[j,t] <- exp(sig.obs[ob[j,t]] + bTemp.sig*tempCov[j,t] + log.sigma.year[year_index[t]])
+    sigma[j,t] <- exp(sig.obs[ob[j,t]] + log.sigma.year[year_index[t]])
     
     # Construct cell probabilities for nG multinomial cells (distance categories) PER SITE
     

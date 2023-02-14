@@ -1,4 +1,3 @@
-
 rm(list=ls())
 
 library(rjags)
@@ -86,24 +85,11 @@ sig.lam.year <- 0.7
 lam.year <- rnorm(nyrs, 0, sig.lam.year) 
 
 
-#TIME CO-VARIATE (YEAR)
-
-b.lam.year <- 0.3
-year <- matrix(NA,nrow = max.sites, ncol = nyrs)
-colnames(year) <- yrs
-for (i in 0:nyrs){
-  year[ ,yrs[i]] <- rep(year_number[i], max.sites)
-}
 
 # HQ COVARIATE
 
 bHQ <- 0.5
-
-# Realist hq covariate:
-hqvalues <- abs(rnorm(max.sites*2, 1.5, 0.7))
-hq <- matrix(rep(hqvalues, each = 4), nrow = max.sites, ncol = nyrs-1, byrow = TRUE)
-hq <- cbind(hq, hq[,8]) # Last year has the same values than year 8
-
+hq <- matrix(runif(max.sites*nyrs, 0, 3), nrow = max.sites, ncol = nyrs)
 #SCALED
 hq_mean <- mean(hq)
 hq_sd <- sd(hq)
@@ -130,7 +116,6 @@ for(j in 1:max.sites){
   w[j,1] <- eps[j,1] / sqrt(1 - rho * rho)
   lam[j,1] <- exp(lam.alpha.site[j] + 
                     lam.year[1] + 
-                    b.lam.year*year[j,1] +
                     bHQ*hq_sc[j,1] +
                     w[j,1])
 }
@@ -141,7 +126,6 @@ for (j in 1:max.sites){
     w[j,t] <- rho * w[j,t-1] + eps[j,t]
     lam[j,t] <- exp(lam.alpha.site[j] + 
                       lam.year[t] + 
-                      b.lam.year*year[j,t] +
                       bHQ*hq_sc[j,t] +
                       w[j,t])
   }
@@ -267,18 +251,18 @@ indexYears <- model.matrix(~ allyears-1, data = m)
 
 data1 <- list(nyears = nyrs, nsites = max.sites, nG=nG, int.w=int.w, strip.width = strip.width, midpt = midpt, db = dist.breaks,
               year.dclass = year.dclass, site.dclass = site.dclass, y = y.sum, nind=nind, dclass=dclass,
-              hqCov = hq_sc, tempCov = temp_sc, ob = ob.id, nobs = nobs, year1 = year_number, site = site, year_index = yrs)
+              hqCov = hq_sc, tempCov = temp_sc, ob = ob.id, nobs = nobs, site = site, year_index = yrs)
 
 
 # Inits
 Nst <- y.sum + 1
 inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1),
-                         mu.lam.site = runif(1), sig.lam.site = 0.2, sig.lam.year = 0.3, bYear.lam = runif(1), bHQ = runif(1),
+                         mu.lam.site = runif(1), sig.lam.site = 0.2, sig.lam.year = 0.3, bHQ = runif(1),
                          N = Nst)} 
 
 # Params
 params <- c( "mu.sig", "sig.sig", "bTemp.sig", "sig.obs", "log.sigma.year", # Save also observer effect
-             "mu.lam.site", "sig.lam.site", "sig.lam.year", "bYear.lam", "log.lambda.year", "bHQ", # Save year effect
+             "mu.lam.site", "sig.lam.site", "sig.lam.year", "log.lambda.year", "bHQ", # Save year effect
              "popindex", "sd", "rho", "lam.tot",'Bp.Obs', 'Bp.N'
 )
 
@@ -288,14 +272,14 @@ nc <- 3 ; ni <- 70000 ; nb <- 3000 ; nt <- 5
 
 setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
 #setwd("~/Scripts_MS/Ganga/HDS/Farmdindis/Model")
-source("2.HDS_trendmodel_lam[hq].r")
+source("2.3.HDS_trendmodel_lam[hq_NOTREND].r")
 
 # With jagsUI 
-out <- jags(data1, inits, params, "2.HDS_trendmodel_lam[hq].txt", n.chain = nc,
+out <- jags(data1, inits, params, "2.3.HDS_trendmodel_lam[hq_NOTREND].txt", n.chain = nc,
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
-save(out, file = "2.Sim_HDS_trendmodel_lam[hq]_2.RData")
+save(out, file = "2.3.Sim_HDS_trendmodel_lam[hq_NOTREND]_2.RData")
 
 summary <- out$summary
 
@@ -306,7 +290,6 @@ data_comp <- list(lam.tot = lam.tot,
                   mu.lam.alpha.site = mu.lam.alpha.site,
                   sig.lam.alpha.site = sig.lam.alpha.site,
                   sig.lam.year = sig.lam.year,
-                  b.lam.year = b.lam.year,
                   rho = rho, sig.lam.eps = sig.lam.eps)
 
 

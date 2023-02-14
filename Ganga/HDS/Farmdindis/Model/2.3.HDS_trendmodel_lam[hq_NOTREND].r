@@ -1,4 +1,7 @@
-model{
+# ---- JAGS model ----
+
+setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
+cat("model{
     
     # PRIORS
     
@@ -6,8 +9,6 @@ model{
     rho ~ dunif(-1,1) # Autorregresive parameter (serial AC)
     tau <- pow(sd, -2) # Prior for overdispersion in eps
     sd ~ dunif(0, 3)
-    
-    bYear.lam ~ dnorm(0, 0.001) # Prior for the trend
     
     bHQ ~ dnorm(0, 0.001)
 
@@ -90,7 +91,7 @@ model{
     y[j,1] ~ dbin(pcap[j,1], N[j,1]) 
     N[j,1] ~ dpois(lambda[j,1]) 
     
-    lambda[j,1] <- exp(log.lambda.site[site[j]] + log.lambda.year[year_index[1]] + bYear.lam*year1[1] + bHQ*hqCov[j,1] + w[j,1]) # year1 is t-1; year_index is t (to index properly the random effect)
+    lambda[j,1] <- exp(log.lambda.site[site[j]] + log.lambda.year[year_index[1]] + bHQ*hqCov[j,1] + w[j,1]) # year1 is t-1; year_index is t (to index properly the random effect)
     w[j,1] <- eps[j,1] / sqrt(1 - rho * rho)
     eps[j,1] ~ dnorm(0, tau)
     
@@ -130,7 +131,7 @@ model{
     y[j,t] ~ dbin(pcap[j,t], N[j,t]) 
     N[j,t] ~ dpois(lambda[j,t]) 
     
-    lambda[j,t] <- exp(log.lambda.site[site[j]] + log.lambda.year[year_index[t]] + bYear.lam*year1[t] + bHQ*hqCov[j,t] + w[j,t])
+    lambda[j,t] <- exp(log.lambda.site[site[j]] + log.lambda.year[year_index[t]] + bHQ*hqCov[j,t] + w[j,t])
     w[j,t] <- rho * w[j,t-1] + eps[j,t]
     eps[j,t] ~ dnorm(0, tau)
     
@@ -155,12 +156,5 @@ model{
     popindex[t] <- sum(lambda[,t])
     }
     
-    # Expected abundance per year inside model
     
-    lam.tot[1] <- popindex[1] # Expected abundance in year 1
-    for (i in 2:nyears){
-    lam.tot[i] <- lam.tot[i-1] * # Here I add the starting population size as a baseline for the trend 
-    exp(bYear.lam)}
-    
-    
-    }
+    }",fill=TRUE, file = "2.3.HDS_trendmodel_lam[hq_NOTREND].txt")

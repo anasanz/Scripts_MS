@@ -84,7 +84,7 @@ for (i in 1:nyrs){
 }
 
 # Observer 
- 
+
 # Format
 obs <- matrix(NA, nrow = length(all.sites), ncol = nyrs)
 rownames(obs) <- all.sites
@@ -186,19 +186,19 @@ for (t in 1:nyrs){ # sites has to be nested on years because dclass first indexe
 
 data1 <- list(nyears = nyrs, nsites = nSites, nG=nG, int.w=int.w, strip.width = strip.width, midpt = midpt, db = dist.breaks,
               year.dclass = year.dclass, site.dclass = site.dclass, y = m, nind=nind, dclass=dclass,
-              hqCov = hq_sc, tempCov = temp_sc, ob = ob, nobs = nobs, year1 = year_number, site = site, year_index = yrs)
+              hqCov = hq_sc, tempCov = temp_sc, ob = ob, nobs = nobs, site = site, year_index = yrs)
 
 ## ---- Inits ----
 
 Nst <- m + 1
-inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1), sig.sig.year = runif(1),
+inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1), sig.sig.year = runif(1), b = runif(1),
                          mu.lam.site = runif(1), sig.lam.site = 0.2, sig.lam.year = 0.3, 
-                         bYear.lam = runif(1), bHQ = runif(1), 
+                         bHQ = runif(1), 
                          N = Nst)} 
 ## ---- Params ----
 
-params <- c( "mu.sig", "sig.sig", "log.sigma.year", "bTemp.sig",
-             "mu.lam.site", "sig.lam.site", "sig.lam.year", "bYear.lam", "log.lambda.year", "bHQ",  # Save year effect
+params <- c( "mu.sig", "sig.sig", "log.sigma.year", "bTemp.sig", "b",
+             "mu.lam.site", "sig.lam.site", "sig.lam.year", "log.lambda.year", "bHQ",  # Save year effect
              "popindex", "sd", "rho", "w", "lam.tot",'Bp.Obs', 'Bp.N')
 
 
@@ -210,21 +210,14 @@ nc <- 3 ; ni <- 700000 ; nb <- 100000 ; nt <- 5
 
 setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
 #setwd("~/Scripts_MS/Ganga/HDS/Farmdindis/Model")
-source("2.HDS_trendmodel_lam[hq].r")
+source("2.4.HDS_trendmodel_lam[hq_NOTREND]_sigHR.r")
 
 # With jagsUI 
-out <- jags(data1, inits, params, "2.HDS_trendmodel_lam[hq].txt", n.chain = nc,
+out <- jags(data1, inits, params, "2.4.HDS_trendmodel_lam[hq_NOTREND]_sigHR.txt", n.chain = nc,
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 summary <- out$summary
 print(out)
 
-#setwd("~/Model_results")
-#save(out, file = "2.Dat_HDS_trendmodel_lam[hq].RData") # 60000 iter, 4 thining
-
-## ---- Results ----
-
-setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
-load("2.Dat_HDS_trendmodel_lam[hq].RData")
-summary <- out$summary
-
+setwd("~/Model_results")
+save(out, file = "2.Dat_HDS_trendmodel_lam[hq].RData") # 60000 iter, 4 thining

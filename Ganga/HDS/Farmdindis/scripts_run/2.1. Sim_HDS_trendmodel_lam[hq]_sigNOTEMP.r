@@ -1,4 +1,3 @@
-
 rm(list=ls())
 
 library(rjags)
@@ -7,8 +6,7 @@ library(plyr)
 
 
 
-### Same than original trend model, but adding bQ
-# mu.lam.site slightly over estimated
+### Same than original trend model, but adding bQ, removing temperature
 
 #set.seed(2013)
 
@@ -59,18 +57,9 @@ ob <- matrix(sig.obs[ob.id],  nrow = max.sites, ncol = nyrs) # Matrix with inter
 sig.sig.year <- 1		
 sig.year <- rnorm(nyrs, 0, sig.sig.year) 
 
-# TEMPERATURE COVARIATE
-bTemp.sig <- 0.5
-temp <- matrix(rnorm(max.sites*nyrs, 50, 7), nrow = max.sites, ncol = nyrs)
-#SCALED
-temp_mean <- mean(temp)
-temp_sd <- sd(temp)
-temp_sc <- (temp - temp_mean) / temp_sd
-
 
 #SIGMA
-sigma <- exp(ob + bTemp.sig * temp_sc + 
-               matrix(rep(sig.year, each = max.sites), nrow = max.sites, ncol = nyrs))
+sigma <- exp(ob + matrix(rep(sig.year, each = max.sites), nrow = max.sites, ncol = nyrs))
 
 #####
 # ----  Abundance component: Site effect, Year effect and Year trend
@@ -98,12 +87,7 @@ for (i in 0:nyrs){
 # HQ COVARIATE
 
 bHQ <- 0.5
-
-# Realist hq covariate:
-hqvalues <- abs(rnorm(max.sites*2, 1.5, 0.7))
-hq <- matrix(rep(hqvalues, each = 4), nrow = max.sites, ncol = nyrs-1, byrow = TRUE)
-hq <- cbind(hq, hq[,8]) # Last year has the same values than year 8
-
+hq <- matrix(runif(max.sites*nyrs, 0, 3), nrow = max.sites, ncol = nyrs)
 #SCALED
 hq_mean <- mean(hq)
 hq_sd <- sd(hq)
@@ -267,7 +251,7 @@ indexYears <- model.matrix(~ allyears-1, data = m)
 
 data1 <- list(nyears = nyrs, nsites = max.sites, nG=nG, int.w=int.w, strip.width = strip.width, midpt = midpt, db = dist.breaks,
               year.dclass = year.dclass, site.dclass = site.dclass, y = y.sum, nind=nind, dclass=dclass,
-              hqCov = hq_sc, tempCov = temp_sc, ob = ob.id, nobs = nobs, year1 = year_number, site = site, year_index = yrs)
+              hqCov = hq_sc, ob = ob.id, nobs = nobs, year1 = year_number, site = site, year_index = yrs)
 
 
 # Inits
@@ -277,7 +261,7 @@ inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1)
                          N = Nst)} 
 
 # Params
-params <- c( "mu.sig", "sig.sig", "bTemp.sig", "sig.obs", "log.sigma.year", # Save also observer effect
+params <- c( "mu.sig", "sig.sig", "sig.obs", "log.sigma.year", # Save also observer effect
              "mu.lam.site", "sig.lam.site", "sig.lam.year", "bYear.lam", "log.lambda.year", "bHQ", # Save year effect
              "popindex", "sd", "rho", "lam.tot",'Bp.Obs', 'Bp.N'
 )
@@ -288,20 +272,19 @@ nc <- 3 ; ni <- 70000 ; nb <- 3000 ; nt <- 5
 
 setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
 #setwd("~/Scripts_MS/Ganga/HDS/Farmdindis/Model")
-source("2.HDS_trendmodel_lam[hq].r")
+source("2.1.HDS_trendmodel_lam[hq]_sigNOTEMP.r")
 
 # With jagsUI 
-out <- jags(data1, inits, params, "2.HDS_trendmodel_lam[hq].txt", n.chain = nc,
+out <- jags(data1, inits, params, "2.1.HDS_trendmodel_lam[hq]_sigNOTEMP.txt", n.chain = nc,
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
-save(out, file = "2.Sim_HDS_trendmodel_lam[hq]_2.RData")
+save(out, file = "2.1.Sim_HDS_trendmodel_lam[hq]_sigNOTEMP.RData")
 
 summary <- out$summary
 
 data_comp <- list(lam.tot = lam.tot, 
                   mu.sig.obs = mu.sig.obs, sig.sig.obs = sig.sig.obs,
-                  bTemp.sig = bTemp.sig,
                   bHQ = bHQ,
                   mu.lam.alpha.site = mu.lam.alpha.site,
                   sig.lam.alpha.site = sig.lam.alpha.site,

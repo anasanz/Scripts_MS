@@ -313,6 +313,8 @@ write.csv(df_habBuf2, file = "HQvariable2021.csv")
 
 ## ---- 4. Area of each habitat quality ----
 
+pa2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "zonesGanga2021") 
+
 library(rgeos)
 
 area2 <- as.vector(gArea(pa2,byid = TRUE)) #Area
@@ -327,3 +329,5 @@ area_zona_HA2$Group.1[1] <- 3
 area_zona_HA2$Group.1[3] <- 1
 
 area_zona_HA2 <- arrange(area_zona_HA2, Group.1)
+write.csv(area_zona_HA2, file = "HQ_area.csv")
+

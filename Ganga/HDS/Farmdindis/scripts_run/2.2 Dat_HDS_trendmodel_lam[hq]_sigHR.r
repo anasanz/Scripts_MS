@@ -84,7 +84,7 @@ for (i in 1:nyrs){
 }
 
 # Observer 
- 
+
 # Format
 obs <- matrix(NA, nrow = length(all.sites), ncol = nyrs)
 rownames(obs) <- all.sites
@@ -191,13 +191,13 @@ data1 <- list(nyears = nyrs, nsites = nSites, nG=nG, int.w=int.w, strip.width = 
 ## ---- Inits ----
 
 Nst <- m + 1
-inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1), sig.sig.year = runif(1),
+inits <- function(){list(mu.sig = runif(1, log(30), log(50)), sig.sig = runif(1), sig.sig.year = runif(1), b = runif(1),
                          mu.lam.site = runif(1), sig.lam.site = 0.2, sig.lam.year = 0.3, 
                          bYear.lam = runif(1), bHQ = runif(1), 
                          N = Nst)} 
 ## ---- Params ----
 
-params <- c( "mu.sig", "sig.sig", "log.sigma.year", "bTemp.sig",
+params <- c( "mu.sig", "sig.sig", "log.sigma.year", "bTemp.sig", "b",
              "mu.lam.site", "sig.lam.site", "sig.lam.year", "bYear.lam", "log.lambda.year", "bHQ",  # Save year effect
              "popindex", "sd", "rho", "w", "lam.tot",'Bp.Obs', 'Bp.N')
 
@@ -210,21 +210,86 @@ nc <- 3 ; ni <- 700000 ; nb <- 100000 ; nt <- 5
 
 setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
 #setwd("~/Scripts_MS/Ganga/HDS/Farmdindis/Model")
-source("2.HDS_trendmodel_lam[hq].r")
+source("2.2.HDS_trendmodel_lam[hq]_sigHR.r")
 
 # With jagsUI 
-out <- jags(data1, inits, params, "2.HDS_trendmodel_lam[hq].txt", n.chain = nc,
+out <- jags(data1, inits, params, "2.2.HDS_trendmodel_lam[hq]_sigHR.txt", n.chain = nc,
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 summary <- out$summary
 print(out)
 
-#setwd("~/Model_results")
-#save(out, file = "2.Dat_HDS_trendmodel_lam[hq].RData") # 60000 iter, 4 thining
+setwd("~/Model_results")
+save(out, file = "2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData") # 60000 iter, 4 thining
 
 ## ---- Results ----
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
-load("2.Dat_HDS_trendmodel_lam[hq].RData")
+load("2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData")
 summary <- out$summary
+
+# Parameters to predict abundance in each hq zone
+mu.site <- summary[which(rownames(summary) %in% "mu.lam.site"), 1]
+random.year.2022 <- summary[which(rownames(summary) %in% "log.lambda.year[13]"), 1]
+bYear.lam <- summary[which(rownames(summary) %in% "bYear.lam"), 1]
+year1 <- 0:12
+bHQ <- summary[which(rownames(summary) %in% "bHQ"), 1]
+
+# Load hq areas
+
+setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
+hq_area <- read.csv(file = "HQ_area.csv")
+
+area_transect <- 500*1000 # m2
+
+
+## ---- 1. Predict ignoring w ----
+
+# Model: lambda[j,t] <- exp(log.lambda.site[site[j]] + log.lambda.year[year_index[t]] + bYear.lam*year1[t] + bHQ*hqCov[j,t] + w[j,t])
+
+# Zone 1 (example on how to calculate it)
+lambda1 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 1)
+dens1 <- lambda1/area_transect
+abundance1 <- dens1*hq_area$x[1]
+total_abundance1 <- abundance1*average_clus
+
+lambda2 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 2)
+dens2 <- lambda2/area_transect
+abundance2 <- dens2*hq_area$x[2]
+total_abundance2 <- abundance2*average_clus
+
+lambda3 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 3)
+dens3 <- lambda3/area_transect
+abundance3 <- dens3*hq_area$x[3]
+total_abundance3 <- abundance3*average_clus
+
+ta <- total_abundance1 + total_abundance2 + total_abundance3
+
+
+# Results in table to export
+
+hqzones <- c("hq1", "hq2", "hq3")
+
+ab <- data.frame(matrix(NA, nrow = length(hqzones), ncol = 4))
+rownames(ab) <- hqzones
+colnames(ab) <- c("lambda", "density", "abundance", "total_abundance")
+
+for (i in 1:length(hqzones)) {
+  ab[i,1] <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * i) # Expected abundance
+  ab[i,2] <- ab[i,1]/area_transect # Average transect density
+  ab[i,3] <- ab[i,2]*hq_area$x[i] # 
+  ab[i,4] <- ab[i,3]*average_clus
+}
+
+total_abundance <- sum(ab[,4])
+
+## ---- 2. Predict taking into account w ----
+
+# w in a year t depends on the overdispersion and ac that year, and the previous one 
+# Explore how it changes each year
+
+w <- 
+
+
+
 

@@ -18,14 +18,15 @@ setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
 
 dat <- read.csv("Transectes_Farmdindis_Ganga_TOTS anys.csv", sep = ";")
 
-colnames(dat)[which(colnames(dat) == "ï..Codi_seca")] <- "Region.Label"
+colnames(dat)[which(colnames(dat) == "Codi_seca")] <- "Region.Label"
 colnames(dat)[which(colnames(dat) == "anys")] <- "Year"
 colnames(dat)[which(colnames(dat) == "Hora_inici")] <- "Start_time"
 colnames(dat)[which(colnames(dat) == "Hora_final")] <- "End_time"
 colnames(dat)[which(colnames(dat) == "Nuvolositat")] <- "Clouds"
 colnames(dat)[which(colnames(dat) == "Temperatura")] <- "Temp"
 colnames(dat)[which(colnames(dat) == "codiEspecie")] <- "Species"
-colnames(dat)[which(colnames(dat) == "Num")] <- "Count" 
+colnames(dat)[which(colnames(dat) == "Num")] <- "Count"
+colnames(dat)[which(colnames(dat) == "Observador")] <- "Observer" 
 dat$Effort <- 500
 
 ## ---- Create variable transectID, than matches with the code of the GIS layers (i.e., two digits: 09) ----
@@ -87,7 +88,6 @@ for (t in 1:length(years)){
        main = paste("PTALC", years[t]), col = "grey", freq = FALSE) 
 }
 
-dat$Species <- "PTALC"
 dat <- dat[ ,c(9,1:8,10:16)]
 
 

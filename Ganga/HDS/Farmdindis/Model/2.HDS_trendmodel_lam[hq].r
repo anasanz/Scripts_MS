@@ -1,7 +1,6 @@
 # ---- JAGS model ----
 
 setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
-
 cat("model{
     
     # PRIORS
@@ -12,6 +11,9 @@ cat("model{
     sd ~ dunif(0, 3)
     
     bYear.lam ~ dnorm(0, 0.001) # Prior for the trend
+    
+    bHQ ~ dnorm(0, 0.001)
+
     
     # Random effects for lambda per site
     mu.lam.site ~ dunif(-10, 10) 
@@ -31,9 +33,8 @@ cat("model{
     log.lambda.year[t] ~ dnorm(0, tau.lam.year)
     }
     
-    bHQ ~ dnorm(0, 0.001)
-
     # PRIORS FOR SIGMA
+    bTemp.sig ~ dnorm(0, 0.001)
     
     mu.sig ~ dunif(-10, 10) # Random effects for sigma per observer
     sig.sig ~ dunif(0, 10)
@@ -69,7 +70,7 @@ cat("model{
     # FIRST YEAR
     for(j in 1:nsites){ 
     
-    sigma[j,1] <- exp(sig.obs[ob[j,1]] + log.sigma.year[year_index[1]])
+    sigma[j,1] <- exp(sig.obs[ob[j,1]] + bTemp.sig*tempCov[j,1] + log.sigma.year[year_index[1]])
     
     # Construct cell probabilities for nG multinomial cells (distance categories) PER SITE
     
@@ -109,7 +110,7 @@ cat("model{
     for(j in 1:nsites){ 
     for (t in 2:nyears){
     
-    sigma[j,t] <- exp(sig.obs[ob[j,t]] + log.sigma.year[year_index[t]])
+    sigma[j,t] <- exp(sig.obs[ob[j,t]] + bTemp.sig*tempCov[j,t] + log.sigma.year[year_index[t]])
     
     # Construct cell probabilities for nG multinomial cells (distance categories) PER SITE
     

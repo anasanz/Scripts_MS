@@ -50,6 +50,9 @@ model{
     log.sigma.year[t] ~ dnorm(0, tau.sig.year)
     }
     
+    # PRIOR FOR BETA
+    b ~ dunif(0, 100)
+    
     for(i in 1:nind){
     dclass[i] ~ dcat(fct[site.dclass[i], year.dclass[i], 1:nG]) 
     
@@ -73,12 +76,9 @@ model{
     
     for(k in 1:nG){ 
     
-    up[j,1,k]<-pnorm(db[k+1], 0, 1/sigma[j,1]^2) ##db are distance bin limits
-    low[j,1,k]<-pnorm(db[k], 0, 1/sigma[j,1]^2) 
-    p[j,1,k]<- 2 * (up[j,1,k] - low[j,1,k])
+    p[j,1,k]<-1-exp(-(midpt[k]/sigma[j,1])^-b)
     pi[j,1,k] <- int.w[k] / strip.width 
-    f[j,1,k]<- p[j,1,k]/f.0[j,1]/int.w[k]                   ## detection prob. in distance category k                      
-    fc[j,1,k]<- f[j,1,k] * pi[j,1,k]                 ## pi=percent area of k; drops out if constant
+    fc[j,1,k]<- p[j,1,k] * pi[j,1,k]                 ## pi=percent area of k; drops out if constant
     fct[j,1,k]<-fc[j,1,k]/pcap[j,1] 
     }
     
@@ -113,12 +113,9 @@ model{
     
     for(k in 1:nG){ 
     
-    up[j,t,k]<-pnorm(db[k+1], 0, 1/sigma[j,t]^2) ##db are distance bin limits
-    low[j,t,k]<-pnorm(db[k], 0, 1/sigma[j,t]^2) 
-    p[j,t,k]<- 2 * (up[j,t,k] - low[j,t,k])
+    p[j,t,k]<-1-exp(-(midpt[k]/sigma[j,t])^-b)
     pi[j,t,k] <- int.w[k] / strip.width 
-    f[j,t,k]<- p[j,t,k]/f.0[j,t]/int.w[k]                   ## detection prob. in distance category k                      
-    fc[j,t,k]<- f[j,t,k] * pi[j,t,k]                 ## pi=percent area of k; drops out if constant
+    fc[j,t,k]<- p[j,t,k] * pi[j,t,k]                 ## pi=percent area of k; drops out if constant
     fct[j,t,k]<-fc[j,t,k]/pcap[j,t] 
     }
     
