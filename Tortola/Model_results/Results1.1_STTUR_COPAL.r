@@ -13,19 +13,23 @@ rm(list=ls())
 library(dplyr)
 
 # Load analyzed transects (all species)
-setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_transects_0221.RData") 
 
 ## ---- STTUR ----
 
 # List of file names to load (depending on how many iter)
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
+## HERE: First load the ones that converged properly
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_noconverge_2002_2021.RData") # Did not converge with 5e5 iter
 converge <- transect[-which(transect %in% no_converge)] # Transects that converged with 5e5 iter 
 converge1_files <-paste("1.1TortoData_0221_", converge,".RData", sep = "") 
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_noconverge2_9e5iter_2002_2021.RData") # Did not converge with 9e5 iter
 no_converge2 <- c(no_converge2,"169") # Añadir 169 que no consigo correr, error
 converge2 <- transect[-which(transect %in% c(converge, no_converge2))] # Transects that converged with 9e5 iter (removing the ones added already (converge))

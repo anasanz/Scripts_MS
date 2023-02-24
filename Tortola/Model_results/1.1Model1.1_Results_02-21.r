@@ -5,7 +5,7 @@ library(dplyr)
 source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/plot.violins3.r")
 source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/DoScale.r")
 
-setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_transects_0221.RData") # Load analyzed transects
 
 ## ---- Check convergence of structural parameters ----
@@ -13,8 +13,9 @@ load("1.1TortoData_transects_0221.RData") # Load analyzed transects
 # With with 5e5 iter
 
 no_converge <- NULL
+no_converge_1.1Rhat <- NULL
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 for (i in 1:length(transect)){
   load(paste("1.1TortoData_0221_", transect[i],".RData", sep = ""))
   
@@ -22,15 +23,20 @@ for (i in 1:length(transect)){
                                   %in% c("mu.lam.year", "sig.lam.year", "bYear.lam", "mu.sig.year", "sig.sig.year", "brough.sig", "sd", "rho",'Bp.Obs', 'Bp.N'), ]) # Only structural parameters
   if (sum(ifelse(sum$Rhat > 1.30, 1, 0)) > 0 )
     no_converge <- c(no_converge, transect[i])
+  
+  if (sum(ifelse(sum$Rhat > 1.15, 1, 0)) > 0 )
+    no_converge_1.1Rhat <- c(no_converge_1.1Rhat, transect[i])
   next 
 }
 
-setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
-save(no_converge, file = "1.1TortoData_noconverge_2002_2021.RData") # Save to run at 500000
+rerun1 <- no_converge_1.1Rhat[which(no_converge_1.1Rhat %in% no_converge == FALSE)] # This I need to re-run with more iters to really reach convergence
+
+#setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+#save(no_converge, file = "1.1TortoData_noconverge_2002_2021.RData") # Save to run at 500000
 
 # --> Check how bad is convergence of 5e5 iter
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_noconverge_2002_2021.RData")
 list_no_converge <- list()
 
@@ -44,12 +50,14 @@ for (i in 1:length(no_converge)){
 list_no_converge
 
 # With 9e5 iter
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_noconverge_2002_2021.RData")
 
 no_converge <- no_converge[-10] # Transecto 10 (num 169) no esta! No se ha corrido bien
 
 no_converge2 <- NULL
+no_converge2_1.1Rhat <- NULL
+
 
 for (i in 1:length(no_converge)){
   load(paste("1.1TortoData_0221_", no_converge[i], "9e5iter", ".RData", sep = ""))
@@ -58,15 +66,21 @@ for (i in 1:length(no_converge)){
                                   %in% c("mu.lam.year", "sig.lam.year", "bYear.lam", "mu.sig.year", "sig.sig.year", "brough.sig", "sd", "rho",'Bp.Obs', 'Bp.N'), ]) # Only structural parameters
   if (sum(ifelse(sum$Rhat > 1.30, 1, 0)) > 0 )
     no_converge2 <- c(no_converge2, no_converge[i])
+  
+  if (sum(ifelse(sum$Rhat > 1.15, 1, 0)) > 0 )
+    no_converge2_1.1Rhat <- c(no_converge2_1.1Rhat, no_converge[i])
   next 
 }
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
-save(no_converge2, file = "1.1TortoData_noconverge2_9e5iter_2002_2021.RData") # Save to run at 500000
+rerun2 <- no_converge2_1.1Rhat[which(no_converge2_1.1Rhat %in% no_converge2 == FALSE)] # This I need to re-run with more iters to really reach convergence
+rerun2 <- c(rerun2, "169")
+
+#setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+#save(no_converge2, file = "1.1TortoData_noconverge2_9e5iter_2002_2021.RData") # Save to run at 500000
 
 # --> Check how bad is convergence of 9e5 iter
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_noconverge2_9e5iter_2002_2021.RData")
 
 list_no_converge2 <- list()
@@ -78,7 +92,6 @@ for (i in 1:length(no_converge2)){
                                                     %in% c("mu.lam.year", "sig.lam.year", "bYear.lam", "mu.sig.year", "sig.sig.year", "brough.sig", "sd", "rho",'Bp.Obs', 'Bp.N'), ]) # Only structural parameters
 }
 
-list_no_converge2
 
 ## ---- Probability of increase in trend ----
 
@@ -183,3 +196,67 @@ segments(0, -1, 0, 37.4, col = "red")
 dev.off()
 
 # Roughness tiene efecto en la detectabilidad de 11/36 transectos: 8 efecto negativo, 3 efecto positivo?
+
+## ---- Added transects, less restrictive: cHECK CONVERGENCE AND ADD ----
+
+# With 9e5 iter
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+load("1.1TortoData_transects_0221_ADD.RData") 
+
+no_converge3 <- NULL
+no_converge3_1.1Rhat <- NULL
+
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/Models_added_transects")
+for (i in 1:length(transect_add)){
+  load(paste("1.1TortoData_0221_", transect_add[i],"_9e5iter.RData", sep = ""))
+  
+  sum <-as.data.frame(out$summary[rownames(out$summary) 
+                                  %in% c("mu.lam.year", "sig.lam.year", "bYear.lam", "mu.sig.year", "sig.sig.year", "brough.sig", "sd", "rho",'Bp.Obs', 'Bp.N'), ]) # Only structural parameters
+  if (sum(ifelse(sum$Rhat > 1.30, 1, 0)) > 0 )
+    no_converge3 <- c(no_converge3, transect_add[i])
+  
+  if (sum(ifelse(sum$Rhat > 1.15, 1, 0)) > 0 )
+    no_converge3_1.1Rhat <- c(no_converge3_1.1Rhat, transect_add[i])
+  next 
+}
+
+rerun3 <- no_converge3_1.1Rhat[which(no_converge3_1.1Rhat %in% no_converge3 == FALSE)] # This I need to re-run with more iters to really reach convergence
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+#save(no_converge3, file = "1.1TortoData_noconverge3(added)_9e5iter_2002_2021.RData") # Save to run at 500000
+
+## Compile all transects to re-run with more iterations
+rerun <- c(rerun1,rerun2,rerun3)
+rerun <- c(rerun, "14", "22") # Add this 2 as Rhat doesnt arrive to 2, just to see if there is luck
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+#save(rerun, file = "1.1TortoData_transects_0221_RERUN.RData") 
+
+## ---- RE-RUN TRANSECTS WITH MORE ITERATIONS ----
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+load("1.1TortoData_transects_0221_RERUN.RData")
+
+no_converge4 <- NULL
+no_converge4_1.1Rhat <- NULL
+
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/Models_rerun")
+for (i in 1:length(rerun)){
+  load(paste("1.1TortoData_0221_", rerun[i],"_15e5iter.RData", sep = ""))
+  
+  sum <-as.data.frame(out$summary[rownames(out$summary) 
+                                  %in% c("mu.lam.year", "sig.lam.year", "bYear.lam", "mu.sig.year", "sig.sig.year", "brough.sig", "sd", "rho",'Bp.Obs', 'Bp.N'), ]) # Only structural parameters
+  if (sum(ifelse(sum$Rhat > 1.30, 1, 0)) > 0 )
+    no_converge4 <- c(no_converge4, rerun[i])
+  
+  if (sum(ifelse(sum$Rhat > 1.15, 1, 0)) > 0 )
+    no_converge4_1.1Rhat <- c(no_converge4_1.1Rhat, transect_add[i])
+  next 
+}
+
+rerun4 <- no_converge4_1.1Rhat[which(no_converge4_1.1Rhat %in% no_converge4 == FALSE)] 
+
+

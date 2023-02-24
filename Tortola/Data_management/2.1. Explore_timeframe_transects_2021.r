@@ -155,6 +155,9 @@ length(unique(m_subset2$site)) # Number of transects that will be analyzed
 transect2 <- unique(m_subset2$site)
 transect_add <- transect2[-which(transect2 %in% transect)] # Transects to add, less restrictive
 
+#setwd("C:/Users/anasa/OneDrive/deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021")
+#save(transect_add, file = "1.1TortoData_transects_0221_ADD.RData") 
+
 # Check time frame new transects
 
 # ---- Create data frame to store year of beginning and year of end ----
@@ -178,5 +181,5 @@ for (xxx in 1:length(transect_add)){
   temp[xxx,4:23] <- ifelse(is.na(data_transect[1,-21]), 0, 1)
 }
 
-setwd("D:/Otros/Tórtola/Data")
-write.csv(temp, file = "timeframe_transects_add.csv")
+#setwd("D:/Otros/Tórtola/Data")
+#write.csv(temp, file = "timeframe_transects_add.csv")
