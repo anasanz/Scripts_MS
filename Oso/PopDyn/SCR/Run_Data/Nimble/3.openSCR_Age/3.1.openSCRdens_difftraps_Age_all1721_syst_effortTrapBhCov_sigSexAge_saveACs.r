@@ -747,7 +747,7 @@ library(MCMCvis)
 library(rgdal)
 library(nimbleSCR)
 
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
 load("myResults_3-3.1_param.RData")
 summary(nimOutput)
 
@@ -776,11 +776,10 @@ plot(osbuf2, col = adjustcolor("yellow", alpha = 0.5), add = TRUE)
 
 
 
-
 #---- 2.  ESTIMATE ABUNDANCE IN BUFFER ---- 
 
 # Load results
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
 load("myResults_3-3.1_sxy.RData")
 
 dim(nimOutputSXY[[1]]) #  iterations * 6000 elements (e.g., z[1,5]) ???
