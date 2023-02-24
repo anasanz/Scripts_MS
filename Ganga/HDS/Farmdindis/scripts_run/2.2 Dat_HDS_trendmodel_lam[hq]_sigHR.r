@@ -61,13 +61,20 @@ nrow(dat_notmade) == length(m[is.na(m)])
 # Only to check: Count of individuals per year
 count.year <- colSums(m,na.rm = TRUE)
 
-# Count of individuals per year corrected by cluster size
+# Average and median cluster size
+
 average_clus <- mean(dat_det$Count) # TO INCLUDE IN THE MODEL
 median_clust <- median(dat_det$Count)
 
-hist(dat_det$Count)
-abline(v = average_clus, col = "red")
-abline(v = median_clust, col = "blue") # Better by the median, the mean will be really pushed by big occasional groups
+#hist(dat_det$Count)
+#abline(v = average_clus, col = "red")
+#abline(v = median_clust, col = "blue") # Better by the median, the mean will be really pushed by big occasional groups
+
+# Just to check: Average cluster size in 2022
+dat_det2022 <- dat_det[which(dat_det$Year %in% 2022), ]
+average_clus2022 <- mean(dat_det2022$Count) # TO INCLUDE IN THE MODEL
+
+# Count of individuals per year corrected by cluster size
 
 count.year_clus <- count.year*median_clust
 
@@ -234,204 +241,173 @@ hq_area <- read.csv(file = "HQ_area.csv")
 
 area_transect <- 500*1000 # m2
 
-mode <- function(x) {
-  ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
-}
 
 ## ---- 1. Predictions from posterior distribution ----
 
 ## ---- 1.1. Ignoring w ----
 
-plot(density(out$sims.list$popindex[,13]))
-max(out$sims.list$popindex[,13])
-mean(out$sims.list$popindex[,13])
-min(out$sims.list$popindex[,13])
+#plot(density(out$sims.list$popindex[,13]))
+#abline(v = mean(out$sims.list$popindex[,13]), col = "blue")
 # It is very skewed....
 
 # Parameters to predict abundance in each hq zone
-mu.site <- out$sims.list$mu.lam.site
-random.year.2022 <- out$sims.list$log.lambda.year[,13]
-bYear.lam <- out$sims.list$bYear.lam
+mu.site <- out$sims.list$mu.lam.site # Mean = summary -1.532456
+random.year.2022 <- out$sims.list$log.lambda.year[,13] # Mean = summary -0.2761982
+bYear.lam <- out$sims.list$bYear.lam # Mean = summary -0.02565323
 year1 <- 12
-bHQ <- out$sims.list$bHQ
+bHQ <- out$sims.list$bHQ # Mean = summary
+
+#par(mfrow = c(2,2))
+#plot(density(out$sims.list$mu.lam.site))
+#abline(v = mean(out$sims.list$mu.lam.site), col = "blue")
+#
+#plot(density(out$sims.list$log.lambda.year[,13])) ### THIS ONE IS THE ONE THAT SEEMS SKEWED?
+#abline(v = mean(out$sims.list$log.lambda.year[,13]), col = "blue")
+#
+#plot(density(out$sims.list$bYear.lam))
+#abline(v = mean(out$sims.list$bYear.lam), col = "blue")
+#
+#plot(density(out$sims.list$bHQ))
+#abline(v = mean(out$sims.list$bHQ), col = "blue")
+
 
 hqzones <- c("hq1", "hq2", "hq3")
 
-ab <- data.frame(matrix(NA, nrow = length(hqzones), ncol = 6))
-rownames(ab) <- hqzones
-colnames(ab) <- c("mean_lambda", "density", "abundance", "total_abundance", "total_abundance_lci", "total_abundance_uci")
+ab <- data.frame(matrix(NA, nrow = length(mu.site), ncol = 4))
+colnames(ab) <- c(hqzones, "total")
+
+de <- data.frame(matrix(NA, nrow = length(mu.site), ncol = 4))
+colnames(de) <- c(hqzones, "total")
 
 for (i in 1:length(hqzones)) {
   
   lambda <- exp(mu.site + random.year.2022 + bYear.lam*year1 + bHQ * i) # Expected abundance
-  
-  mean.pred  <- mean(lambda)
-  dens_obs <- density(lambda)
-  mode.pred <- dens_obs$x[dens_obs$y == max(dens_obs$y)]
-  
-  plot(density(lambda), main = hqzones[i])
-  abline(v = mean.pred, col = "red")
-  abline(v = mode.pred, col = "blue")
-  
-  
-  # Mean
-  
-  #mean.pred  <- mean(lambda)
-  #
-  #dens <- mean.pred/area_transect
-  #abundance <- dens*hq_area$x[i]
-  #total_abundance <- abundance*average_clus
-  
-  # Mode
-  
-  dens <- mode.pred/area_transect
+
+  dens <- lambda/area_transect
   abundance <- dens*hq_area$x[i]
-  total_abundance <- abundance*average_clus
+  total_abundance <- abundance*average_clus2022
+  ab[,i] <- total_abundance
   
-  # LCI
+  densHA <- lambda/(area_transect/10000)
   
-  lci <- quantile(lambda,probs = 0.025)
+  de[,i] <- densHA*average_clus2022
   
-  dens_lci <- lci/area_transect
-  abundance_lci <- dens_lci*hq_area$x[i]
-  total_abundance_lci <- abundance_lci*average_clus
-  
-  # UCI
-  
-  uci <- quantile(lambda,probs = 0.975)
-  
-  dens_uci <- uci/area_transect
-  abundance_uci <- dens_uci*hq_area$x[i]
-  total_abundance_uci <- abundance_uci*average_clus
-  
-  #ab[i,1] <- mean.pred 
-  ab[i,1] <- mode.pred 
-  ab[i,2] <- dens
-  ab[i,3] <- abundance
-  ab[i,4] <- total_abundance
-  ab[i,5] <- total_abundance_lci
-  ab[i,6] <- total_abundance_uci
 }
 
-ta <- colSums(ab[,c(3:6)]) 
+ab[,4] <- rowSums(ab[,c(1:3)])
+de[,4] <- rowSums(de[,c(1:3)])
 
-# Abundance can be estimated
-# 1. Multiplying by average cluster size
-average_clus # Result: 135.74363 [ 17.49625 - 293.34180]
-# 2. Multiplying by median cluster size
-median_clust # Result: 67.761811 [ 8.733949 - 146.433183]
+# All observations
 
-## ---- 1.2. Including w ----
+dens_obs1 <- density(ab[,4]) 
+mode_ab <- dens_obs1$x[dens_obs1$y == max(dens_obs1$y)]
+mean_ab <- mean(ab[,4])
 
-dim(out$sims.list$w) # Take last year
+# 95% CI (excludes the 2.5% of obs with lower and higher values)
 
-w.2022.sites <- out$sims.list$w[,,13] # Mean of w accross sites per iteration
-w.2022 <- rowMeans(w.2022.sites)
+lci <- quantile(ab[,4],probs = 0.025) 
+uci <- quantile(ab[,4],probs = 0.975)
 
-ab_w <- data.frame(matrix(NA, nrow = length(hqzones), ncol = 6))
-rownames(ab_w) <- hqzones
-colnames(ab_w) <- c("mean_lambda", "density", "abundance", "total_abundance", "total_abundance_lci", "total_abundance_uci")
+# Observations of value lower than the upper ci 474.58 (97.5%)
 
-for (i in 1:length(hqzones)) {
-  
-  lambda <- exp(mu.site + random.year.2022 + bYear.lam*year1 + bHQ * i + w.2022) # Expected abundance
-  
-  # Mean
-  
-  mean.pred  <- mean(lambda)
-  
-  dens <- mean.pred/area_transect
-  abundance <- dens*hq_area$x[i]
-  total_abundance <- abundance*average_clus
-  
-  # LCI
-  
-  lci <- quantile(lambda,probs = 0.025)
-  
-  dens_lci <- lci/area_transect
-  abundance_lci <- dens_lci*hq_area$x[i]
-  total_abundance_lci <- abundance_lci*average_clus
-  
-  # UCI
-  
-  uci <- quantile(lambda,probs = 0.975)
-  
-  dens_uci <- uci/area_transect
-  abundance_uci <- dens_uci*hq_area$x[i]
-  total_abundance_uci <- abundance_uci*average_clus
-  
-  ab_w[i,1] <- mean.pred 
-  ab_w[i,2] <- dens
-  ab_w[i,3] <- abundance
-  ab_w[i,4] <- total_abundance
-  ab_w[i,5] <- total_abundance_lci
-  ab_w[i,6] <- total_abundance_uci
-}
+dens_obs2 <- density(ab[,4][which(ab[,4]<uci)]) 
 
-ta_w <- colSums(ab_w[,c(3:6)]) 
+# 90% CI (excludes the 5% of obs with lower and higher values)
 
-# It doesn't change much in any case
+lci2 <- quantile(ab[,4],probs = 0.05)
+uci2 <- quantile(ab[,4],probs = 0.95)
 
-## ---- 2. Predictions from summary ----
+# 85% CI (excludes the 7.5% of obs with lower and higher values)
 
-# Parameters to predict abundance in each hq zone
-mu.site <- summary[which(rownames(summary) %in% "mu.lam.site"), 1]
-random.year.2022 <- summary[which(rownames(summary) %in% "log.lambda.year[13]"), 1]
-bYear.lam <- summary[which(rownames(summary) %in% "bYear.lam"), 1]
-year1 <- 0:12
-bHQ <- summary[which(rownames(summary) %in% "bHQ"), 1]
+lci3 <- quantile(ab[,4],probs = 0.075)
+uci3 <- quantile(ab[,4],probs = 0.925)
 
 
-## ---- 2.1. Predict ignoring w ----
+## ---- 1.1.1. Plot ----
 
-# Model: lambda[j,t] <- exp(log.lambda.site[site[j]] + log.lambda.year[year_index[t]] + bYear.lam*year1[t] + bHQ*hqCov[j,t] + w[j,t])
+setwd("D:/MargSalas/Ganga/Results/HDS/Plots")
+pdf("Abundance_estimate.pdf", 7, 9)
 
-# Zone 1 (example on how to calculate it)
-lambda1 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 1)
-dens1 <- lambda1/area_transect
-abundance1 <- dens1*hq_area$x[1]
-total_abundance1 <- abundance1*average_clus
+par(mfrow = c(2,1),
+    mar = c(3.2,3,2,1))
+plot(dens_obs1, main = "Full posterior distribution", col = "darkcyan", lwd = 1.2, xlab = " ", ylab = " ", bty = "n", axes = FALSE)
+polygon(c(dens_obs1$x, 0), c(dens_obs1$y, 0), col="darkcyan", border = "darkcyan") # ?? I still don't know if its right
+polygon(c(dens_obs1$x[which(dens_obs1$x > lci3 & dens_obs1$x < uci3)], uci3, lci3), 
+        c(dens_obs1$y[which(dens_obs1$x > lci3 & dens_obs1$x < uci3)], 0, 0), 
+        col=adjustcolor("yellow", alpha = 0.5),
+        border = adjustcolor("yellow", alpha = 0.5)) 
 
-lambda2 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 2)
-dens2 <- lambda2/area_transect
-abundance2 <- dens2*hq_area$x[2]
-total_abundance2 <- abundance2*average_clus
+axis(1, pos = 0, tck = -0.05, cex.axis = 0.9)
+axis(2, pos = -0.5, tck = -0.05, cex.axis = 0.9)
 
-lambda3 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 3)
-dens3 <- lambda3/area_transect
-abundance3 <- dens3*hq_area$x[3]
-total_abundance3 <- abundance3*average_clus
-
-ta <- total_abundance1 + total_abundance2 + total_abundance3
+mtext("Abundance (N)", side = 1, line = 1.7)
+mtext("Probability", side = 2, line = 1.7)
 
 
-# Results in table to export
+plot(dens_obs2, main = "Posterior distribution (0 - 97.5% CI)", col = "darkcyan",lwd = 1.5, xlab = "", ylab = "", bty = "n", axes = FALSE)
+polygon(c(dens_obs2$x, 0), c(dens_obs2$y, 0), col="darkcyan", border = "darkcyan",lwd = 1.5) # ?? I still don't know if its right
+polygon(c(dens_obs2$x[which(dens_obs2$x > lci3 & dens_obs2$x < uci3)], uci3, lci3), 
+        c(dens_obs2$y[which(dens_obs2$x > lci3 & dens_obs2$x < uci3)], 0, 0), 
+        col=adjustcolor("yellow", alpha = 0.5),
+        border = "yellow", lwd = 1.5) 
+
+axis(1, pos = 0, tck = -0.05, cex.axis = 0.9)
+axis(2, pos = -0.5, tck = -0.05, cex.axis = 0.9)
+
+mtext("Abundance (N)", side = 1, line = 1.7)
+mtext("Probability", side = 2, line = 1.7)
+
+abline(v = mean_ab, col = "darkslategrey", lwd = 2)
+abline(v = mode_ab, col = "darkslategrey", lwd = 2)
+
+segments(x0=lci3,y0=0,x1=lci3,y1=dens_obs2$y[41],col="yellow", lwd = 1.5)
+segments(x0=uci3,y0=0,x1=uci3,y1=dens_obs2$y[270],col="yellow", lwd = 1.5)
+
+text(x = 82, y = 0.0007, labels = "Mean:\n85 ind", adj = 0, pos = 4, col = "darkslategrey", cex = 1, font = 2)
+text(x = 34, y = 0.0007, labels = "Mode:\n37 ind", adj = 0, pos = 4, col = "darkslategrey", cex = 1, font = 2)
+
+
+dev.off()
+
+
+## ---- 1.1.1. Table ----
 
 hqzones <- c("hq1", "hq2", "hq3")
 
-ab <- data.frame(matrix(NA, nrow = length(hqzones), ncol = 4))
-rownames(ab) <- hqzones
-colnames(ab) <- c("lambda", "density", "abundance", "total_abundance")
+results <- data.frame(matrix(NA, nrow = length(hqzones)+1, ncol = 6))
+rownames(results) <- c(hqzones,"total")
+colnames(results) <- c("abundance_mean","abundance_lci", "abundance_uci", "density_mean","density_lci", "density_uci")
 
-for (i in 1:length(hqzones)) {
-  ab[i,1] <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * i) # Expected abundance
-  ab[i,2] <- ab[i,1]/area_transect # Average transect density
-  ab[i,3] <- ab[i,2]*hq_area$x[i] # 
-  ab[i,4] <- ab[i,3]*average_clus
-}
+for (i in 1:(length(hqzones)+1)) {
+  results[i,1] <- round(mean(ab[,i]),2)
+  results[i,2] <- round(quantile(ab[,i],probs = 0.075),2)
+  results[i,3] <- round(quantile(ab[,i],probs = 0.925),2)
+  results[i,4] <- mean(de[,i])
+  results[i,5] <- quantile(de[,i],probs = 0.075)
+  results[i,6] <- quantile(de[,i],probs = 0.925)
+  }
 
-total_abundance <- sum(ab[,4])
+results[4,1] <- paste("Mean = ", round(mean_ab, 2), ", Mode = ", round(mode_ab, 2), sep = "")
 
-## ---- 2.2. Predict taking into account w ----
+setwd("D:/MargSalas/Ganga/Results/HDS")
+write.csv(results, file = "resultsHDS_2022.csv")
 
+## --------- HDI interval ----
+
+library(HDInterval)
+
+hdi(ab[,4], credMass = 0.85)
+
+## ---- 1.2. Including w ----
+
+summary <- out$summary 
 # w in a year t depends on the overdispersion and ac that year, and the previous one 
 # Explore how it changes each year
 wvec <- summary[grep("w", rownames(summary)), 1]
 w <- matrix(wvec, nrow = nSites, ncol = nyrs, byrow = FALSE)
 
-setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
-save(w, file = "w.RData")
+#setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
+#save(w, file = "w.RData")
 
 library("RColorBrewer")
 
@@ -445,24 +421,193 @@ for (i in 1:nSites){
   abline(m, col = cl[i])
 }
 
-# They don't follow a clear pattern...take the mean site w of the last year
+dim(out$sims.list$w) # Take last year
 
-# Zone 1 (example on how to calculate it)
-lambda1 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 1 + colMeans(w)[13])
-dens1 <- lambda1/area_transect
-abundance1 <- dens1*hq_area$x[1]
-total_abundance1 <- abundance1*average_clus
+w.2022.sites <- out$sims.list$w[,,13] # Mean of w accross sites per iteration
+w.2022 <- rowMeans(w.2022.sites)
 
-lambda2 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 2 + colMeans(w)[13])
-dens2 <- lambda2/area_transect
-abundance2 <- dens2*hq_area$x[2]
-total_abundance2 <- abundance2*average_clus
+hqzones <- c("hq1", "hq2", "hq3")
 
-lambda3 <- exp(mu.site + random.year.2022 + bYear.lam*year1[13] + bHQ * 3 + colMeans(w)[13])
-dens3 <- lambda3/area_transect
-abundance3 <- dens3*hq_area$x[3]
-total_abundance3 <- abundance3*average_clus
+ab <- data.frame(matrix(NA, nrow = length(mu.site), ncol = 4))
+colnames(ab) <- c(hqzones, "total")
 
-ta_w <- total_abundance1 + total_abundance2 + total_abundance3
+for (i in 1:length(hqzones)) {
+  
+  lambda <- exp(mu.site + random.year.2022 + bYear.lam*year1 + bHQ * i + w.2022) # Expected abundance
+  
+  dens <- lambda/area_transect
+  abundance <- dens*hq_area$x[i]
+  total_abundance <- abundance*average_clus2022
+  ab[,i] <- total_abundance
+}
 
-# It doesn't change much, difference of 1 individual
+ab[,4] <- rowSums(ab[,c(1:3)])
+
+# All observations
+
+dens_obs1 <- density(ab[,4]) 
+mode_ab <- dens_obs1$x[dens_obs1$y == max(dens_obs1$y)]
+mean_ab <- mean(ab[,4])
+
+# 95% CI (excludes the 2.5% of obs with lower and higher values)
+
+lci <- quantile(ab[,4],probs = 0.025) 
+uci <- quantile(ab[,4],probs = 0.975)
+
+#### CONCLUSION: IT DOESN'T CHANGE MUCH, SO I KEEP THE MODEL PREDICTION WITHOUT W
+
+
+
+
+
+
+
+
+
+
+## ---- 2. Predictions from posterior distribution ALL YEARS ----
+
+# Parameters to predict abundance in each hq zone
+mu.site <- out$sims.list$mu.lam.site # Mean = summary -1.532456
+random.year <- out$sims.list$log.lambda.year # Mean = summary -0.2761982
+bYear.lam <- out$sims.list$bYear.lam # Mean = summary -0.02565323
+year1 <- 0:12
+bHQ <- out$sims.list$bHQ # Mean = summary
+
+hqzones <- c("hq1", "hq2", "hq3")
+
+ab_years <- list()
+lam_years <- list()
+
+ab <- data.frame(matrix(NA, nrow = length(mu.site), ncol = 4))
+colnames(ab) <- c(hqzones, "total")
+
+lam <- data.frame(matrix(NA, nrow = length(mu.site), ncol = 4))
+colnames(lam) <- c(hqzones, "total")
+
+for (t in 1:length(year1)){
+  for (i in 1:length(hqzones)) {
+  
+  lambda <- exp(mu.site + random.year[,t] + bYear.lam*year1[t] + bHQ * i) # Expected abundance
+  
+  dens <- lambda/area_transect
+  abundance <- dens*hq_area$x[i]
+  total_abundance <- abundance*average_clus2022
+  ab[,i] <- total_abundance
+  ab_years[[t]] <- ab
+  
+  lam[,i] <- lambda
+  lam_years[[t]] <- lam
+  
+}}
+
+total_ab_years <- list()
+total_lam_years <- list()
+
+
+for (t in 1:length(year1)){
+  ab <- ab_years[[t]]
+  ab[,4] <- rowSums(ab[,c(1:3)])
+  total_ab_years[[t]] <- ab
+  
+  lam <- lam_years[[t]] 
+  lam[,4] <- rowSums(lam[,c(1:3)])
+  total_lam_years[[t]] <- lam
+  }
+
+### Results total abundance
+
+results_allyears <- data.frame(matrix(NA, nrow = length(year1), ncol = 4))
+
+yrs <- c(2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022)
+rownames(results_allyears) <- yrs
+colnames(results_allyears) <- c("Mean", "Mode", "Low 85% BCI", "Upper 85% BCI")
+
+for (t in 1:length(year1)){
+
+dens_obs1 <- density(total_ab_years[[t]][,4]) 
+mode_ab <- dens_obs1$x[dens_obs1$y == max(dens_obs1$y)]
+mean_ab <- mean(total_ab_years[[t]][,4])
+
+# 85% CI (excludes the 7.5% of obs with lower and higher values)
+lci3 <- quantile(total_ab_years[[t]][,4],probs = 0.075)
+uci3 <- quantile(total_ab_years[[t]][,4],probs = 0.925)
+
+results_allyears[t,1] <- mean_ab
+results_allyears[t,2] <- mode_ab
+results_allyears[t,3] <- lci3
+results_allyears[t,4] <- uci3
+}
+
+### Results expected abundance per transect
+
+results_allyears2 <- data.frame(matrix(NA, nrow = length(year1), ncol = 4))
+
+yrs <- c(2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022)
+rownames(results_allyears2) <- yrs
+colnames(results_allyears2) <- c("Mean", "Mode", "Low 85% BCI", "Upper 85% BCI")
+
+for (t in 1:length(year1)){
+  
+  dens_obs1 <- density(total_lam_years[[t]][,4]) 
+  mode_ab <- dens_obs1$x[dens_obs1$y == max(dens_obs1$y)]
+  mean_ab <- mean(total_lam_years[[t]][,4])
+  
+  # 85% CI (excludes the 7.5% of obs with lower and higher values)
+  lci3 <- quantile(total_lam_years[[t]][,4],probs = 0.075)
+  uci3 <- quantile(total_lam_years[[t]][,4],probs = 0.925)
+  
+  results_allyears2[t,1] <- mean_ab
+  results_allyears2[t,2] <- mode_ab
+  results_allyears2[t,3] <- lci3
+  results_allyears2[t,4] <- uci3
+}
+
+setwd("D:/MargSalas/Ganga/Results/HDS")
+write.csv(results_allyears[6:13,], file = "resultsHDS_totalab_2015-2022.csv")
+write.csv(results_allyears2, file = "resultsHDS_expectedlam_allyears.csv")
+
+## Plot
+
+setwd("D:/MargSalas/Ganga/Results/HDS/Plots")
+pdf("Full_posterior_allyears.pdf", 7, 9)
+
+par(mfrow = c(3,3),
+    mar = c(3.2,3,2,1),
+    oma = c(3,3,3,1))
+
+for (t in 6:13){
+  
+  dens_obs1 <- density(total_ab_years[[t]][,4]) 
+  mode_ab <- dens_obs1$x[dens_obs1$y == max(dens_obs1$y)]
+  mean_ab <- mean(total_ab_years[[t]][,4])
+  
+  # 85% CI (excludes the 7.5% of obs with lower and higher values)
+  lci3 <- quantile(total_ab_years[[t]][,4],probs = 0.075)
+  uci3 <- quantile(total_ab_years[[t]][,4],probs = 0.925)
+  
+  plot(dens_obs1, main = yrs[t], col = "darkcyan", lwd = 1.2, xlab = " ", ylab = " ", bty = "n", axes = FALSE)
+  polygon(c(dens_obs1$x, 0), c(dens_obs1$y, 0), col="darkcyan", border = "darkcyan") # ?? I still don't know if its righ
+  polygon(c(dens_obs1$x[which(dens_obs1$x > lci3 & dens_obs1$x < uci3)], uci3, lci3), 
+        c(dens_obs1$y[which(dens_obs1$x > lci3 & dens_obs1$x < uci3)], 0, 0), 
+        col=adjustcolor("yellow", alpha = 0.5),
+        border = adjustcolor("yellow", alpha = 0.5)) 
+  axis(1, pos = 0, tck = -0.05, cex.axis = 0.9)
+  axis(2, pos = -0.5, tck = -0.05, cex.axis = 0.9)
+}
+
+mtext("Full posterior distribution", side = 3, line = 1, outer = TRUE)
+mtext("Abundance (N)", side = 1, line = 1, outer = TRUE)
+mtext("Probability", side = 2, line = 1, outer = TRUE)
+
+dev.off()
+
+## ---- Save parameter estimates ----
+
+sum <- out$summary
+sum <- sum[which(rownames(sum) %in% c("mu.sig", "sig.sig", "bTemp.sig", "b", "mu.lam.site", "bHQ", "sd", "rho", "Bp.Obs", "Bp.N")), c(1,2,3,7)]
+sum <- round(sum,3)
+
+setwd("D:/MargSalas/Ganga/Results/HDS")
+write.csv(sum, file = "model_estimates_2.2.HR.csv")
+

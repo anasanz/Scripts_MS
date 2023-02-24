@@ -80,12 +80,12 @@ for (i in 1:nrow(dat)){
 # All years
 
 hist(dat$distance[which(!is.na(dat$distance))], breaks = c(0,25,50,100,200,500),
-     main = "PTALC all years", col = "grey", freq = FALSE) 
+     main = "Detection function all years", col = "grey", freq = FALSE, xlab = "Distance") 
 
 years <- unique(dat$Year)
 for (t in 1:length(years)){
   hist(dat$distance[which(dat$Year == years[t] & !is.na(dat$distance))], breaks = c(0,25,50,100,200,500),
-       main = paste("PTALC", years[t]), col = "grey", freq = FALSE) 
+       main = paste("Detection function", years[t]), col = "grey", freq = FALSE, xlab = "Distance") 
 }
 
 dat <- dat[ ,c(9,1:8,10:16)]
