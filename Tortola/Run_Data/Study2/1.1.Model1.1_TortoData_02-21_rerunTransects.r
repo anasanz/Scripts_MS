@@ -109,6 +109,10 @@ rough$site <- m_subset$site # For subset
 
 transect <- unique(m_subset$site)
 
+xxx = 4
+#Fehler in checkForRemoteErrors(val) : 
+#  one node produced an error: Error in node dclass[42]
+#Node inconsistent with parents
 
 for (xxx in 1:length(transect)){
   

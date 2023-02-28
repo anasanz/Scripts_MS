@@ -16,55 +16,56 @@ library(dplyr)
 setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_transects_0221.RData") 
 
-## ---- STTUR ----
+## ---- 1. STTUR ----
 
-# List of file names to load (depending on how many iter)
+## ---- 1.1. Identify the files that I will keep for the results (files that converged) ----
 
-## HERE: First load the ones that converged properly
-setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
-
-
-setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_noconverge_2002_2021.RData") # Did not converge with 5e5 iter
-converge <- transect[-which(transect %in% no_converge)] # Transects that converged with 5e5 iter 
+converge <- transect[-which(transect %in% no_converge)] # Transects that converged with 5e5 iter
 converge1_files <-paste("1.1TortoData_0221_", converge,".RData", sep = "") 
 
-setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
 load("1.1TortoData_noconverge2_9e5iter_2002_2021.RData") # Did not converge with 9e5 iter
 no_converge2 <- c(no_converge2,"169") # Añadir 169 que no consigo correr, error
 converge2 <- transect[-which(transect %in% c(converge, no_converge2))] # Transects that converged with 9e5 iter (removing the ones added already (converge))
-converge2_files <-paste("1.1TortoData_0221_", converge2, "9e5iter", ".RData", sep = "")
+converge2_files <-paste("1.1TortoData_0221_", converge2, "_9e5iter", ".RData", sep = "")
 
-converge_all <- c(converge, converge2)
-files <- c(converge1_files, converge2_files)
+load("1.1TortoData_transects_0221_ADD.RData") # ADDED transects (less restrictive)
+load("1.1TortoData_noconverge3(added)_9e5iter_2002_2021.RData") # Did not converge with 9e5 iter
+converge3 <- transect_add[-which(transect_add %in% c(no_converge3))]
+converge3_files <-paste("1.1TortoData_0221_", converge3, "_9e5iter", ".RData", sep = "")
 
-# From this, except the transecta 14 and 22 ([1,2]), which might work by increasing iterations,
-# I would have to see other ways to reach convergence
+converge_all <- c(converge, converge2, converge3)
+files <- c(converge1_files, converge2_files, converge3_files)
 
-transectSTTUR <- transect[-which(transect %in% no_converge2)] 
+converged_files <- data.frame(transect_ID = converge_all, file = files)
 
-## VALUES PROBABILITY OF INCREASE IN TREND
+## Load the ones that converged properly from rerun, to substitute them (I will keep these as priority)
+load("1.1TortoData_transects_0221_RERUN.RData") # Rerun transects
+load("1.1TortoData_noconverge4_15e5iter_2002_2021.RData") # Did not converge even rerunning
+no_converge4 <- c(no_converge4,"169") # Añadir 169 que no consigo correr, error
+converge4 <- rerun[-which(rerun %in% no_converge4)] # Transects that converged with 15e5 iter
+converge4_files <-paste("1.1TortoData_0221_", converge4, "_15e5iter", ".RData", sep = "")
 
-trendSTTUR <- data.frame(Site = converge_all, p_increasing_STTUR = NA, name_file = NA)
+converged_files$file[which(converged_files$transect_ID %in% converge4)] <- converge4_files # Substitute, keep the ones that converged better with more iter
 
-setwd("D:/Deepthought/Results/Otros/Tortola/Study2/Model1.1/2002_2021/STTUR")
+## ---- Probability of increase in trend ----
 
-for (i in 1:length(files)){
-  load(files[i])
+converged_files$p_increasing <- NA
+
+for (i in 1:nrow(converged_files)){
+  load(converged_files$file[i])
   df.outall <- as.data.frame(out$sims.list)
   total.samples <- nrow(df.outall)
   increasing <- df.outall$bYear.lam[which(df.outall$bYear.lam > 0)]
   prob_increasing <- length(increasing)/total.samples
-  trendSTTUR[i,2] <- prob_increasing
-  trendSTTUR[i,3] <- files[i]
+  converged_files$p_increasing[i] <- prob_increasing
 }
 
-trendSTTUR$p_increasing_STTUR <- round(trendSTTUR$p_increasing_STTUR,3)
-trendSTTUR$label_STTUR <- paste("PI =", trendSTTUR$p_increasing_STTUR)
-trendSTTUR <- arrange(trendSTTUR,p_increasing_STTUR)
+converged_files$p_increasing <- round(converged_files$p_increasing,4)
+converged_files <- arrange(converged_files,p_increasing)
 
-setwd("D:/Otros/Tórtola/Results/Study2/Model_results")
-#write.csv(trendSTTUR,"STTUR_trend1.1.csv")
+#write.csv(converged_files, file = "pInc_transects_converged.csv")
+
 
 ## ---- COPAL ----
 

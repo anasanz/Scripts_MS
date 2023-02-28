@@ -89,7 +89,7 @@ for (i in 1:nrow(m_subset)) {
 length(unique(m_subset2$site)) # Number of transects that will be analyzed
 transect <- unique(m_subset2$site) # Transect vector of ALL transects analyzed
 
-## ---- 2. Add timeframe to transects ----
+## ---- 2. Add time frame to transects ----
 
 # Create data frame to store year of beginning and year of end
 
@@ -144,4 +144,15 @@ p2 <- temp[which(temp$N_P1<4),]
 p1 <- temp[which(is.na(temp$Period) & temp$N_P2 < 4), ]
 p3 <- temp[which(is.na(temp$Period)), ]
 
-## ---- Add results that can be used for next analysis: Convergence and probability of increase ----
+## ---- 4. Add results that can be used for next analysis ----
+## Convergence, nº of iterations, name of file, p.increase
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+tr <- read.csv("pInc_transects_converged.csv")
+tr$transect_ID <- as.character(tr$transect_ID)
+
+df <- left_join(temp, tr, by = "transect_ID")
+df_converged <- df[which(complete.cases(df)),-which(colnames(df) %in% c("file", "X"))]
+
+#write.csv(df_converged, file = "results_analysis1.csv")
+

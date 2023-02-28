@@ -242,7 +242,7 @@ load("1.1TortoData_transects_0221_RERUN.RData")
 no_converge4 <- NULL
 no_converge4_1.1Rhat <- NULL
 
-
+rerun <- rerun[-which(rerun == "169")]
 setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/Models_rerun")
 for (i in 1:length(rerun)){
   load(paste("1.1TortoData_0221_", rerun[i],"_15e5iter.RData", sep = ""))
@@ -253,10 +253,14 @@ for (i in 1:length(rerun)){
     no_converge4 <- c(no_converge4, rerun[i])
   
   if (sum(ifelse(sum$Rhat > 1.15, 1, 0)) > 0 )
-    no_converge4_1.1Rhat <- c(no_converge4_1.1Rhat, transect_add[i])
+    no_converge4_1.1Rhat <- c(no_converge4_1.1Rhat, rerun[i])
   next 
 }
 
-rerun4 <- no_converge4_1.1Rhat[which(no_converge4_1.1Rhat %in% no_converge4 == FALSE)] 
+rerun4 <- no_converge4_1.1Rhat[which(no_converge4_1.1Rhat %in% no_converge4 == FALSE)]
+
+setwd("D:/Otros/Tórtola/Results/Study2/Model_results_1.1/STTUR")
+save(no_converge4, file = "1.1TortoData_noconverge4_15e5iter_2002_2021.RData") # Save to run at 500000
+
 
 
