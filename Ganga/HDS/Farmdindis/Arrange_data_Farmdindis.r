@@ -95,8 +95,8 @@ setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
 write.csv(dat, file = "Data_HDS_Farmdindis.csv")
 
 ## -------------------------------------------------
-##            Remove obs from hq = 0
-##        I still don't know if I want to do it
+##            Check obs from hq = 0
+## I did not delete it, but I leave here the code
 ## ------------------------------------------------- 
 
 setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")

@@ -9,6 +9,7 @@ library(plyr)
 
 ### Same than original trend model, but adding bQ
 # mu.lam.site slightly over estimated
+# From script: 6. TRIM_PoisBayesP. S_x[dcat_area_integralBin]_sigma[obs(j,t)_year.random(t)_tempCov(j,t)]_lambda[site.alpha.random(j)_year.random(t)_beta.year(j)_w(AC+OD)]
 
 #set.seed(2013)
 
