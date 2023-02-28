@@ -500,7 +500,8 @@ nimData <- list(habDens = X.d_sc,
                 agePlusOne = ageMatAug[,1],       #known age in yr 1
                 w = c(rep(1, n), rep(NA, nz)),    #membership in superpopulation
                 u = zdatAGE,                      #known alive states
-                b = rep(1,K), a = rep(1, max.age) #prior params for recruitment, age distribution
+                b = rep(1,K), # this is wrong I think!!! b = rep (1,nyrs). It doesnt matter because the dimension is higher, but bear in mind. 
+                a = rep(1, max.age) #prior params for recruitment, age distribution
 )
 
 
