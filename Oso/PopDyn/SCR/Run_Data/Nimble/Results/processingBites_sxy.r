@@ -13,7 +13,7 @@ library(MCMCvis)
 
 
 #setwd("C:/Users/cymi/Downloads/AnaNimbleSCR")
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
 
 # Number of iter ran: Bite size = 100: 1000 iterations per bite, thinned by 10
 # 39 bites * 1000 iter / 10 = 3900
@@ -44,7 +44,7 @@ for(p in 1:length(path.list)){
   print(path.list[p])
   outfiles <- list.files(path.list[p])
   out  <- runtime <- list()#[CM]
-  for(x in NSkipBites:minBites){
+  for(x in NSkipBites:minBites){ # ASP: Here Im skiping the first 1000 iterations (10 bites * 100 iter = 1000 iter)
     print(x)
     load(file.path(path.list[p], paste("bite_", x, ".RData", sep = "")))
     runtime[[x]] <- RunTime[3]
@@ -66,8 +66,8 @@ source("ProcessCodaOutput.R")
 
 myResults <- ProcessCodaOutput(nimOutput,params.omit = c("sxy","z"))
 
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.2.1")
-save(nimOutput,myResults, file = "myResults_3-3.2.1_param.RData")
+setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
+save(nimOutput,myResults, file = "myResults_3.1_param.RData")
 
 MCMCtrace(nimOutput,   
           ind = TRUE)
@@ -77,6 +77,11 @@ inv.logit(0.004) # Adults
 inv.logit(0.0009198) # Subadults
 
 ### ====    1.2 SXY,Z,AGE.CAT ====
+
+# COMPILE CHARACTERISTICS 
+#bitesize <- 50 # ASP: Atención, bites are already thinned :( :()
+#burnin <- 1000
+#NSkipBites <- burnin/bitesize
 
 ## GO TROUGH THE BITES AND GET THEM (SXY LOCATIONS)
 nimOutputSXY <- RUNTIME <- list()

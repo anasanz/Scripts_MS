@@ -41,7 +41,7 @@ sxy.start<-array(NA, c(M.new, 2, 1+t.new))
 s.which<-grep('sxy', colnames(sampmat)) # ASP: index columns all sxy (sampmat matrix)
 ##all individuals X Yr1, then all inds Y Yr1; all inds X yr 2, then y yr 2 etc ## ASP: This is the order the sxy vector is placed (s.which)
 
-indx<-(Tt*Maug*2-(Maug*2-1)):(Tt*Maug*2) # ASP: Index the LAST year of sxy
+indx<-(Tt*Maug*2-(Maug*2-1)):(Tt*Maug*2) # ASP: Index the LAST year of sxy. *2 because there are the double of columns: x and y
 sxy.start[1:Maug,,1]<-matrix(sampmat[ 1, s.which[indx] ], Maug, 2) # ASP: Starting SXY for projection: SXY of year 5 
 
 ##calculate per capita recruitment

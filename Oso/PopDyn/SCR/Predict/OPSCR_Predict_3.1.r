@@ -36,6 +36,9 @@ setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/C
 load("myResults_3-3.1_sxy.RData")
 sampmat2 <- do.call(rbind, nimOutputSXY)
 
+# Problem: iterations between params and SXY do not correspond to each other!
+dim(sampmat1)
+dim(sampmat2)
 
 ## ---- 1. Re-Build model with extra dimensions ----
 
@@ -89,19 +92,100 @@ sxy.start[1:nimConstants$M,,1]<-matrix(sampmat2[ 1, s.which[indx] ], nimConstant
 
 ## ---- 1.2. Calculate per capita recruitment ----
 
+# Estimate recruitment (number of entries). 
+# I think this is the Bs in the model (coming from "recruit"). But I check it anyway.
+R <- matrix(NA, nrow(sampmat2), nimConstants$Nyr-1)
+for (t in 2:nimConstants$Nyr){
+  zwt <- paste('z[', 1:nimConstants$M,', ', t, ']', sep = '' ) # ASP: names z all individuals on year t
+  zwtm <- paste('z[', 1:nimConstants$M,', ', t-1, ']', sep = '' ) # ASP: names z all individuals on year t-1
+  
+  for (nn in 1:nrow(sampmat2)){ # ASP: Each iteration
+    R[nn,t-1] <- sum(ifelse((sampmat2[nn,zwt]-sampmat2[nn,zwtm]) == 1, 1, 0)) # ASP: Identified recruited ind (1 at t - 0 at t - 1 = recruited 1); sum all to get total numer of recruited from year t-1 to t
+  }
+}
+
+B <- matrix(sampmat1[1:nrow(sampmat1), grep('B', colnames(sampmat1))], nrow(sampmat1), nimConstants$Nyr)
+# ASP: Is not the same and I don't understand, B doesn't make sense! I get better R
+
+# PCR -> Average number of individuals recruited per Adult from t-1 to t. 
+N.which <- grep('N.ad', colnames(sampmat1))[1:(nimConstants$Nyr-1)] # ASP: Index columns N the four first years (to calculate pcr)
+pcr <- mean(R[1,]/sampmat1[1,N.which[1:4]]) # ASP: Mean per capita recruitment (for ONE iteration). Example?
+
+# The R comes from the z (sampmat2) that is more thinned than the N.ad (sampmat1)
+# For now I just take the first iterations, but is WRONG
+# I take the 
+pcrmat <- matrix(NA, nrow(sampmat2), 4)
+for (ite in 1:nrow(sampmat2)){
+  pcrmat[ite,]<-R[ite,]/sampmat1[ite,N.which[1:4]]
+}
+
+## ---- 1.3. Other parameters ----
+# We don't include the parameters related with detection (not in projection model)
+
+phi.ad <- sampmat1[1,'phi.ad']
+phi.cub <- sampmat1[1,'phi.cub']
+phi.sub <- sampmat1[1,'phi.sub']
+beta.dens <- sampmat1[1,'beta.dens']
+sigD <- sampmat1[1,'sigD']
+
+##calculate psi and unconditional age structure at t=1, which don't really matter 
+## as they  don't apply to the projection years
+##but need to be in the model for proper structure
+##won't be changed in simulations
+psi <- mean(sampmat1[,'N[5]'])/M.new # ASP: This is the data augmentation parameter (N last year/AUG), not really understand but it doesn't matter?
+##unconditional age structure at t=1 (old t=5, from single iteration)
+pi.uncond <- table(age.start[,1])/M.new # ASP: Reminder -> it is unconditional because it adds the prob. of not being recruited for augmented individuals
+
+## ---- 1.4. Set un constants and build model ----
+
+##set up constants
+nimConstants <- list(
+  M=(M.new), numHabWindows = nimConstants$numHabWindows, 
+  numGridRows = nimConstants$numGridRows, numGridCols = nimConstants$numGridCols, 
+  Nyr=(1+t.new),
+  max.age = nimConstants$max.age
+)
+
+##set up data
+names(nimData)
+nimData<-list(habDens = nimData$habDens, 
+              lowerHabCoords = nimData$lowerHabCoords, upperHabCoords = nimData$upperHabCoords,
+              habitatGrid = nimData$habitatGrid,
+              z = z.start,
+              sxy = sxy.start,
+              age = age.start+1,
+              age.cat = age.start,
+              u = z.start,
+              pcr = pcr, ##transformed per capita recruitment
+              phi.ad = phi.ad,
+              phi.cub = phi.cub,
+              phi.sub = phi.sub,
+              beta.dens = beta.dens,
+              sigD = sigD,
+              psi = psi,
+              pi.uncond = pi.uncond
+)
 
 
+# Create model using projection code (per capita recruitment, no observations)
+model <- nimbleModel( code = SCRhab.Open.diftraps.age.PR,
+                      constants = nimConstants,
+                      data = nimData,
+                      #inits = nimInits,
+                      check = F,       
+                      calculate = T)  
+
+nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
+                                      "pcr", "beta.dens", 'pi.uncond', 'psi'),
+                                    self = F,
+                                    downstream = T,
+                                    returnScalarComponents = TRUE)
+model$simulate(nodesToSim, includeData = FALSE)
+N <- apply(model$z,2,sum)
 
 
-
-
-
-
-
-
-
-
-
+##compile for faster simulation
+cmodelSims <- compileNimble(model)
 
 
 
