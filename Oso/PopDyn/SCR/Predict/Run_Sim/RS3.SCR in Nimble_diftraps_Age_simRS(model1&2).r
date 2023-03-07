@@ -1,9 +1,8 @@
-
 SCRhab.Open.diftraps.age<-nimbleCode({
   
   ### PRIORS ###
   psi~ dbeta(1,1)           # data augmentation
-
+  
   # recruitment prob at k 
   beta[1:Nyr] ~ ddirch(b[1:Nyr])
   
@@ -36,7 +35,7 @@ SCRhab.Open.diftraps.age<-nimbleCode({
   phi.ad ~ dbeta(1,1)          # survival adults
   phi.sub ~ dbeta(1,1)          # survival subadults
   phi.cub ~ dbeta(1,1)          # survival cubs
-
+  
   phi[1]<-0  #not recruited yet, placeholder to make indexing work
   phi[2]<-phi.cub
   phi[3]<-phi.cub
@@ -57,18 +56,18 @@ SCRhab.Open.diftraps.age<-nimbleCode({
   ##  FIRST YEAR
   ####activity centers, alive state, age yr 1
   for (i in 1:M){
-
+    
     w[i] ~ dbern(psi) # part of superpopulation?
     
     # Age process
     agePlusOne[i] ~ dcat(piAGEuncond[1:(max.age+1)]) 
     age[i,1] <- agePlusOne[i]-1 #age 0 = not yet entered, 5 = adult
     age.cat[i,1]<-age[i,1] #age category, everything above 5 == 5
-
+    
     # State process
     u[i,1] <- step(agePlusOne[i]-1.1)  # alive if age[i,1] >0
     z[i,1] <- u[i,1]*w[i]  
-
+    
     # derived stuff
     avail[i,1] <- 1- u[i,1]            # still available for recruitment. 
     recruit[i,1] <- z[i,1]             # recruited at k
@@ -122,16 +121,16 @@ SCRhab.Open.diftraps.age<-nimbleCode({
       # State process
       u[i,t] ~ dbern( u[i,t-1]*phi[ (age.cat[i,t-1]+1) ] + avail[i,t-1]*eta[t] )   #
       z[i,t] <- u[i,t]*w[i]  
-
+      
       # Age process
       age[i,t] <- age[i,t-1] + max(u[i,1:t]) # ages by one year after recruitment
       ##make sure age>5 get converted to age class 5 (adult)
       age.cat[i,t]<-min(age[i,t], max.age)
-
+      
       # derived stuff
       avail[i,t] <- 1- max(u[i,1:t])       
       recruit[i,t] <- equals(z[i,t]-z[i,t-1],1) # recruited at k
-
+      
     }
     
   }#end yr loop for ACs, demographic model
@@ -143,8 +142,8 @@ SCRhab.Open.diftraps.age<-nimbleCode({
   } #t
   
   Nsuper <- sum(w[1:M])            # Superpopulation size
-
-##################################################################################################################################
+  
+  ##################################################################################################################################
   ##detection model
   for (t in 1:Nyr){
     for(i in 1:M){
@@ -168,7 +167,7 @@ SCRhab.Open.diftraps.age<-nimbleCode({
     
   }
   
-
+  
 })
 
 
@@ -184,14 +183,14 @@ SCRhab.Open.diftraps.age.PR<-nimbleCode({
     R[t]<-pcr* N[t-1] #per capita recruitment times number adults in previous year=expected recruits
     gamma[t]<-R[t]/sum(avail[1:M,t-1])  #individual recruitment probability: expected recruits/number available for recruitment
   }
-    
+  
   sigD~dunif(0,5)  #dispersal Kernel SD, adjust to units of trap array
-   
+  
   ##survival probability, per age category
   phi.ad ~ dbeta(1,1)          # survival adults
   phi.sub ~ dbeta(1,1)          # survival subadults
   phi.cub ~ dbeta(1,1)          # survival cubs
-
+  
   phi[1]<-0  #not recruited yet, placeholder to make indexing work
   phi[2]<-phi.cub
   phi[3]<-phi.cub
@@ -212,17 +211,17 @@ SCRhab.Open.diftraps.age.PR<-nimbleCode({
   ##  FIRST YEAR
   ####activity centers, alive state, age yr 1
   for (i in 1:M){
-
+    
     z[i,1]~dbern(psi)
     u[i,1]<-z[i,1]
     age[i,1]~dcat(pi.uncond[1:6])
     age.cat[i,1]<-age[i,1]-1
-
+    
     # derived stuff
     avail[i,1] <- 1- u[i,1]            # still available for recruitment. 
     recruit[i,1] <- z[i,1]             # recruited at k
     #age.cat[i,1]<-min(age[i,1], max.age)
-
+    
     #activity centers according to density surface
     sxy[i, 1:2,1] ~ dbernppAC(
       lowerCoords = lowerHabCoords[1:numHabWindows, 1:2],#not used; from getWindowCoords()
@@ -252,23 +251,23 @@ SCRhab.Open.diftraps.age.PR<-nimbleCode({
         numWindows             = numHabWindows
       )
     }
-   
+    
     
     ###demographic model
     for (i in 1:M){
       # State process
-      u[i,t] ~ dbern( u[i,t-1]*phi[ (age.cat[i,t-1]+1) ] + avail[i,t-1]*gamma[t] )   #
+      u[i,t] ~ dbern( u[i,t-1]*phi[ (age.cat[i,t-1]+1) ] + avail[i,t-1]*gamma[t] )
       z[i,t] <- u[i,t] 
-
+      
       # Age process
       age[i,t] <- age[i,t-1] + max(u[i,1:t]) # ages by one year after recruitment
       ##make sure age>5 get converted to age class 5 (adult)
       age.cat[i,t]<-min(age[i,t], max.age)
-
+      
       # derived stuff
       avail[i,t] <- 1- max(u[i,1:t])       
       recruit[i,t] <- equals(z[i,t]-z[i,t-1],1) # recruited at k
-
+      
     }
     
   }#end yr loop for ACs, demographic model
@@ -279,7 +278,7 @@ SCRhab.Open.diftraps.age.PR<-nimbleCode({
     B[t] <- sum(recruit[1:M,t])         # Number of entries
   } #t
   
-
+  
 })
 
 

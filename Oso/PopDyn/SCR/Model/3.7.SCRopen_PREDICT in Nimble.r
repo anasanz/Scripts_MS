@@ -90,9 +90,9 @@ SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR <- nimbleCode({
     # agePlusOne[i] ~ dcat(piAGEuncond[1:(max.age+1)]) 
     # age[i,1] <- agePlusOne[i]-1 #age 0 = not yet entered, 5 = adult
     # age.cat[i,1]<-age[i,1] #age category, everything above 5 == 5
-    
-    age[i,1] ~ dcat(pi.uncond[1:6])
-    age.cat[i,1]<-age[i,1]-1
+    agePlusOne[i] ~ dcat(pi.uncond[1:6]) #starts at 1
+    age[i,1] <- agePlusOne[i]-1 #starts at 0, continuously increases!
+    age.cat[i,1]<-age[i,1]      #also starts at 0 but does not go above 5
     
     
     # To index cubs with the sigma of the females
@@ -188,7 +188,7 @@ SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR <- nimbleCode({
     
   } #t
   
-  #Nsuper <- sum(w[1:M])            # Superpopulation size
+  Nsuper <- sum(z[1:M])            # Superpopulation size
   
   ##################################################################################################################################
   

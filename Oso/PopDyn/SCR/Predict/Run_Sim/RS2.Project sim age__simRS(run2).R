@@ -1,5 +1,13 @@
 
 
+## -------------------------------------------------
+##      Predict from simulation script RS (run1)
+##              SPATIAL PROJECTION
+## ------------------------------------------------- 
+
+#rm(list = ls())
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Predict")
 samp2<-readRDS('TestOutputAGE.rds')
 sampmat<-do.call(rbind, samp2)
 dim(sampmat)
@@ -106,6 +114,8 @@ nimData<-list(habDens=X.d,
               pi.uncond=pi.uncond
 )
 
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Predict")
+source('SCR in Nimble_diftraps_Age_simRS(model1&2).r')
 
 # Create model using projection code (per capita recruitment, no observations)
 model <- nimbleModel( code = SCRhab.Open.diftraps.age.PR,

@@ -515,7 +515,7 @@ inits<-function(){list(beta=c(0.15,rep(0.85/(Tt-1), Tt-1)),
 #setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Sim/3.openSCR")
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Predict")
-source('SCR in Nimble_diftraps_Age.txt')
+source('SCR in Nimble_diftraps_Age_simRS(model1&2).r')
 
 ##determine which parameters to monitor
 params<-c("p.ad", "p.sub","p.cub","phi.ad","phi.sub","phi.cub", 
