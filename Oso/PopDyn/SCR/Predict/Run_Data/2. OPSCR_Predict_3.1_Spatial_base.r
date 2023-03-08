@@ -188,7 +188,7 @@ nimData<-list(habDens = nimData$habDens,
 )
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('3.7.SCRopen_PREDICT in Nimble.r')
+source('3.7.SCRopen_PREDICT in Nimble RS.r')
 
 # Create model using projection code (per capita recruitment, no observations)
 model <- nimbleModel( code = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR,
@@ -220,7 +220,7 @@ sNodes <- samplerConfList[grep("sxy",samplerConfList)]
 uNodes <- samplerConfList[grep("u\\[",samplerConfList)]
 ageNodes <- samplerConfList[grep("age\\[",samplerConfList)]
 age.cat.Nodes <- samplerConfList[grep("age.cat\\[",samplerConfList)]
-agePO.Nodes <- samplerConfList[grep("agePlusOne",samplerConfList)]
+agePO.Nodes <-samplerConfList[grep("agePlusOne",samplerConfList)]
 
 ##get some random iterations from posterior
 itera <- sample(1:nrow(sampmat), 20)

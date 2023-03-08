@@ -188,7 +188,8 @@ SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR <- nimbleCode({
     
   } #t
   
-  Nsuper <- sum(z[1:M])            # Superpopulation size
+  #Nsuper <- sum(w[1:M])            # Superpopulation size
+  #Nsuper <- sum(recruit) # Now Nsuper would be the sum of all w right?
   
   ##################################################################################################################################
   

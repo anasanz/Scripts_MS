@@ -6,7 +6,7 @@
 
 ## Our abundance estimates are based in subsetting our population to our trapping area (core buffer)
 ## To predict abundance non-spatially, we do not have the activity centers in future years, so
-## we can't subset it a posterior and we need use as starting point (year 5) the individuals
+## we can't subset it a posteriori and we need use as starting point (year 5) the individuals
 ## inside the core area.
 ## To predict, we use the pcr rate. We need to choose if we:
 # 1. Estimate pcr for all individuals
@@ -120,6 +120,9 @@ Narray[,1,]<-t(N.age) # ASP: Fill N at each age class the first year for each it
 
 
 ## ---- 3. Calculate per capita recruitment ----
+
+# Function to estimate pcr in the whole state space (pcr_core = FALSE) 
+# or only in core buffer (pcr_core = TRUE)
 
 calc.pcr <- function(pcr_core = TRUE){
   
