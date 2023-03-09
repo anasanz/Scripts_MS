@@ -120,6 +120,22 @@ s.which <- grep('sxy', colnames(sampmat)) # ASP: index columns all sxy (sampmat 
 indx <- (Tt*M.aug*2-(M.aug*2-1)):(Tt*M.aug*2) # ASP: Index the LAST year of sxy. *2 because there are the double of columns: x and y. (M.aug*2-1) corresponds to 1 year of data
 sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: Starting SXY for projection: SXY of year 5 
 
+dimnames(sxy.start)[[2]] <- c("x", "y")
+
+sxy.start2 <- scaleCoordsToHabitatGrid(coordsData = sxy.start,## this are your sxy
+                                       coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
+                                       scaleToGrid = FALSE)$coordsDataScaled
+
+dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
+myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
+                                                        coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
+                                                        scaleToGrid = FALSE)$coordsDataScaled
+
+class(myResultsSXYZ$sims.list$sxy)
+class(sxy.start)
+dim(myResultsSXYZ$sims.list$sxy)
+dim(sxy.start)
+
 ## ---- 1.2. Calculate per capita recruitment ----
 
 # Function to estimate pcr in the whole state space (pcr_core = FALSE) 

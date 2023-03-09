@@ -124,7 +124,7 @@ Narray[,1,]<-t(N.age) # ASP: Fill N at each age class the first year for each it
 # Function to estimate pcr in the whole state space (pcr_core = FALSE) 
 # or only in core buffer (pcr_core = TRUE)
 
-calc.pcr <- function(pcr_core = TRUE){
+#calc.pcr <- function(pcr_core = TRUE){
   
   R <- matrix(NA, nrow(sampmat), Tt-1) # Number of recruits
   N.ad <- matrix(NA, nrow(sampmat), Tt-1)# Number of adults
@@ -190,11 +190,15 @@ calc.pcr <- function(pcr_core = TRUE){
   return(results)
   
 }
+#
+#pcr_corebuf1 <- calc.pcr(pcr_core = TRUE)
+#pcr1_corebuf1 <- apply(pcr_corebuf1[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 
-pcr_corebuf <- calc.pcr(pcr_core = TRUE)
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+load("pcr_corebuf.RData")
+load("pcr_all.RData")
+
 pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
-
-pcr_all <- calc.pcr(pcr_core = FALSE)
 pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 
 
@@ -248,7 +252,7 @@ Nall_core <- apply(subset_N, 2:3, sum)
 par(mfrow = c(1,2))
 
 plot(1:6, apply(Nall_core[1:6,], 1,mean), type='l', ylim=c(0,400), main = "Core")
-for (ite in 1:niter){
+for (ite in 1:length(itera)){
   points(1:6, Nall_core[1:6,ite], type='l', col='lightgrey')
 }
 points(1:6,apply(Nall_core, 1,mean), type='l')
@@ -297,7 +301,7 @@ subset_N <- Narray[,,itera]
 Nall_all <- apply(subset_N, 2:3, sum)
 
 plot(1:6, apply(Nall_all[1:6,], 1,mean), type='l', ylim=c(0,400), main = "All")
-for (ite in 1:niter){
+for (ite in 1:length(itera)){
   points(1:6, Nall_all[1:6,ite], type='l', col='lightgrey')
 }
 points(1:6,apply(Nall_all, 1,mean), type='l')
