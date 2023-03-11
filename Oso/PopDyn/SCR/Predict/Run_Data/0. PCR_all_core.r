@@ -142,16 +142,31 @@ calc.pcr <- function(pcr_core = TRUE){
 pcr_corebuf <- calc.pcr(pcr_core = TRUE)
 pcr_all <- calc.pcr(pcr_core = FALSE)
 
+# Save pcr because it takes forever to calculate
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+#save(pcr_corebuf, file = "pcr_corebuf.RData")
+#save(pcr_all, file = "pcr_all.RData")
+
 # Create new matrix of pcr to show all possibilities: Containts absolute maximum, absolute minimum, mean pcr in core
 
 pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 
-minpcr <- min(pcr1_corebuf,pcr2_all)
-maxpcr <- max(pcr1_corebuf, pcr2_all)
+pcr_range_min <- NULL
+for (i in 1:length(pcr1_corebuf)) {
+  pcr_range_min <- c(pcr_range_min,min(pcr1_corebuf[i], pcr2_all[i]))
+}
 
-# Save pcr because it takes forever to calculate
+pcr_range_max <- NULL
+for (i in 1:length(pcr1_corebuf)) {
+  pcr_range_max <- c(pcr_range_max,max(pcr1_corebuf[i], pcr2_all[i]))
+}
+
+pcr_range <- c(pcr_range_min, pcr_range_max)
+
+summary(pcr1_corebuf)
+summary(pcr2_all)
+
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-save(pcr_corebuf, pcr_all, file = "pcr.RData")
-
+save(pcr_range, file = "pcr_range.RData")
 

@@ -5,18 +5,12 @@
 ## ------------------------------------------------- 
 
 ## Our abundance estimates are based in subsetting our population to our trapping area (core buffer)
-## To predict abundance spatially we have several options:
-# I. Projection focused on all individuals from state-space
-#    1.1. Choose the individuals in all state space as starting point (modifying the z as starting population (death outside buffer?))
-#    1.2. Estimate pcr from individuals whole state space: R/NºAdults
-#    1.3. Subset afterwards to the individuals located in the core in all study years
-# II. Projection focused on individuals at the core buffer
-#    2.1. Choose the individuals inside the core area as starting point (modifying the z as starting population (death outside buffer?))
-#    2.2. Estimate pcr from individuals in core buffer: R in core/NºAdults in core
+## To predict abundance spatially we will estimate abundance choosing as starting point 
+# all individuals from state-space, and subset afterwards (as we do in the model).
+#   1. Choose the individuals in all state space as starting point
+#   2. Load estimated pcr from individuals: In whole state space: R/NºAdults and in core buffer only: R core/NºAdults core
+#   3. Subset afterwards to the individuals located in the core in all study years
 
-## --------------------------------------------------------------
-##      I. Initial population are all individuals in state space
-## ---------------------------------------------------------------
 
 rm(list = ls())
 
@@ -127,9 +121,11 @@ sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: St
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
 load("pcr_corebuf.RData")
 load("pcr_all.RData")
+load("pcr_range.RData")
 
 pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
+
 
 # Take pcr value of one iteration to build the model
 pcr <- pcr2_all[1]
@@ -275,9 +271,8 @@ for(ite in 1:length(itera)){
   
   # we set the values in the model
   #values(cmodelSims, sNodes) <- nimData1$sxy
-  #values(cmodelSims, sNodes) <- c(c(t(sxy.start[1:M.aug,,1]),rep(NA,9000)))
   
-  ## FIND s NODES FROM THE FIRST YEAR (SHOULD NOT BE REPLACED)
+  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
   sNodes <- sNodes[grep( ", 1]",sNodes)]
   for(i in 1:length(sNodes)){
   values(cmodelSims, sNodes[i]) <-sxy.start[i,,1]
@@ -370,8 +365,7 @@ sxy.proj.core.uns <- scaleCoordsToHabitatGrid(coordsData = sxy.proj.core,## this
 
 NIn_coreBuf <- matrix(NA,nrow = dim(z.proj.core)[1], ncol=dim(z.proj.core)[3]) # nrow = iterations, ncol = year
 sp.check <- sp.t.check <- list()
-ite=1
-t=1
+
 
 for(ite in 1:dim(z.proj.core)[1]){
   for(t in 1:dim(z.proj.core)[3]){
@@ -379,10 +373,6 @@ for(ite in 1:dim(z.proj.core)[1]){
     which.alive <- which(z.proj.core[ite,,t]==1) # Select only the individuals alive (z=1)
     
     which.aliveSXY <- sxy.proj.core.uns[ite,which.alive,,t] # Retrieve the activity center for those individuals
-    
-    which.aliveSXY <- which.aliveSXY[complete.cases(which.aliveSXY), ] # Provisionary all NA I consider them out (only happens in year 2)
-    
-    if(nrow(which.aliveSXY) == 0) next # Also provisionary, it happens in iter 19
     
     sp <- SpatialPoints(which.aliveSXY, proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
     
@@ -397,6 +387,8 @@ for(ite in 1:dim(z.proj.core)[1]){
   sp.check[[ite]] <-  sp.t.check # To check where points fall
 }
 
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
+save(Nmat.core, Rmat.core, sxy.proj.core, z.proj.core, age.cat.proj.core, sxy.proj.core.uns, NIn_coreBuf, file = "proj_pcr.core.RData")
 
 #average number of individuals without the buffer for each year 
 colMeans(NIn_coreBuf)
@@ -412,17 +404,15 @@ for (t in 1:dim(z.proj.core)[3]){
 NALL <- apply(z.proj.core,c(1,3),function(x) sum(x==1))
 colMeans(NALL)
 
-library(raster)
-# Load distcore variable 
-setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
-distcore <- raster("logDistcore_hrbear.tif")
+#library(raster)
+## Load distcore variable 
+#setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+#distcore <- raster("logDistcore_hrbear.tif")
 
-# Outside is too much!! Check where they fall
 par(mfrow = c(1,1))
 plot(distcore)
 plot(Xbuf2, add = TRUE)
 points(sp.check[[8]][[6]]) 
-# Why there???
 
 
 ## ---- 2.2. PCR in whole state space ----
@@ -459,8 +449,11 @@ for(ite in 1:length(itera)){
   sxy.start[1:M.aug,,1]<-matrix(sampmat[ itera[ite], s.which[indx] ], M.aug, 2)
   nimData1$sxy <- sxy.start
   
-  # we set the values in the model
-  values(cmodelSims, sNodes) <- nimData1$sxy
+  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
+  sNodes <- sNodes[grep( ", 1]",sNodes)]
+  for(i in 1:length(sNodes)){
+    values(cmodelSims, sNodes[i]) <-sxy.start[i,,1]
+  }
   
   ###set age
   age.est <- sampmat[itera[ite],age.which]
@@ -513,9 +506,10 @@ for(ite in 1:length(itera)){
   sxy.proj.all[ite,,,] <- c(cmodelSims$sxy)
   z.proj.all[ite,,] <- cmodelSims$z
   age.cat.proj.all[ite,,] <- cmodelSims$age.cat
-  cmodelSims$sxy[,,2]
-  
+
 }
+
+
 
 ##plot trajectory
 plot(1:(1+t.new), apply(Nmat.all,2,mean, na.rm = TRUE), type='l', ylim=range(Nmat.all, na.rm=TRUE))
@@ -550,10 +544,6 @@ for(ite in 1:dim(z.proj.all)[1]){
     
     which.aliveSXY <- sxy.proj.all.uns[ite,which.alive,,t] # Retrieve the activity center for those individuals
     
-    which.aliveSXY <- which.aliveSXY[complete.cases(which.aliveSXY), ] # Provisionary all NA I consider them out (only happens in year 2)
-    
-    if(nrow(which.aliveSXY) == 0) next # Also provisionary, it happens in iter 19
-    
     sp <- SpatialPoints(which.aliveSXY, proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
     
     which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
@@ -567,6 +557,9 @@ for(ite in 1:dim(z.proj.all)[1]){
   sp.check[[ite]] <-  sp.t.check # To check where points fall
 }
 
+# Save
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
+save(Nmat.all, Rmat.all, sxy.proj.all, z.proj.all, age.cat.proj.all, sxy.proj.all.uns, NIn_coreBuf.all, file = "proj_pcr.all.RData")
 
 #average number of individuals without the buffer for each year 
 colMeans(NIn_coreBuf.all)
@@ -582,25 +575,114 @@ for (t in 1:dim(z.proj.all)[3]){
 NALL <- apply(z.proj.all,c(1,3),function(x) sum(x==1))
 colMeans(NALL)
 
-# Outside is too much!! Check where they fall
+## ---- 2.3. PCR whole range (from min to max) ----
+## ------ 2.2.1. Projection ----
 
-library(raster)
-## Load distcore variable 
-setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
-distcore <- raster("logDistcore_hrbear.tif")
+pcr.all <- pcr_range 
 
-par(mfrow = c(1,1))
-plot(distcore)
-plot(Xbuf2, add = TRUE)
-points(sp.check[[15]][[2]]) 
-# Why there???
+# pcr_range contains joint all minimum and all maximum values of pcr (ordered by iteration, 1st minimums, 2nd maximums)
+# Multiply sampmat so that iterations are repeated twice and they fit with pcr_range
+# I don't know if this matters but in case. Then I can subet after anyway
 
-# Year 1 is really spread, how is that possible?
-# Check for one ite, out from from the model of activity center location in year 5
+sampmatx2 <- rbind(sampmat,sampmat)
+##get some random iterations from posterior
+itera <- sample(1:nrow(sampmatx2), 40)
+nimData1 <- nimData
+Nmat.range <- Rmat.range <- matrix(NA, length(itera), 1+t.new)
 
-sp <- SpatialPoints(myResultsSXYZ$sims.list$sxy[1,,,1], proj4string=CRS(proj4string(Xbuf2))) 
+# To store as simlist
+sxy.proj.range <- array(NA, c(length(itera), M.new, 2, t.new+1))
+z.proj.range <- age.cat.proj.range <- array(NA, c(length(itera), M.new, t.new+1))
 
-par(mfrow = c(1,1))
-plot(distcore)
-plot(Xbuf2, add = TRUE)
-points(sp)
+for(ite in 1:length(itera)){
+  # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
+  # USE NA FOR THE years to predict#
+  
+  # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
+  z.est <- matrix(sampmatx2[itera[ite],z.which], M.aug, Tt)
+  z.start[1:M.aug, 1] <- sampmatx2[itera[ite],z.which1]
+  z.start[(M.aug+1):M.new, 1]<-0
+  
+  nimData1$z <- z.start
+  nimData1$u <- z.start
+  
+  # we set the values in the model - yr 1 aren't nodes in model (only data)
+  values(cmodelSims, zNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
+  values(cmodelSims, uNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
+  
+  # WE SET SXY
+  sxy.start[1:M.aug,,1]<-matrix(sampmatx2[ itera[ite], s.which[indx] ], M.aug, 2)
+  nimData1$sxy <- sxy.start
+  
+  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
+  sNodes <- sNodes[grep( ", 1]",sNodes)]
+  for(i in 1:length(sNodes)){
+    values(cmodelSims, sNodes[i]) <-sxy.start[i,,1]
+  }
+  
+  ###set age
+  age.est <- sampmatx2[itera[ite],age.which]
+  ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
+  ##model (they were never part of the superpopulation)
+  z.nosuper <- which(apply(z.est,1,sum)==0)
+  age.est[z.nosuper] <- 0
+  #age.est[age.est>5] <- 5 #set to max age category
+  age.start[1:M.aug, 1] <- age.est
+  age.start[(M.aug+1):M.new, 1] <- 0
+  
+  nimData1$age <- age.start 
+  values(cmodelSims, ageNodes) <- age.start #[,2:(Tt+t.new)] 
+  
+  ##also replace age.cat and agePlusOne
+  nimData1$agePlusOne <- age.start[,1]+1 
+  values(cmodelSims, agePO.Nodes) <- age.start[,1]+1
+  
+  nimData1$age.cat <- age.start 
+  values(cmodelSims, age.cat.Nodes) <- age.start
+  
+  ##set pcr, phi, sigD, beta.dens
+  ##not sure if needed to set in data and cmodelSims...
+  ##simplified since we calculated pcr for all iterations above
+  nimData1$pcr <- pcr.all[itera[ite]]
+  values(cmodelSims,"pcr") <- nimData1$pcr
+  
+  nimData1$phi.ad<-sampmatx2[itera[ite],'phi.ad']
+  values(cmodelSims,"phi.ad") <- nimData1$phi.ad
+  nimData1$phi.cub<-sampmatx2[itera[ite],'phi.cub']
+  values(cmodelSims,"phi.cub") <- nimData1$phi.cub  
+  nimData1$phi.sub<-sampmatx2[itera[ite],'phi.sub']
+  values(cmodelSims,"phi.sub") <- nimData1$phi.sub
+  
+  nimData1$sigD<-sampmatx2[itera[ite],'sigD']
+  values(cmodelSims,"sigD") <- nimData1$sigD
+  
+  nimData1$beta.dens<-sampmatx2[itera[ite],'beta.dens']
+  values(cmodelSims,"beta.dens") <- nimData1$beta.dens
+  
+  #now we simulate 
+  cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
+                      includeData = F)#---if TRUE: want to simulate new values also for nodes considered as data
+  
+  # Store results from iteration
+  
+  Nmat.range[ite,] <- apply(cmodelSims$z,2,sum)
+  Rmat.range[ite,] <- cmodelSims$R
+  
+  sxy.proj.range[ite,,,] <- c(cmodelSims$sxy)
+  z.proj.range[ite,,] <- cmodelSims$z
+  age.cat.proj.range[ite,,] <- cmodelSims$age.cat
+  
+}
+
+
+##plot trajectory
+plot(1:(1+t.new), apply(Nmat.range,2,mean, na.rm = TRUE), type='l', ylim=range(Nmat.range, na.rm=TRUE))
+for (ite in 1:20){
+  points(1:(1+t.new), Nmat.range[ite,], type='l', col='lightgrey')
+}
+points(1:(1+t.new), apply(Nmat.range,2,mean), type='l')
+
+
+# I think this doesn't make sense. We can maybe play with the results afterwards? I can run in anyway but it will reflect
+# the same results as if we would join the abundance projection from both pcr (core and all). No need to reproject
+

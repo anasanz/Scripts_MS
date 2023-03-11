@@ -5,18 +5,12 @@
 ## ------------------------------------------------- 
 
 ## Our abundance estimates are based in subsetting our population to our trapping area (core buffer)
-## To predict abundance spatially we have several options:
-# I. Projection focused on all individuals from state-space
-#    1.1. Choose the individuals in all state space as starting point (modifying the z as starting population (death outside buffer?))
-#    1.2. Estimate pcr from individuals whole state space: R/NºAdults
-#    1.3. Subset afterwards to the individuals located in the core in all study years
-# II. Projection focused on individuals at the core buffer
-#    2.1. Choose the individuals inside the core area as starting point (modifying the z as starting population (death outside buffer?))
-#    2.2. Estimate pcr from individuals in core buffer: R in core/NºAdults in core
+## To predict abundance spatially we will estimate abundance choosing as starting point 
+# all individuals from state-space, and subset afterwards (as we do in the model).
+#   1. Choose the individuals in all state space as starting point
+#   2. Load estimated pcr from individuals: In whole state space: R/NºAdults and in core buffer only: R core/NºAdults core
+#   3. Subset afterwards to the individuals located in the core in all study years
 
-## --------------------------------------------------------
-##  II. Initial population are only individuals in the core
-## --------------------------------------------------------
 
 rm(list = ls())
 
@@ -31,28 +25,34 @@ library(coda)
 library(rgdal)
 
 
-source("D:/MargSalas/Scripts_MS/Functions/ProcessCodaOutput.R")
-source("D:/MargSalas/Scripts_MS/Functions/plot.violins2.r")
-source("D:/MargSalas/Scripts_MS/Functions/DoScale.r")
+#source("D:/MargSalas/Scripts_MS/Functions/ProcessCodaOutput.R")
+#source("D:/MargSalas/Scripts_MS/Functions/plot.violins2.r")
+#source("D:/MargSalas/Scripts_MS/Functions/DoScale.r")
 
-setwd("D:/MargSalas/Scripts_MS/Functions/Nimble")
-source('dbinomLocal_normalBear_rbinom2.R')
+#setwd("D:/MargSalas/Scripts_MS/Functions/Nimble")
+setwd("~/Scripts_MS/Functions/Nimble")
+source('dbinomLocal_normalBear_rbinom2.r')
 
 # Load buffer core area
 
-setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
+#setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
+setwd("~/Data_server/Oso/Data_for_Prediction")
 Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+
 
 # Load data and model results
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
+setwd("~/Data_server/Oso/Data_for_Prediction")
 load("Data_Model3-3.1_CYRIL_allparams.RData")
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+setwd("~/Data_server/Oso/Data_for_Prediction")
 load("myResults_3-3.1_param.RData")
 sampmat1 <- do.call(rbind, nimOutput)
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+setwd("~/Data_server/Oso/Data_for_Prediction")
 load("myResults_3-3.1_sxy.RData")
 sampmat2 <- do.call(rbind, nimOutputSXY)
 
@@ -66,7 +66,6 @@ sampmat <- cbind(sampmat1, sampmat2)
 M.aug <- nimConstants$M
 Tt <- nimConstants$Nyr
 
-
 ## ---- 1. Re-Build model with extra dimensions ----
 
 ### I re-build model structure by taking values of one iteration
@@ -75,7 +74,7 @@ Tt <- nimConstants$Nyr
 
 # These will be based on model output (last year), new M and new time frame
 t.new <- 5 # sim 5 addl years
-M.new <- 600 # new augmentation limit
+M.new <- 800 # new augmentation limit
 
 # Use estimates of z, age etc from last year of estimation model only
 
@@ -120,119 +119,25 @@ s.which <- grep('sxy', colnames(sampmat)) # ASP: index columns all sxy (sampmat 
 indx <- (Tt*M.aug*2-(M.aug*2-1)):(Tt*M.aug*2) # ASP: Index the LAST year of sxy. *2 because there are the double of columns: x and y. (M.aug*2-1) corresponds to 1 year of data
 sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: Starting SXY for projection: SXY of year 5 
 
-dimnames(sxy.start)[[2]] <- c("x", "y")
+## ---- 1.2. Per capita recruitment ----
 
-sxy.start2 <- scaleCoordsToHabitatGrid(coordsData = sxy.start,## this are your sxy
-                                       coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
-                                       scaleToGrid = FALSE)$coordsDataScaled
+# Load results from function in script 0.PCR_all_core.r
 
-dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
-myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
-                                                        coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
-                                                        scaleToGrid = FALSE)$coordsDataScaled
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+setwd("~/Data_server/Oso/Data_for_Prediction")
+load("pcr_corebuf.RData")
+load("pcr_all.RData")
+load("pcr_range.RData")
 
-class(myResultsSXYZ$sims.list$sxy)
-class(sxy.start)
-dim(myResultsSXYZ$sims.list$sxy)
-dim(sxy.start)
-
-## ---- 1.2. Calculate per capita recruitment ----
-
-# Function to estimate pcr in the whole state space (pcr_core = FALSE) 
-# or only in core buffer (pcr_core = TRUE)
-
-# To constrain individuals inside, we need to unscale the sxy first.
-# We will need the sxy scaled for the prediction model (CONTAINED IN SAMPMAT) 
-# and unscaled to constrain individuals in/out (WILL DO IT IN myResultsSXYZ$sims.list$sxy): 
-
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
-load("habcoord.RData")
-
-dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
-myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
-                                                        coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
-                                                        scaleToGrid = FALSE)$coordsDataScaled
-
-calc.pcr <- function(pcr_core = TRUE){
-  
-  R <- matrix(NA, nrow(sampmat), Tt-1) # Number of recruits
-  N.ad <- matrix(NA, nrow(sampmat), Tt-1)# Number of adults
-  pcrmat <- matrix(NA, nrow(sampmat), Tt-1) # PCR matrix
-  
-  ZZad <- myResultsSXYZ$sims.list$z # To calculate recruitment per nº of adults: set z adults
-  ZZad[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (ADULTS) as dead
-  
-  for (ite in 1:nrow(sampmat)){
-    
-    for (t in 2:Tt){
-      
-      zwt <- paste('z[', 1:M.aug,', ', t, ']', sep='' )
-      zwtm <- paste('z[', 1:M.aug,', ', t-1, ']', sep='' )
-      
-      if(pcr_core == FALSE){ # If pcr is calculated as Nº recruits in all state space/Nº Adults in all state space
-        
-        # N recruits: From year t-1 to t
-        R[ite,t-1] <- sum(ifelse((sampmat[ite,zwt]-sampmat[ite,zwtm])==1, 1, 0)) # Number of (ALL) recruits in t-1
-        
-        # N adults: Important, on year t-1!
-        N.ad[ite,t-1] <- length(which(ZZad[ite,,t-1]==1)) # Number of (ALL) adults alive in t-1
-        
-        # PCR
-        pcrmat[ite,t-1] <- R[ite,t-1]/N.ad[ite,t-1]
-        
-      } else { # If pcr is calculated as Nº recruits in core buffer/Nº Adults in core buffer
-        
-        # N recruits: From year t-1 to t
-        
-        sp.t <- SpatialPoints(myResultsSXYZ$sims.list$sxy[ite,,,t],proj4string=CRS(proj4string(Xbuf2))) # Activity centers of t. Convert to spatial
-        sp.tm <- SpatialPoints(myResultsSXYZ$sims.list$sxy[ite,,,t-1],proj4string=CRS(proj4string(Xbuf2))) # Activity centers of t-1. Convert to spatial
-        
-        which.In.t <- over(sp.t, Xbuf2) # AC inside core buffer
-        which.In.tm <- over(sp.tm, Xbuf2)
-        
-        t.in <- sampmat[ite,zwt] # z of t and t - 1
-        tm.in <- sampmat[ite,zwtm]
-        
-        t.in[is.na(which.In.t)] <- 0  # All outside buffer(NA) considered dead
-        tm.in[is.na(which.In.tm)] <- 0 
-        
-        R[ite,t-1]<-sum(ifelse((t.in-tm.in)==1, 1, 0))
-        
-        # N adults: Important, on year t-1!
-        
-        which.alive <- which(ZZad[ite,,t-1]==1) # Which adults are alive
-        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t-1] # Retrieve the activity center for those individuals
-        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
-        which.In <- over(sp, Xbuf2) # Which inside core buffer
-        
-        N.ad[ite,t-1] <- sum(which.In,na.rm = T) # Number of (ALL) adults in t-1
-        
-        # PCR
-        pcrmat[ite,t-1] <- R[ite,t-1]/N.ad[ite,t-1]
-        
-      } # pcr_core
-    } # t
-  }# ite
-  
-  results <- list(R,N.ad,pcrmat)
-  names(results) <- c("R", "N.ad", "pcrmat")
-  
-  return(results)
-  
-}
-
-pcr_corebuf <- calc.pcr(pcr_core = TRUE)
 pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
-
-pcr_all <- calc.pcr(pcr_core = FALSE)
 pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 
+
 # Take pcr value of one iteration to build the model
-pcr <- pcr1_corebuf[1]
+pcr <- pcr2_all[1]
 
 #B <- matrix(sampmat[1:nrow(sampmat), grep('B\\[', colnames(sampmat))], nrow(sampmat), Tt) 
 #pcr_all[[1]] == B[,c(2:5)] # ASP: B is the same than R in all state space! (except column 1, which is abundance)
-
 
 ## ---- 1.3. Other parameters ----
 # We don't include the parameters related with detection (not in projection model)
@@ -288,7 +193,8 @@ nimData<-list(habDens = nimData$habDens,
               pi.uncond = pi.uncond
 )
 
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
+setwd("~/Scripts_MS/Oso/PopDyn/SCR/Model")
 source('3.7.SCRopen_PREDICT in Nimble RS.r')
 
 # Create model using projection code (per capita recruitment, no observations)
@@ -307,15 +213,18 @@ nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
 model$simulate(nodesToSim, includeData = FALSE)
 N <- apply(model$z,2,sum)
 
+model$sxy[,,2] # Here there are no NA in the AC
+sxy.start[1:M.aug,,1] == model$sxy[1:M.aug,,1] # And values in year 1 are = as data
+
 # Are there individuals available for recruitment?
 apply(model$recruit,1,sum) 
-sum(apply(model$recruit,1,sum) ) # Only 18 left, maybe need to increase augmented individuals
+sum(apply(model$recruit,1,sum) ) 
 
 ##compile for faster simulation
 cmodelSims <- compileNimble(model)
 
 
-## ---- 2. Run projection for several iterations ----
+## ---- 2. Run projection for several iterations and subset abundance ----
 
 # WE FIND THE S AND Z NODES THAT SHOULDNT BE PREDICTED FOR. 
 # added more age related nodes
@@ -327,26 +236,32 @@ ageNodes <- samplerConfList[grep("age\\[",samplerConfList)]
 age.cat.Nodes <- samplerConfList[grep("age.cat\\[",samplerConfList)]
 agePO.Nodes <-samplerConfList[grep("agePlusOne",samplerConfList)]
 
+length(values(cmodelSims, sNodes)) #800*2*6 (sNodes are 4800 because dim 2 is 1:2)
+sxy.start[1:M.aug,,1] == model$sxy[1:M.aug,,1]
+values(cmodelSims, sNodes)[1:600] == c(t(sxy.start[1:M.aug,,1]))
+
 ## ---- 2.1. PCR inside core buffer ----
+## ------ 2.1.1. Projection ----
 
 pcr.core <- pcr1_corebuf
 
 ##get some random iterations from posterior
-itera <- sample(1:nrow(sampmat), 20)
+#itera <- sample(1:nrow(sampmat), 20)
 nimData1 <- nimData
-Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
+Nmat.core <- Rmat.core <- matrix(NA, nrow(sampmat), 1+t.new)
 
 # To store as simlist
-sxy.proj.core <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.core <- age.cat.proj.core <- array(NA, c(length(itera), M.new, t.new+1))
+sxy.proj.core <- array(NA, c(nrow(sampmat), M.new, 2, t.new+1))
+z.proj.core <- age.cat.proj.core <- array(NA, c(nrow(sampmat), M.new, t.new+1))
 
-for(ite in 1:length(itera)){
+#for(ite in 1:length(itera)){
+for(ite in 4126:5000){
   # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
   # USE NA FOR THE years to predict#
   
   # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  z.est <- matrix(sampmat[itera[ite],z.which], M.aug, Tt)
-  z.start[1:M.aug, 1] <- sampmat[itera[ite],z.which1]
+  z.est <- matrix(sampmat[ite,z.which], M.aug, Tt)
+  z.start[1:M.aug, 1] <- sampmat[ite,z.which1]
   z.start[(M.aug+1):M.new, 1]<-0
   
   nimData1$z <- z.start
@@ -357,14 +272,22 @@ for(ite in 1:length(itera)){
   values(cmodelSims, uNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
   
   # WE SET SXY
-  sxy.start[1:M.aug,,1]<-matrix(sampmat[ itera[ite], s.which[indx] ], M.aug, 2)
+  sxy.start[1:M.aug,,1] <- matrix(sampmat[ ite, s.which[indx] ], M.aug, 2)
+  
   nimData1$sxy <- sxy.start
+  #length(c(t(sxy.start[1:M.aug,,1])))
   
   # we set the values in the model
-  values(cmodelSims, sNodes) <- nimData1$sxy
+  #values(cmodelSims, sNodes) <- nimData1$sxy
+  
+  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
+  sNodes <- sNodes[grep( ", 1]",sNodes)]
+  for(i in 1:length(sNodes)){
+    values(cmodelSims, sNodes[i]) <-sxy.start[i,,1]
+  }
   
   ###set age
-  age.est <- sampmat[itera[ite],age.which]
+  age.est <- sampmat[ite,age.which]
   ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
   ##model (they were never part of the superpopulation)
   z.nosuper <- which(apply(z.est,1,sum)==0)
@@ -386,27 +309,25 @@ for(ite in 1:length(itera)){
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.core[itera[ite]]
+  nimData1$pcr <- pcr.core[ite]
   values(cmodelSims,"pcr") <- nimData1$pcr
   
-  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
+  nimData1$phi.ad<-sampmat[ite,'phi.ad']
   values(cmodelSims,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
+  nimData1$phi.cub<-sampmat[ite,'phi.cub']
   values(cmodelSims,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
+  nimData1$phi.sub<-sampmat[ite,'phi.sub']
   values(cmodelSims,"phi.sub") <- nimData1$phi.sub
   
-  nimData1$sigD<-sampmat[itera[ite],'sigD']
+  nimData1$sigD<-sampmat[ite,'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
+  nimData1$beta.dens<-sampmat[ite,'beta.dens']
   values(cmodelSims,"beta.dens") <- nimData1$beta.dens
   
   #now we simulate 
   cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
                       includeData = F)#---if TRUE: want to simulate new values also for nodes considered as data
-  
-  # Store results from iteration
   
   Nmat.core[ite,] <- apply(cmodelSims$z,2,sum)
   Rmat.core[ite,] <- cmodelSims$R
@@ -415,38 +336,37 @@ for(ite in 1:length(itera)){
   z.proj.core[ite,,] <- cmodelSims$z
   age.cat.proj.core[ite,,] <- cmodelSims$age.cat
   
+  
 }
 
-##plot trajectory
-plot(1:(1+t.new), apply(Nmat.core,2,mean), type='l', ylim=range(Nmat.core, na.rm=TRUE))
-for (ite in 1:20){
-  points(1:(1+t.new), Nmat.core[ite,], type='l', col='lightgrey')
-}
-points(1:(1+t.new), apply(Nmat.core,2,mean), type='l')
-
-# Why are there NA? Where the individual was not recruited
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
+setwd("~/Model_results/Oso/ALLiter")
+save(sxy.proj.core, z.proj.core, age.cat.proj.core, file = "proj_pcr.core.RData")
 
 
-## ---- 2.1. PCR in whole state space ----
+## ---- 2.2. PCR in whole state space ----
+## ------ 2.2.1. Projection ----
 
 pcr.all <- pcr2_all
 
 ##get some random iterations from posterior
-itera <- sample(1:nrow(sampmat), 20)
+#itera <- sample(1:nrow(sampmat), 20)
 nimData1 <- nimData
-Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
+Nmat.all <- Rmat.all <- matrix(NA, nrow(sampmat), 1+t.new)
 
 # To store as simlist
-sxy.proj.all <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.all <- age.cat.proj.all <- array(NA, c(length(itera), M.new, t.new+1))
+sxy.proj.all <- array(NA, c(nrow(sampmat), M.new, 2, t.new+1))
+z.proj.all <- age.cat.proj.all <- array(NA, c(nrow(sampmat), M.new, t.new+1))
 
-for(ite in 1:length(itera)){
+#for(ite in 1:length(itera)){
+for(ite in 1:5000){
+  
   # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
   # USE NA FOR THE years to predict#
   
   # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  z.est <- matrix(sampmat[itera[ite],z.which], M.aug, Tt)
-  z.start[1:M.aug, 1] <- sampmat[itera[ite],z.which1]
+  z.est <- matrix(sampmat[ite,z.which], M.aug, Tt)
+  z.start[1:M.aug, 1] <- sampmat[ite,z.which1]
   z.start[(M.aug+1):M.new, 1]<-0
   
   nimData1$z <- z.start
@@ -457,14 +377,17 @@ for(ite in 1:length(itera)){
   values(cmodelSims, uNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
   
   # WE SET SXY
-  sxy.start[1:M.aug,,1]<-matrix(sampmat[ itera[ite], s.which[indx] ], M.aug, 2)
+  sxy.start[1:M.aug,,1]<-matrix(sampmat[ ite, s.which[indx] ], M.aug, 2)
   nimData1$sxy <- sxy.start
   
-  # we set the values in the model
-  values(cmodelSims, sNodes) <- nimData1$sxy
+  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
+  sNodes <- sNodes[grep( ", 1]",sNodes)]
+  for(i in 1:length(sNodes)){
+    values(cmodelSims, sNodes[i]) <-sxy.start[i,,1]
+  }
   
   ###set age
-  age.est <- sampmat[itera[ite],age.which]
+  age.est <- sampmat[ite,age.which]
   ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
   ##model (they were never part of the superpopulation)
   z.nosuper <- which(apply(z.est,1,sum)==0)
@@ -486,20 +409,20 @@ for(ite in 1:length(itera)){
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.all[itera[ite]]
+  nimData1$pcr <- pcr.all[ite]
   values(cmodelSims,"pcr") <- nimData1$pcr
   
-  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
+  nimData1$phi.ad<-sampmat[ite,'phi.ad']
   values(cmodelSims,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
+  nimData1$phi.cub<-sampmat[ite,'phi.cub']
   values(cmodelSims,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
+  nimData1$phi.sub<-sampmat[ite,'phi.sub']
   values(cmodelSims,"phi.sub") <- nimData1$phi.sub
   
-  nimData1$sigD<-sampmat[itera[ite],'sigD']
+  nimData1$sigD<-sampmat[ite,'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
+  nimData1$beta.dens<-sampmat[ite,'beta.dens']
   values(cmodelSims,"beta.dens") <- nimData1$beta.dens
   
   #now we simulate 
@@ -517,9 +440,8 @@ for(ite in 1:length(itera)){
   
 }
 
-##plot trajectory
-plot(1:(1+t.new), apply(Nmat.all,2,mean), type='l', ylim=range(Nmat.all, na.rm=TRUE))
-for (ite in 1:20){
-  points(1:(1+t.new), Nmat.all[ite,], type='l', col='lightgrey')
-}
-points(1:(1+t.new), apply(Nmat.all,2,mean), type='l')
+# Save
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
+setwd("~/Model_results/Oso/ALLiter")
+save(z.proj.all, age.cat.proj.all, sxy.proj.all.uns, file = "proj_pcr.all.RData")
+

@@ -4454,7 +4454,7 @@ dev.off()
 ##          2017 - 2021 FINAL DATA (Cross check Elena)
 ## ------------------------------------------------- 
 
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021")
 load("sampOpenSCR_diftraps_age_final1721.RData")
 
 out.list<- list()
