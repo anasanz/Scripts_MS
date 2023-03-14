@@ -11,8 +11,9 @@
 #   2. Load estimated pcr from individuals: In whole state space: R/NºAdults and in core buffer only: R core/NºAdults core
 #   3. Subset afterwards to the individuals located in the core in all study years
 
-
 rm(list = ls())
+
+set.seed(2023)
 
 ## Load packages
 
@@ -74,7 +75,7 @@ Tt <- nimConstants$Nyr
 
 # These will be based on model output (last year), new M and new time frame
 t.new <- 5 # sim 5 addl years
-M.new <- 800 # new augmentation limit
+M.new <- 700 # new augmentation limit
 
 # Use estimates of z, age etc from last year of estimation model only
 
@@ -127,7 +128,7 @@ sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: St
 setwd("~/Data_server/Oso/Data_for_Prediction")
 load("pcr_corebuf.RData")
 load("pcr_all.RData")
-load("pcr_range.RData")
+#load("pcr_range.RData")
 
 pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
@@ -213,9 +214,6 @@ nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
 model$simulate(nodesToSim, includeData = FALSE)
 N <- apply(model$z,2,sum)
 
-model$sxy[,,2] # Here there are no NA in the AC
-sxy.start[1:M.aug,,1] == model$sxy[1:M.aug,,1] # And values in year 1 are = as data
-
 # Are there individuals available for recruitment?
 apply(model$recruit,1,sum) 
 sum(apply(model$recruit,1,sum) ) 
@@ -236,32 +234,29 @@ ageNodes <- samplerConfList[grep("age\\[",samplerConfList)]
 age.cat.Nodes <- samplerConfList[grep("age.cat\\[",samplerConfList)]
 agePO.Nodes <-samplerConfList[grep("agePlusOne",samplerConfList)]
 
-length(values(cmodelSims, sNodes)) #800*2*6 (sNodes are 4800 because dim 2 is 1:2)
-sxy.start[1:M.aug,,1] == model$sxy[1:M.aug,,1]
-values(cmodelSims, sNodes)[1:600] == c(t(sxy.start[1:M.aug,,1]))
 
 ## ---- 2.1. PCR inside core buffer ----
 ## ------ 2.1.1. Projection ----
 
 pcr.core <- pcr1_corebuf
 
-##get some random iterations from posterior
-#itera <- sample(1:nrow(sampmat), 20)
+##get some random iterations from posterior and save 
+itera <- sample(1:nrow(sampmat), 5000)
+#setwd("~/Model_results/Oso/ALLiter")
+#save(itera, file = "itera.RData")
+
 nimData1 <- nimData
-Nmat.core <- Rmat.core <- matrix(NA, nrow(sampmat), 1+t.new)
+#Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
 
 # To store as simlist
-sxy.proj.core <- array(NA, c(nrow(sampmat), M.new, 2, t.new+1))
-z.proj.core <- age.cat.proj.core <- array(NA, c(nrow(sampmat), M.new, t.new+1))
+sxy.proj.core <- array(NA, c(length(itera), M.new, 2, t.new+1))
+z.proj.core <- age.cat.proj.core <- array(NA, c(length(itera), M.new, t.new+1))
 
-#for(ite in 1:length(itera)){
-for(ite in 4126:5000){
-  # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
-  # USE NA FOR THE years to predict#
+for(ite in 1:length(itera)){
   
   # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  z.est <- matrix(sampmat[ite,z.which], M.aug, Tt)
-  z.start[1:M.aug, 1] <- sampmat[ite,z.which1]
+  z.est <- matrix(sampmat[itera[ite],z.which], M.aug, Tt)
+  z.start[1:M.aug, 1] <- sampmat[itera[ite],z.which1]
   z.start[(M.aug+1):M.new, 1]<-0
   
   nimData1$z <- z.start
@@ -272,7 +267,7 @@ for(ite in 4126:5000){
   values(cmodelSims, uNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
   
   # WE SET SXY
-  sxy.start[1:M.aug,,1] <- matrix(sampmat[ ite, s.which[indx] ], M.aug, 2)
+  sxy.start[1:M.aug,,1] <- matrix(sampmat[ itera[ite], s.which[indx] ], M.aug, 2)
   
   nimData1$sxy <- sxy.start
   #length(c(t(sxy.start[1:M.aug,,1])))
@@ -287,7 +282,7 @@ for(ite in 4126:5000){
   }
   
   ###set age
-  age.est <- sampmat[ite,age.which]
+  age.est <- sampmat[itera[ite],age.which]
   ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
   ##model (they were never part of the superpopulation)
   z.nosuper <- which(apply(z.est,1,sum)==0)
@@ -309,33 +304,32 @@ for(ite in 4126:5000){
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.core[ite]
+  nimData1$pcr <- pcr.core[itera[ite]]
   values(cmodelSims,"pcr") <- nimData1$pcr
   
-  nimData1$phi.ad<-sampmat[ite,'phi.ad']
+  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
   values(cmodelSims,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[ite,'phi.cub']
+  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
   values(cmodelSims,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[ite,'phi.sub']
+  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
   values(cmodelSims,"phi.sub") <- nimData1$phi.sub
   
-  nimData1$sigD<-sampmat[ite,'sigD']
+  nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[ite,'beta.dens']
+  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
   values(cmodelSims,"beta.dens") <- nimData1$beta.dens
   
   #now we simulate 
   cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
                       includeData = F)#---if TRUE: want to simulate new values also for nodes considered as data
   
-  Nmat.core[ite,] <- apply(cmodelSims$z,2,sum)
-  Rmat.core[ite,] <- cmodelSims$R
+  #Nmat.core[ite,] <- apply(cmodelSims$z,2,sum)
+  #Rmat.core[ite,] <- cmodelSims$R
   
   sxy.proj.core[ite,,,] <- c(cmodelSims$sxy)
   z.proj.core[ite,,] <- cmodelSims$z
   age.cat.proj.core[ite,,] <- cmodelSims$age.cat
-  
   
 }
 
@@ -349,24 +343,19 @@ save(sxy.proj.core, z.proj.core, age.cat.proj.core, file = "proj_pcr.core.RData"
 
 pcr.all <- pcr2_all
 
-##get some random iterations from posterior
-#itera <- sample(1:nrow(sampmat), 20)
+## use same random iterations from posterior as before (itera)
 nimData1 <- nimData
-Nmat.all <- Rmat.all <- matrix(NA, nrow(sampmat), 1+t.new)
+#Nmat.all <- Rmat.all <- matrix(NA, nrow(sampmat), 1+t.new)
 
 # To store as simlist
-sxy.proj.all <- array(NA, c(nrow(sampmat), M.new, 2, t.new+1))
-z.proj.all <- age.cat.proj.all <- array(NA, c(nrow(sampmat), M.new, t.new+1))
+sxy.proj.all <- array(NA, c(length(itera), M.new, 2, t.new+1))
+z.proj.all <- age.cat.proj.all <- array(NA, c(length(itera), M.new, t.new+1))
 
-#for(ite in 1:length(itera)){
-for(ite in 1:5000){
-  
-  # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
-  # USE NA FOR THE years to predict#
+for(ite in 1:length(itera)){
   
   # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  z.est <- matrix(sampmat[ite,z.which], M.aug, Tt)
-  z.start[1:M.aug, 1] <- sampmat[ite,z.which1]
+  z.est <- matrix(sampmat[itera[ite],z.which], M.aug, Tt)
+  z.start[1:M.aug, 1] <- sampmat[itera[ite],z.which1]
   z.start[(M.aug+1):M.new, 1]<-0
   
   nimData1$z <- z.start
@@ -377,7 +366,7 @@ for(ite in 1:5000){
   values(cmodelSims, uNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
   
   # WE SET SXY
-  sxy.start[1:M.aug,,1]<-matrix(sampmat[ ite, s.which[indx] ], M.aug, 2)
+  sxy.start[1:M.aug,,1]<-matrix(sampmat[ itera[ite], s.which[indx] ], M.aug, 2)
   nimData1$sxy <- sxy.start
   
   ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
@@ -387,7 +376,7 @@ for(ite in 1:5000){
   }
   
   ###set age
-  age.est <- sampmat[ite,age.which]
+  age.est <- sampmat[itera[ite],age.which]
   ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
   ##model (they were never part of the superpopulation)
   z.nosuper <- which(apply(z.est,1,sum)==0)
@@ -409,20 +398,20 @@ for(ite in 1:5000){
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.all[ite]
+  nimData1$pcr <- pcr.all[itera[ite]]
   values(cmodelSims,"pcr") <- nimData1$pcr
   
-  nimData1$phi.ad<-sampmat[ite,'phi.ad']
+  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
   values(cmodelSims,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[ite,'phi.cub']
+  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
   values(cmodelSims,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[ite,'phi.sub']
+  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
   values(cmodelSims,"phi.sub") <- nimData1$phi.sub
   
-  nimData1$sigD<-sampmat[ite,'sigD']
+  nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[ite,'beta.dens']
+  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
   values(cmodelSims,"beta.dens") <- nimData1$beta.dens
   
   #now we simulate 
@@ -431,8 +420,8 @@ for(ite in 1:5000){
   
   # Store results from iteration
   
-  Nmat.all[ite,] <- apply(cmodelSims$z,2,sum)
-  Rmat.all[ite,] <- cmodelSims$R
+  #Nmat.all[ite,] <- apply(cmodelSims$z,2,sum)
+  #Rmat.all[ite,] <- cmodelSims$R
   
   sxy.proj.all[ite,,,] <- c(cmodelSims$sxy)
   z.proj.all[ite,,] <- cmodelSims$z
@@ -443,5 +432,5 @@ for(ite in 1:5000){
 # Save
 #setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
 setwd("~/Model_results/Oso/ALLiter")
-save(z.proj.all, age.cat.proj.all, sxy.proj.all.uns, file = "proj_pcr.all.RData")
+save(z.proj.all, age.cat.proj.all, sxy.proj.all, file = "proj_pcr.all.RData")
 
