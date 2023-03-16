@@ -30,8 +30,11 @@ setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
 Xbuf <- readOGR("Buffer_statespace.shp")
 Xbuf2 <- readOGR("Buffer_8500_traps.shp")
 
-# Conver to rasters
+## ---- 1. Relate density to habitats ----
 
+# Convert density values to raster files
+
+# Raster to store
 setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
 r <- raster("logDistcore_hrbear.tif")
 raster::values(r) <- NA
@@ -140,13 +143,12 @@ for(i in 1:12){
   hablist_res[[i]][is.na(ACDens[[1]][])] <- NA
 }
 
-
 # Raster stack of all layers and years
-
 resampld <- c(ACDens, hablist_res)
 st <- do.call('stack',resampld)
 
 # Correlation matrix
+# Pearson
 jnk <- layerStats(st, 'pearson', na.rm=T)
 corr_matrix <- jnk$'pearson correlation coefficient'
 
@@ -158,7 +160,14 @@ corr_matrix2$habitat <- c("Artificial surfaces", "Agricultural areas", "Broad-le
     "Other open spaces (beaches, dunes, burnt areas, glaciers)", 
     "Bare rocks", "Wetlands",  "Water bodies",  "Sparse vegetation")
 corr_matrix2 <- corr_matrix2[,c(6,1:5)]
-openxlsx::write.xlsx(corr_matrix2, 'corr_matrix.xlsx')
+#openxlsx::write.xlsx(corr_matrix2, 'corr_matrix.xlsx')
+
+#Spearman (pairwise)
+cor1 <- cor(sampleRandom(st, size= ncell(ACDens[[5]]) ), method = "spearman")
+
+st2021_conif <- do.call('stack',c(ACDens[[5]], hablist_res[[4]]))
+cor2 <- cor(sampleRandom(st2021_conif, size= ncell(ACDens[[5]]) ), method = "spearman")
+df <- corrplot(cor2, method = "number")
 
 # Plots 2020-2021 and forests habitats
 
@@ -207,5 +216,55 @@ mtext(c("2021"), line = 0.5, side = 3)
 
 dev.off()
 
+## ---- 2. Relate distcore to habitats and relevant bear variables ----
 
+
+# Load
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+distcore <- raster("logDistcore_hrbear.tif")
+forest <- raster("forest_hrbear.tif")
+dem <- raster("dem_hrbear.tif")
+rough <- raster("rough_hrbear.tif")
+slope <- raster("slope_hrbear.tif")
+roads1 <- raster("roads1_hrbear.tif")
+roads4 <- raster("roads4_hrbear.tif")
+roads5 <- raster("roads5_hrbear.tif")
+roads6 <- raster("roads6_hrbear.tif")
+
+covs <- c(distcore, forest, dem, rough, slope,
+          roads1, roads4, roads5, roads6)
+
+# Same extent as state space
+covs_crop <- lapply(covs, crop, y = Xbuf)
+
+# Same values as state space
+covs_ss <- list()
+for (i in 1:length(covs)){
+  covs_ss[[i]] <- rasterize(Xbuf, covs_crop[[i]], mask = TRUE)
+}
+
+# Resample to obtain same resolution (habitat to resolution of dens)
+covs_ss_res <- list()
+for(i in 1:length(covs)){
+  covs_ss_res[[i]] <- resample(covs_ss[[i]], ACDens[[1]], method = 'bilinear')
+}
+
+# Stack
+cov_st <- do.call('stack',covs_ss_res)
+cor1 <- cor(sampleRandom(cov_st, size= ncell(ACDens[[5]])), method = "spearman") 
+# It looks like distcore is slightly correlated with roughness and slope
+# Pairwise correlation test:
+t1 <- cor.test(x = sampleRandom(cov_st, size= ncell(ACDens[[5]]))[,c(1)], 
+         y = sampleRandom(cov_st, size= ncell(ACDens[[5]]))[,c(4)], method = "spearman")
+t1$p.value # Significant
+
+# Distcore - Corine forest categories
+for_st <- do.call('stack',c(covs_ss_res[[1]], hablist_res[[3]], hablist_res[[4]], hablist_res[[5]], ACDens[[5]]))
+cor2 <- cor(sampleRandom(for_st, size= ncell(ACDens[[5]])), method = "spearman") 
+
+
+plot(covs_ss[[3]])
+  crop(r,Xbuf)
+distcore <- rasterize(Xbuf, r, mask = TRUE)
+compareRaster(distcore, ACDens[[4]])
 

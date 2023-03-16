@@ -179,80 +179,66 @@ for(ite in 1:dim(ZZad)[1]){
 ## ---- 3. Estimate abundance proportion of each age class ----
 
 prop_years <- list()
-
-prop <- matrix(NA,nrow=dim(ZZad)[1],ncol=3) # nrow = iterations, ncol = age categories
-prop <- array(NA,c(dim(ZZad)[1],3,2))
-
-ite = 1
-t = 1
+prop <- array(NA,c(dim(ZZad)[1],3,2)) # nrow = iterations, ncol = age categories, ndim = 1: n subset in buffer/ 2: n all ss
 
 for(t in 1:dim(ZZad)[3]){
   for(ite in 1:dim(ZZad)[1]){
-    prop[ite, 1] <- cub_trapBuf[ite,t]/NIn_trapBuf[ite,t]
-    prop[ite, 2] <- subad_trapBuf[ite,t]/NIn_trapBuf[ite,t]
-    prop[ite, 3] <- ad_trapBuf[ite,t]/NIn_trapBuf[ite,t]
+    prop[ite, 1, 1] <- cub_trapBuf[ite,t]/sum(cub_trapBuf[ite,t], subad_trapBuf[ite,t], ad_trapBuf[ite,t])
+    prop[ite, 2, 1] <- subad_trapBuf[ite,t]/sum(cub_trapBuf[ite,t], subad_trapBuf[ite,t], ad_trapBuf[ite,t])
+    prop[ite, 3, 1] <- ad_trapBuf[ite,t]/sum(cub_trapBuf[ite,t], subad_trapBuf[ite,t], ad_trapBuf[ite,t])
+    
+    prop[ite, 1, 2] <- cub_allss[ite,t]/sum(cub_allss[ite,t], subad_allss[ite,t], ad_allss[ite,t])
+    prop[ite, 2, 2] <- subad_allss[ite,t]/sum(cub_allss[ite,t], subad_allss[ite,t], ad_allss[ite,t])
+    prop[ite, 3, 2] <- ad_allss[ite,t]/sum(cub_allss[ite,t], subad_allss[ite,t], ad_allss[ite,t])
   }
   prop_years[[t]] <- prop
 }
 
+df.core <- matrix(NA,nrow = 10, ncol = 3)
+for (t in 1:10){
+  df.core[t,] <- apply(prop_years[[t]][,,1], c(2), FUN = mean)
+}
+
+df.ss <- matrix(NA,nrow = 10, ncol = 3)
+for (t in 1:10){
+  df.ss[t,] <- apply(prop_years[[t]][,,2], c(2), FUN = mean)
+}
+
+
+
+
 ## ---- 3.5. Plot ----
 
+## ---- 3.5.1. Inside core area ----
+
 source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/plot.violins3.r")
-years <- c(2017, 2018, 2019, 2020, 2021)
 
-setwd("D:/MargSalas/Oso/Results/Plots/model3.1")
-pdf("age_structure.pdf", 9, 7)
+years <- c(2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026)
 
-par(mfrow = c(2,3))
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1/Predictions")
+pdf("age_structure2_pred_core.pdf", 7, 7)
 
-for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-  
-  plot(1, ylim = c(0.5, ncol(prop_years[[t]])+0.5), 
-       xlim = c(0,1), 
-       type ="n", yaxt="n", 
-       #xaxt="n", 
-       xlab = " ", ylab = "", main = years[t],
-       cex.axis = 0.8)
-  
-  axis(2, c(1:ncol(prop_years[[t]])), labels = c("Cub","Subadult","Adult"), las = 2, cex.axis = 1)
-  
-  for(i in 1:ncol(prop_years[[t]])){
-    plot.violins3(list(prop_years[[t]][ ,i]),
-                  x = i,
-                  at = i,
-                  violin.width = 0.2,
-                  plot.ci = 0.95,
-                  col = c("darksalmon"),
-                  add = T,
-                  alpha = 0.3,
-                  scale.width = FALSE,
-                  border.col = "black",
-                  horizontal = TRUE)}}
+par(mfrow = c(1,2),
+    mar = c(3,3,3,2))
 
-dev.off()
-
-# Plot bonito
-
-setwd("D:/MargSalas/Oso/Results/Plots/model3.1")
-pdf("age_structure2.pdf", 6, 10)
-
-par(mfrow = c(1,1))
+# Years estimation
 
 plot(1, ylim = c(0, 19 + 0.5), 
-     xlim = c(0,1), 
+     xlim = c(0,0.8), 
      type ="n", yaxt="n", 
      #xaxt="n", 
-     xlab = " ", ylab = "", main = "",
+     xlab = " ", ylab = "", main = "Estimation",
      cex.axis = 0.8)
 
-axis(2, c(1:20), las = 2, cex.axis = 1)
+#axis(2, c(1:20), las = 2, cex.axis = 1)
+axis(2, labels = years[1:5], lwd.ticks = 0,at = c(2,6,10,14,18), cex.axis = 1)
 
 cubs_at <- c(1,5,9,13,17)
 subad_at <- c(2,6,10,14,18)
 ad_at <- c(3,7,11,15,19)
 ats <- list(cubs_at, subad_at, ad_at)
 
-polygon(x = c(0,0,1,1), y = c(0,4,4,0), col = adjustcolor("grey", alpha.f = 0.5), border = NA)
+#polygon(x = c(0,0,1,1), y = c(0,4,4,0), col = adjustcolor("grey", alpha.f = 0.5), border = NA)
 
 color_cat1 <- c("lightgoldenrod1", "darkolivegreen4", "darkslategrey")
 color_cat2 <- c("lightgoldenrod1", "darkgoldenrod1", "sienna4") # no mucho
@@ -262,41 +248,131 @@ color_cat5 <- c("lightgoldenrod1", "darksalmon", "sienna4") # no mucho
 
 for(i in 1:ncol(prop_years[[1]])){ # Look into cubs
   
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  for(t in 1:5){
     
-    plot.violins3(list(prop_years[[t]][ ,i]),
+    plot.violins3(list(prop_years[[t]][ ,i,1]),
                   x = i,
                   at = ats[[i]][t],
                   violin.width = 0.4,
                   plot.ci = 0.95,
-                  col = color_cat4[i],
+                  col = color_cat1[i],
                   add = T,
                   alpha = 0.3,
                   scale.width = FALSE,
                   border.col = "black",
                   horizontal = TRUE)}}
+
+# Years prediction
+
+plot(1, ylim = c(0, 19 + 0.5), 
+     xlim = c(0,0.8), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Prediction",
+     cex.axis = 0.8)
+
+#axis(2, c(1:20), las = 2, cex.axis = 1)
+axis(2, labels = years[6:10], lwd.ticks = 0,at = c(2,6,10,14,18), cex.axis = 1)
+
+for(i in 1:ncol(prop_years[[1]])){ # Look into cubs
+  
+  for(t in 1:5){
+    
+    plot.violins3(list(prop_years[[t+5]][ ,i,1]),
+                  x = i,
+                  at = ats[[i]][t],
+                  violin.width = 0.4,
+                  plot.ci = 0.95,
+                  col = color_cat1[i],
+                  add = T,
+                  alpha = 0.3,
+                  scale.width = FALSE,
+                  border.col = "black",
+                  horizontal = TRUE)}}
+
 dev.off()
 
+## ---- 3.5.1. All state space ----
 
+source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/plot.violins3.r")
 
-## ---- 3.6. Compare with age structure of data ----
-# This is to see where the model placed the undetected individuals (if is especially in one age cat)
+years <- c(2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026)
 
-zdatAGE.det <- zdatAGE[1:61,]
-zdatAGE.det[is.na(zdatAGE.det)] <- 0
-zdatAGE
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1/Predictions")
+pdf("age_structure2_pred_allss.pdf", 7, 7)
 
+par(mfrow = c(1,2),
+    mar = c(3,3,3,2))
 
-prop_det <- data.frame(matrix(NA, nrow = 5, ncol = 3))
-rownames(prop_det) <- c("2017", "2018", "2019", "2020", "2021")
-colnames(prop_det) <- c("Cub", "Subadult", "Adult")
-t = 1
+# Years estimation
 
-for(t in 1:5){
-  alive.age <- age.cat.z[,t]*zdatAGE.det[,t]
-  prop_det[t,1] <- length(alive.age[which(alive.age == 3 | alive.age == 2)])/length(alive.age[which(alive.age != 0)])
-  prop_det[t,2] <- length(alive.age[which(alive.age == 5 | alive.age == 4)])/length(alive.age[which(alive.age != 0)])
-  prop_det[t,3] <- length(alive.age[which(alive.age == 6)])/length(alive.age[which(alive.age != 0)])
-}
-rowSums(prop_det)
+plot(1, ylim = c(0, 19 + 0.5), 
+     xlim = c(0,0.8), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Estimation",
+     cex.axis = 0.8)
+
+#axis(2, c(1:20), las = 2, cex.axis = 1)
+axis(2, labels = years[1:5], lwd.ticks = 0,at = c(2,6,10,14,18), cex.axis = 1)
+
+cubs_at <- c(1,5,9,13,17)
+subad_at <- c(2,6,10,14,18)
+ad_at <- c(3,7,11,15,19)
+ats <- list(cubs_at, subad_at, ad_at)
+
+#polygon(x = c(0,0,1,1), y = c(0,4,4,0), col = adjustcolor("grey", alpha.f = 0.5), border = NA)
+
+color_cat1 <- c("lightgoldenrod1", "darkolivegreen4", "darkslategrey")
+color_cat2 <- c("lightgoldenrod1", "darkgoldenrod1", "sienna4") # no mucho
+color_cat3 <-c("aquamarine1", "aquamarine4","darkslategrey")
+color_cat4 <- c("aquamarine1","lightseagreen", "darkslategrey")
+color_cat5 <- c("lightgoldenrod1", "darksalmon", "sienna4") # no mucho
+
+for(i in 1:ncol(prop_years[[1]])){ # Look into cubs
+  
+  for(t in 1:5){
+    
+    plot.violins3(list(prop_years[[t]][ ,i,2]),
+                  x = i,
+                  at = ats[[i]][t],
+                  violin.width = 0.4,
+                  plot.ci = 0.95,
+                  col = color_cat1[i],
+                  add = T,
+                  alpha = 0.3,
+                  scale.width = FALSE,
+                  border.col = "black",
+                  horizontal = TRUE)}}
+
+# Years prediction
+
+plot(1, ylim = c(0, 19 + 0.5), 
+     xlim = c(0,0.8), 
+     type ="n", yaxt="n", 
+     #xaxt="n", 
+     xlab = " ", ylab = "", main = "Prediction",
+     cex.axis = 0.8)
+
+#axis(2, c(1:20), las = 2, cex.axis = 1)
+axis(2, labels = years[6:10], lwd.ticks = 0,at = c(2,6,10,14,18), cex.axis = 1)
+
+for(i in 1:ncol(prop_years[[1]])){ # Look into cubs
+  
+  for(t in 1:5){
+    
+    plot.violins3(list(prop_years[[t+5]][ ,i,2]),
+                  x = i,
+                  at = ats[[i]][t],
+                  violin.width = 0.4,
+                  plot.ci = 0.95,
+                  col = color_cat1[i],
+                  add = T,
+                  alpha = 0.3,
+                  scale.width = FALSE,
+                  border.col = "black",
+                  horizontal = TRUE)}}
+
+dev.off()
+
 
