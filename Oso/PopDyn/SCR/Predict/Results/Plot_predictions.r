@@ -29,23 +29,23 @@ sampmat <- cbind(sampmat1, sampmat2)
 M.aug <- 300 # Augmented individuals estimation model
 Tt <- 5 # Nyears estimation model (2017:2021)
 
-M.new <- 800 # New augmentation limit future prediction
+M.new <- 700 # New augmentation limit future prediction
 t.new <- 5 # Extra years future prediction
 
 # Load results from predictions
 
+# ** IMPORTANT
+# - The files proj_pcr.core and proj_pcr.all come from the projections of 5000 random iterations (vector "itera")
+#   with a PCR estimated for all individuals (per capita recruitment per males and females)
+# - The files proj_pcr.core.fem and proj_pcr.all.fem come from the projections of 5000 random iterations (vector "itera")
+#   with a PCR estimated for ONLY FEMALES (per capita recruitment per female)
+
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/ALLiter")
-load("proj_pcr.core1-5000.RData")
-z.proj.core <- z.proj.core2
-sxy.proj.core <- sxy.proj.core2
-age.cat.proj.core <- age.cat.proj.core2
+load("proj_pcr.core.RData")
+load("proj_pcr.all.RData")
 
-
-load("proj_pcr.all1-5000.RData")
-z.proj.all <- z.proj.all2
-sxy.proj.all <- sxy.proj.all2
-age.cat.proj.all <- age.cat.proj.all2
-
+#load("proj_pcr.core.fem.RData")
+#load("proj_pcr.all.fem.RData")
 
 # Load buffer core area and habitat grid (to subset in sampling area)
 
@@ -54,7 +54,6 @@ Xbuf2 <- readOGR("Buffer_8500_traps.shp")
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 load("habcoord.RData")
-
 
 ## ---- 1. Join all results (past+future) in a single matrix with simlist format ----
 
@@ -142,8 +141,12 @@ colMeans(apply(z.allyears[,,,2],c(1,3),function(x) sum(x==1, na.rm = TRUE)))
 
 ## ---- Plot ----
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1")
-pdf("prediction_pcrCore.pdf", 7, 5)
+# Plot names:
+# Running the script with proj_pcr.core.RData (or all) -> prediction_abundanceCore_pcr.allind.pdf
+# Running the script with proj_pcr.core.fem.RData (or all) -> prediction_abundanceCore_pcr.fem.pdf
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1/Predictions")
+pdf("prediction_abundanceCore_pcr.fem.pdf", 7, 5)
 
 plot(1, ylim = c(30,max(NIn)+50), 
      xlim = c(0.5, ncol(NIn)+ncol(NIn)+0.5) , 
@@ -204,3 +207,5 @@ for (i in 6:10){
 
 
 dev.off()
+
+

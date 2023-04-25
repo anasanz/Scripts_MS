@@ -24,7 +24,7 @@ devtools::install_github('oswaldosantos/ggsn')
 
 # Load monitoring data
 setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
-os <- read.csv("Natal_established_coordinates.csv", header = TRUE, row.names = NULL)
+os <- read.csv("Natal_established_coordinates_cubLocations.csv", header = TRUE, row.names = NULL, sep = ";")
 os <- os[,-1] 
 
 # Set coordinates

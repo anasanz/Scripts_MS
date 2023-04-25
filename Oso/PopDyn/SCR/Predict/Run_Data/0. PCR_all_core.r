@@ -143,9 +143,9 @@ pcr_corebuf <- calc.pcr(pcr_core = TRUE)
 pcr_all <- calc.pcr(pcr_core = FALSE)
 
 # Save pcr because it takes forever to calculate
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-#save(pcr_corebuf, file = "pcr_corebuf.RData")
-#save(pcr_all, file = "pcr_all.RData")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+save(pcr_corebuf, file = "pcr_corebuf.RData")
+save(pcr_all, file = "pcr_all.RData")
 
 # Create new matrix of pcr to show all possibilities: Containts absolute maximum, absolute minimum, mean pcr in core
 
@@ -169,4 +169,93 @@ summary(pcr2_all)
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
 save(pcr_range, file = "pcr_range.RData")
+
+## -------------------------------------------------
+##                 PCR females
+## ------------------------------------------------- 
+# Modify function to estimate PCR only for females
+
+calc.pcr.fem <- function(pcr_core = TRUE){
+  
+  R <- matrix(NA, nrow(sampmat), Tt-1) # Number of recruits
+  N.ad <- matrix(NA, nrow(sampmat), Tt-1)# Number of adults
+  pcrmat <- matrix(NA, nrow(sampmat), Tt-1) # PCR matrix
+  
+  ZZad <- myResultsSXYZ$sims.list$z # To calculate recruitment per nº of adults: set z adults
+  ZZad[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (ADULTS) as dead
+  ZZad[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 3 # Considers all individuals that are not 0 (females) as dead
+  
+  for (ite in 1:nrow(sampmat)){
+    
+    for (t in 2:Tt){
+      
+      zwt <- paste('z[', 1:M.aug,', ', t, ']', sep='' )
+      zwtm <- paste('z[', 1:M.aug,', ', t-1, ']', sep='' )
+      
+      if(pcr_core == FALSE){ # If pcr is calculated as Nº recruits in all state space/Nº Adults in all state space
+        
+        # N recruits: From year t-1 to t
+        R[ite,t-1] <- sum(ifelse((sampmat[ite,zwt]-sampmat[ite,zwtm])==1, 1, 0)) # Number of (ALL) recruits in t-1
+        
+        # N adults: Important, on year t-1!
+        N.ad[ite,t-1] <- length(which(ZZad[ite,,t-1]==1)) # Number of (ALL) adults alive in t-1
+        
+        # PCR
+        pcrmat[ite,t-1] <- R[ite,t-1]/N.ad[ite,t-1]
+        
+      } else { # If pcr is calculated as Nº recruits in core buffer/Nº Adults in core buffer
+        
+        # N recruits: From year t-1 to t
+        
+        sp.t <- SpatialPoints(myResultsSXYZ$sims.list$sxy[ite,,,t],proj4string=CRS(proj4string(Xbuf2))) # Activity centers of t. Convert to spatial
+        sp.tm <- SpatialPoints(myResultsSXYZ$sims.list$sxy[ite,,,t-1],proj4string=CRS(proj4string(Xbuf2))) # Activity centers of t-1. Convert to spatial
+        
+        which.In.t <- over(sp.t, Xbuf2) # AC inside core buffer
+        which.In.tm <- over(sp.tm, Xbuf2)
+        
+        t.in <- sampmat[ite,zwt] # z of t and t - 1
+        tm.in <- sampmat[ite,zwtm]
+        
+        t.in[is.na(which.In.t)] <- 0  # All outside buffer(NA) considered dead
+        tm.in[is.na(which.In.tm)] <- 0 
+        
+        R[ite,t-1]<-sum(ifelse((t.in-tm.in)==1, 1, 0))
+        
+        # N adults: Important, on year t-1!
+        
+        which.alive <- which(ZZad[ite,,t-1]==1) # Which adults are alive
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t-1] # Retrieve the activity center for those individuals
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, Xbuf2) # Which inside core buffer
+        
+        N.ad[ite,t-1] <- sum(which.In,na.rm = T) # Number of (ALL) adults in t-1
+        
+        # PCR
+        pcrmat[ite,t-1] <- R[ite,t-1]/N.ad[ite,t-1]
+        
+      } # pcr_core
+    } # t
+  }# ite
+  
+  results <- list(R,N.ad,pcrmat)
+  names(results) <- c("R", "N.ad", "pcrmat")
+  
+  return(results)
+  
+}
+
+# Estimate pcr 
+
+pcr_corebuf_fem <- calc.pcr.fem(pcr_core = TRUE)
+pcr_all_fem <- calc.pcr.fem(pcr_core = FALSE)
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+save(pcr_corebuf_fem, file = "pcr_corebuf_fem.RData")
+save(pcr_all_fem, file = "pcr_all_fem.RData")
+
+load("pcr_corebuf_fem.RData")
+load("pcr_all_fem.RData")
+
+colMeans(pcr_all_fem$pcrmat)
+colMeans(pcr_corebuf_fem$pcrmat)
 

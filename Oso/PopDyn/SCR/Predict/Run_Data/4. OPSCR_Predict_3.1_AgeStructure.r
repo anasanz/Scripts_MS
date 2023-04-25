@@ -29,22 +29,32 @@ sampmat <- cbind(sampmat1, sampmat2)
 M.aug <- 300 # Augmented individuals estimation model
 Tt <- 5 # Nyears estimation model (2017:2021)
 
-M.new <- 800 # New augmentation limit future prediction
+M.new <- 700 # New augmentation limit future prediction
 t.new <- 5 # Extra years future prediction
 
 # Load results from predictions
 
+# ** IMPORTANT
+# - The files proj_pcr.core and proj_pcr.all come from the projections of 5000 random iterations (vector "itera")
+#   with a PCR estimated for all individuals (per capita recruitment per males and females)
+# - The files proj_pcr.core.fem and proj_pcr.all.fem come from the projections of 5000 random iterations (vector "itera")
+#   with a PCR estimated for ONLY FEMALES (per capita recruitment per female)
+
+
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/ALLiter")
-load("proj_pcr.core1-5000.RData")
-z.proj.core <- z.proj.core2
-sxy.proj.core <- sxy.proj.core2
-age.cat.proj.core <- age.cat.proj.core2
+#load("proj_pcr.core1-5000.RData")
+#z.proj.core <- z.proj.core2
+#sxy.proj.core <- sxy.proj.core2
+#age.cat.proj.core <- age.cat.proj.core2
+load("proj_pcr.core.RData")
+### I use for the final predictions the abundance projections from the pcr estimated as per capita recruitment / FEMALE
 
 
-load("proj_pcr.all1-5000.RData")
-z.proj.all <- z.proj.all2
-sxy.proj.all <- sxy.proj.all2
-age.cat.proj.all <- age.cat.proj.all2
+#load("proj_pcr.all1-5000.RData")
+#z.proj.all <- z.proj.all2
+#sxy.proj.all <- sxy.proj.all2
+#age.cat.proj.all <- age.cat.proj.all2
+load("proj_pcr.all.RData")
 
 
 # Load buffer core area and habitat grid (to subset in sampling area)
@@ -82,7 +92,7 @@ for(n in 1:ndim){ # Same for both dimensions of predictions (past years remain t
 ## PREDICTION 1: PCR ESTIMATED IN THE CORE (Dimension 1)
 for(t in 1:t.new){ # 
   for(ite in 1:dim(z.proj.core)[1]){
-    # 800 augmented individuals. We take year 5 from results estimation model. Store in 5 last years
+    # 700 augmented individuals. We take year 5 from results estimation model. Store in 5 last years
     sxy.allyears[ite,,,(t+Tt),1] <- sxy.proj.core[ite,,,(t+1)] 
     z.allyears[ite,,(t+Tt),1] <- z.proj.core[ite,,(t+1)]
     age.cat.allyears[ite,,(t+Tt),1] <- age.cat.proj.core[ite,,(t+1)]
@@ -91,7 +101,7 @@ for(t in 1:t.new){ #
 ## PREDICTION 2: PCR ESTIMATED IN ALL STATE SPACE (Dimension 2)
 for(t in 1:t.new){ # 
   for(ite in 1:dim(z.proj.all)[1]){
-    # 800 augmented individuals. We take year 5 from results estimation model. Store in 5 last years
+    # 700 augmented individuals. We take year 5 from results estimation model. Store in 5 last years
     sxy.allyears[ite,,,(t+Tt),2] <- sxy.proj.all[ite,,,(t+1)] 
     z.allyears[ite,,(t+Tt),2] <- z.proj.all[ite,,(t+1)]
     age.cat.allyears[ite,,(t+Tt),2] <- age.cat.proj.all[ite,,(t+1)]
@@ -118,6 +128,8 @@ for(ite in 1:dim(ZZcubs)[1]){
   for(t in 1:dim(ZZcubs)[3]){
     
     which.alive <- which(ZZcubs[ite,,t]==1) # Select only the individuals alive (z=1)
+    #if (length(which.alive) == 0) next # ite 348 year 10 says that there are no cubs alive!
+    if(ite == 4141 & t == 10) next
     
     which.aliveSXY <- sxy.allyears.uns[ite,which.alive,,t,1] # Retrieve the activity center for those individuals
     
@@ -175,6 +187,9 @@ for(ite in 1:dim(ZZad)[1]){
     ad_allss[ite,t] <- length(which.alive)
     }}
 
+# Check NA (there must be a couple)
+cub_trapBuf[which(!complete.cases(cub_trapBuf)), ] <- cub_trapBuf[50, ] # Just to try
+cub_allss[which(!complete.cases(cub_allss)), ] <- cub_allss[50, ] # Just to try
 
 ## ---- 3. Estimate abundance proportion of each age class ----
 
@@ -216,7 +231,8 @@ source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/plot.violins3.r")
 years <- c(2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026)
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1/Predictions")
-pdf("age_structure2_pred_core.pdf", 7, 7)
+#pdf("age_structure_pred_core_pcr.fem.pdf", 7, 7)
+pdf("age_structure_pred_core_pcr.allind2.pdf", 7, 7)
 
 par(mfrow = c(1,2),
     mar = c(3,3,3,2))
@@ -299,7 +315,8 @@ source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/plot.violins3.r")
 years <- c(2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026)
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1/Predictions")
-pdf("age_structure2_pred_allss.pdf", 7, 7)
+#pdf("age_structure_pred_allss_pcr.fem.pdf", 7, 7)
+pdf("age_structure_pred_allss_pcr.pcr.allind2.pdf", 7, 7)
 
 par(mfrow = c(1,2),
     mar = c(3,3,3,2))

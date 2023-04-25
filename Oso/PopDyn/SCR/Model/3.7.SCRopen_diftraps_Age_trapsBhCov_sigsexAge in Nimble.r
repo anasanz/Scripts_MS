@@ -6,7 +6,7 @@ SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage <- nimbleCode({
   ### PRIORS ###
   psi~ dbeta(1,1)           # data augmentation
   
-  # recruitment prob at k 
+  # recruitment prob at t 
   beta[1:Nyr] ~ ddirch(b[1:Nyr])
   
   eta[1] <- beta[1]

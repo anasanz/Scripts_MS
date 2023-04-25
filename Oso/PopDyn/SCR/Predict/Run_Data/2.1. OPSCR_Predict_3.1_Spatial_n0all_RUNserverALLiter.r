@@ -126,12 +126,14 @@ sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: St
 
 #setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
 setwd("~/Data_server/Oso/Data_for_Prediction")
-load("pcr_corebuf.RData")
-load("pcr_all.RData")
+#load("pcr_corebuf.RData")
+#load("pcr_all.RData")
 #load("pcr_range.RData")
+load("pcr_corebuf_fem.RData")
+load("pcr_all_fem.RData")
 
-pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
-pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
+pcr1_corebuf <- apply(pcr_corebuf_fem[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
+pcr2_all <- apply(pcr_all_fem[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 
 
 # Take pcr value of one iteration to build the model
@@ -234,16 +236,16 @@ ageNodes <- samplerConfList[grep("age\\[",samplerConfList)]
 age.cat.Nodes <- samplerConfList[grep("age.cat\\[",samplerConfList)]
 agePO.Nodes <-samplerConfList[grep("agePlusOne",samplerConfList)]
 
+##get some random iterations from posterior and save 
+#itera <- sample(1:nrow(sampmat), 5000)
+setwd("~/Model_results/Oso/ALLiter")
+load("itera.RData")
+
 
 ## ---- 2.1. PCR inside core buffer ----
 ## ------ 2.1.1. Projection ----
 
 pcr.core <- pcr1_corebuf
-
-##get some random iterations from posterior and save 
-itera <- sample(1:nrow(sampmat), 5000)
-#setwd("~/Model_results/Oso/ALLiter")
-#save(itera, file = "itera.RData")
 
 nimData1 <- nimData
 #Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
@@ -335,7 +337,7 @@ for(ite in 1:length(itera)){
 
 #setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
 setwd("~/Model_results/Oso/ALLiter")
-save(sxy.proj.core, z.proj.core, age.cat.proj.core, file = "proj_pcr.core.RData")
+save(sxy.proj.core, z.proj.core, age.cat.proj.core, file = "proj_pcr.core.fem.RData")
 
 
 ## ---- 2.2. PCR in whole state space ----
@@ -432,5 +434,4 @@ for(ite in 1:length(itera)){
 # Save
 #setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
 setwd("~/Model_results/Oso/ALLiter")
-save(z.proj.all, age.cat.proj.all, sxy.proj.all, file = "proj_pcr.all.RData")
-
+save(z.proj.all, age.cat.proj.all, sxy.proj.all, file = "proj_pcr.all.fem.RData")
