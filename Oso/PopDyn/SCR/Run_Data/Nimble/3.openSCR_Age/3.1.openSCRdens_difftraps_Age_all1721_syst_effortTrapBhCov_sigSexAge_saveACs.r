@@ -932,7 +932,7 @@ colMeans(NALL)
 
 ## ---- 3. AGE STRUCTURE ----
 # 1. Estimate abundance in buffer of the traps of each age category
-# 2. Estimate proportion of total abundance (NIn_trapBuf)
+# 2. Estimate proportion of total abundance in the sampling buffer (NIn_trapBuf)
 
 ## ---- 3.1. CUBS ----
 ZZcubs <- myResultsSXYZ$sims.list$z

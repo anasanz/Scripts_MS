@@ -114,17 +114,24 @@ s.which <- grep('sxy', colnames(sampmat)) # ASP: index columns all sxy (sampmat 
 indx <- (Tt*M.aug*2-(M.aug*2-1)):(Tt*M.aug*2) # ASP: Index the LAST year of sxy. *2 because there are the double of columns: x and y. (M.aug*2-1) corresponds to 1 year of data
 sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: Starting SXY for projection: SXY of year 5 
 
+# Repeat this for: SEX
+sex.start <- rep(NA, M.new)
+sex.which <- grep('sex', colnames(sampmat))
+sex.start[1:M.aug] <- sampmat[1,sex.which] 
+
 ## ---- 1.2. Per capita recruitment ----
 
 # Load results from function in script 0.PCR_all_core.r
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-load("pcr_corebuf.RData")
-load("pcr_all.RData")
-load("pcr_range.RData")
+#load("pcr_corebuf.RData")
+#load("pcr_all.RData")
+#load("pcr_range.RData")
+load("pcr_corebuf_fem.RData")
+load("pcr_all_fem.RData")
 
-pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
-pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
+pcr1_corebuf <- apply(pcr_corebuf_fem[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
+pcr2_all <- apply(pcr_all_fem[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 
 
 # Take pcr value of one iteration to build the model
@@ -140,6 +147,7 @@ phi.ad <- sampmat[1,'phi.ad']
 phi.cub <- sampmat[1,'phi.cub']
 phi.sub <- sampmat[1,'phi.sub']
 beta.dens <- sampmat[1,'beta.dens']
+omega <- sampmat[1,'omega']
 sigD <- sampmat[1,'sigD']
 
 ##calculate psi and unconditional age structure at t=1, which don't really matter 
@@ -184,14 +192,17 @@ nimData<-list(habDens = nimData$habDens,
               beta.dens = beta.dens,
               sigD = sigD,
               psi = psi,
-              pi.uncond = pi.uncond
+              pi.uncond = pi.uncond,
+              sex = sex.start,
+              omega = omega
+              
 )
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
 source('3.7.SCRopen_PREDICT in Nimble RS.r')
 
 # Create model using projection code (per capita recruitment, no observations)
-model <- nimbleModel( code = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR,
+model <- nimbleModel( code = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR.pcr.fem,
                       constants = nimConstants,
                       data = nimData,
                       #inits = nimInits,
@@ -199,7 +210,7 @@ model <- nimbleModel( code = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.
                       calculate = T)  
 
 nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
-                                      "pcr", "beta.dens", 'pi.uncond', 'psi'),
+                                      "pcr", "beta.dens", 'pi.uncond', 'psi', 'omega'),
                                     self = F,
                                     downstream = T,
                                     returnScalarComponents = TRUE)
@@ -217,6 +228,7 @@ sum(apply(model$recruit,1,sum) )
 cmodelSims <- compileNimble(model)
 
 
+
 ## ---- 2. Run projection for several iterations and subset abundance ----
 
 # WE FIND THE S AND Z NODES THAT SHOULDNT BE PREDICTED FOR. 
@@ -228,6 +240,8 @@ uNodes <- samplerConfList[grep("u\\[",samplerConfList)]
 ageNodes <- samplerConfList[grep("age\\[",samplerConfList)]
 age.cat.Nodes <- samplerConfList[grep("age.cat\\[",samplerConfList)]
 agePO.Nodes <-samplerConfList[grep("agePlusOne",samplerConfList)]
+sexNodes <- samplerConfList[grep("sex\\[",samplerConfList)]
+
 
 length(values(cmodelSims, sNodes)) #800*2*6 (sNodes are 4800 because dim 2 is 1:2)
 sxy.start[1:M.aug,,1] == model$sxy[1:M.aug,,1]
@@ -246,6 +260,7 @@ Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
 # To store as simlist
 sxy.proj.core <- array(NA, c(length(itera), M.new, 2, t.new+1))
 z.proj.core <- age.cat.proj.core <- array(NA, c(length(itera), M.new, t.new+1))
+sex.proj.core <- matrix(NA, length(itera), M.new)
 
 for(ite in 1:length(itera)){
   # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
@@ -298,6 +313,12 @@ for(ite in 1:length(itera)){
   nimData1$age.cat <- age.start 
   values(cmodelSims, age.cat.Nodes) <- age.start
   
+  ## Also replace sex, because for the augmented individuals it changes each iteration
+  
+  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
+  nimData1$sex <- sex.start
+  values(cmodelSims, sexNodes) <- sex.start
+  
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
@@ -335,6 +356,8 @@ for(ite in 1:length(itera)){
   sxy.proj.core[ite,,,] <- c(cmodelSims$sxy)
   z.proj.core[ite,,] <- cmodelSims$z
   age.cat.proj.core[ite,,] <- cmodelSims$age.cat
+  
+  sex.proj.core[ite,] <- cmodelSims$sex
   
   #cmodelSims$sxy[,,2]
   
@@ -428,6 +451,8 @@ Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
 # To store as simlist
 sxy.proj.all <- array(NA, c(length(itera), M.new, 2, t.new+1))
 z.proj.all <- age.cat.proj.all <- array(NA, c(length(itera), M.new, t.new+1))
+sex.proj.all <- matrix(NA, length(itera), M.new)
+
 
 for(ite in 1:length(itera)){
   # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
@@ -475,6 +500,12 @@ for(ite in 1:length(itera)){
   nimData1$age.cat <- age.start 
   values(cmodelSims, age.cat.Nodes) <- age.start
   
+  ## Also replace sex, because for the augmented individuals it changes each iteration
+  
+  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
+  nimData1$sex <- sex.start
+  values(cmodelSims, sexNodes) <- sex.start
+  
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
@@ -506,6 +537,8 @@ for(ite in 1:length(itera)){
   sxy.proj.all[ite,,,] <- c(cmodelSims$sxy)
   z.proj.all[ite,,] <- cmodelSims$z
   age.cat.proj.all[ite,,] <- cmodelSims$age.cat
+  sex.proj.all[ite,] <- cmodelSims$sex
+  
 
 }
 

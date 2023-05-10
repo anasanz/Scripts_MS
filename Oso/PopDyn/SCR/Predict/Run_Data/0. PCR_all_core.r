@@ -198,7 +198,7 @@ calc.pcr.fem <- function(pcr_core = TRUE){
         R[ite,t-1] <- sum(ifelse((sampmat[ite,zwt]-sampmat[ite,zwtm])==1, 1, 0)) # Number of (ALL) recruits in t-1
         
         # N adults: Important, on year t-1!
-        N.ad[ite,t-1] <- length(which(ZZad[ite,,t-1]==1)) # Number of (ALL) adults alive in t-1
+        N.ad[ite,t-1] <- length(which(ZZad[ite,,t-1]==1)) # Number of (ALL) adult FEMALES alive in t-1
         
         # PCR
         pcrmat[ite,t-1] <- R[ite,t-1]/N.ad[ite,t-1]
@@ -223,7 +223,7 @@ calc.pcr.fem <- function(pcr_core = TRUE){
         
         # N adults: Important, on year t-1!
         
-        which.alive <- which(ZZad[ite,,t-1]==1) # Which adults are alive
+        which.alive <- which(ZZad[ite,,t-1]==1) # Which adult FEMALES are alive
         which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t-1] # Retrieve the activity center for those individuals
         sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
         which.In <- over(sp, Xbuf2) # Which inside core buffer
@@ -256,6 +256,105 @@ save(pcr_all_fem, file = "pcr_all_fem.RData")
 load("pcr_corebuf_fem.RData")
 load("pcr_all_fem.RData")
 
-colMeans(pcr_all_fem$pcrmat)
-colMeans(pcr_corebuf_fem$pcrmat)
+load("pcr_corebuf.RData")
+load("pcr_all.RData")
 
+# Compare pcr females/all individuals
+
+colMeans(pcr_all_fem$pcrmat)
+colMeans(pcr_all$pcrmat)
+
+colMeans(pcr_corebuf_fem$pcrmat)
+colMeans(pcr_corebuf$pcrmat)
+
+# Conclusion 1: PCR is higher when estimated per female (probably because there are a lower number of females??)
+
+# Now chech the uncertainty in PCR
+
+apply(pcr_all_fem$pcrmat,2,sd)
+apply(pcr_all$pcrmat,2,sd)
+
+apply(pcr_corebuf_fem$pcrmat,2,sd)
+apply(pcr_corebuf$pcrmat,2,sd)
+
+# Conclusion 2: Uncertainty in PCR is higher when estimated per female. Probably because uncertainty in female abundance is higher? CHECK
+
+## COMPARE UNCERTAINTY IN NUMBER OF FEMALES vS MALES, to prove if there is more uncertainty
+
+# 1. Nº females
+
+ZZadFEM <- myResultsSXYZ$sims.list$z
+ZZadFEM[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (ADULTS) as dead
+ZZadFEM[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 3 # Considers all individuals that are not 0 (females) as dead
+
+adFEM_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+    which.alive <- which(ZZadFEM[ite,,t]==1) # Select only the individuals alive (z=1)
+
+    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+
+    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
+    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
+    
+    adFEM_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
+  }}
+
+# 2. Nº males
+
+ZZadMAL <- myResultsSXYZ$sims.list$z
+ZZadMAL[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (SADULTS) as dead
+ZZadMAL[!myResultsSXYZ$sims.list$sex %in% c(1) ]  <- 3 # Considers all individuals that are not 1 (males) as dead
+
+adMAL_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
+
+for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+    
+    which.alive <- which(ZZadMAL[ite,,t]==1) # Select only the individuals alive (z=1)
+    
+    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+    
+    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
+    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
+    
+    adMAL_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
+  }}
+
+#average number of individuals without the buffer for each year 
+colMeans(adFEM_trapBuf)
+colMeans(adMAL_trapBuf)
+
+apply(adFEM_trapBuf,2,sd)
+apply(adMAL_trapBuf,2,sd)
+
+
+par(mfrow = c(2,3))
+for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  plot(density(adFEM_trapBuf[,t]), main = t)
+  abline(v = colMeans(adFEM_trapBuf)[t], col = "blue")
+}
+
+par(mfrow = c(2,3))
+for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+  plot(density(adMAL_trapBuf[,t]), main = t)
+  abline(v = colMeans(adMAL_trapBuf)[t], col = "blue")
+}
+
+
+# Sum of individuals alive in total each year (without buffer)
+NALL_fem <- apply(ZZadFEM,c(1,3),function(x) sum(x==1))
+colMeans(NALL_fem)
+
+NALL_mal <- apply(ZZadMAL,c(1,3),function(x) sum(x==1))
+colMeans(NALL_mal)
+
+apply(NALL_fem,2,sd)
+apply(NALL_mal,2,sd)
+
+# Coonclusion 3: Uncertainty is higher in the number of estimated females
+# That is why uncertainty in PCR is also higher
+
+#Conclusion 4: Sex ratio is skewed to females!! Maybe investigate further?

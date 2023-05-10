@@ -41,11 +41,11 @@ t.new <- 5 # Extra years future prediction
 #   with a PCR estimated for ONLY FEMALES (per capita recruitment per female)
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/ALLiter")
-load("proj_pcr.core.RData")
-load("proj_pcr.all.RData")
+#load("proj_pcr.core.RData")
+#load("proj_pcr.all.RData")
 
-#load("proj_pcr.core.fem.RData")
-#load("proj_pcr.all.fem.RData")
+load("proj_pcr.core.fem.RData")
+load("proj_pcr.all.fem.RData")
 
 # Load buffer core area and habitat grid (to subset in sampling area)
 

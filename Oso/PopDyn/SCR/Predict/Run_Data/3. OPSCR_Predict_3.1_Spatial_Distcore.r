@@ -126,17 +126,24 @@ s.which <- grep('sxy', colnames(sampmat)) # ASP: index columns all sxy (sampmat 
 indx <- (Tt*M.aug*2-(M.aug*2-1)):(Tt*M.aug*2) # ASP: Index the LAST year of sxy. *2 because there are the double of columns: x and y. (M.aug*2-1) corresponds to 1 year of data
 sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: Starting SXY for projection: SXY of year 5 
 
+# Repeat this for: SEX
+sex.start <- rep(NA, M.new)
+sex.which <- grep('sex', colnames(sampmat))
+sex.start[1:M.aug] <- sampmat[1,sex.which] 
+
 ## ---- 1.2. Per capita recruitment ----
 
 # Load results from function in script 0.PCR_all_core.r
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-load("pcr_corebuf.RData")
-load("pcr_all.RData")
+#load("pcr_corebuf.RData")
+#load("pcr_all.RData")
 #load("pcr_range.RData")
+load("pcr_corebuf_fem.RData")
+load("pcr_all_fem.RData")
 
-pcr1_corebuf <- apply(pcr_corebuf[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
-pcr2_all <- apply(pcr_all[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
+pcr1_corebuf <- apply(pcr_corebuf_fem[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
+pcr2_all <- apply(pcr_all_fem[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
 
 
 # Take pcr value of one iteration to build the model
@@ -151,6 +158,7 @@ pcr <- pcr1_corebuf[1]
 phi.ad <- sampmat[1,'phi.ad']
 phi.cub <- sampmat[1,'phi.cub']
 phi.sub <- sampmat[1,'phi.sub']
+omega <- sampmat[1,'omega']
 sigD <- sampmat[1,'sigD']
 
 # Increasing beta dens
@@ -199,14 +207,16 @@ nimData<-list(habDens = nimData$habDens,
               beta.dens = beta.dens,
               sigD = sigD,
               psi = psi,
-              pi.uncond = pi.uncond
+              pi.uncond = pi.uncond,
+              sex = sex.start,
+              omega = omega
 )
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
 source('3.7.SCRopen_PREDICT in Nimble RS.r')
 
 # Create model using projection code (per capita recruitment, no observations)
-model <- nimbleModel( code = SCROpen.PR.distcore.t,
+model <- nimbleModel( code = SCROpen.PR.distcore.t.pcrFem,
                       constants = nimConstants,
                       data = nimData,
                       #inits = nimInits,
@@ -214,7 +224,7 @@ model <- nimbleModel( code = SCROpen.PR.distcore.t,
                       calculate = T)  
 
 nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
-                                      "pcr", "beta.dens", 'pi.uncond', 'psi'),
+                                      "pcr", "beta.dens", 'pi.uncond', 'psi', 'omega'),
                                     self = F,
                                     downstream = T,
                                     returnScalarComponents = TRUE)
@@ -244,7 +254,11 @@ ageNodes <- samplerConfList[grep("age\\[",samplerConfList)]
 age.cat.Nodes <- samplerConfList[grep("age.cat\\[",samplerConfList)]
 agePO.Nodes <-samplerConfList[grep("agePlusOne",samplerConfList)]
 betaDensNodes <- samplerConfList[grep("beta.dens\\[",samplerConfList)]
+sexNodes <- samplerConfList[grep("sex\\[",samplerConfList)]
 
+length(values(cmodelSims, sNodes)) #800*2*6 (sNodes are 4800 because dim 2 is 1:2)
+sxy.start[1:M.aug,,1] == model$sxy[1:M.aug,,1]
+values(cmodelSims, sNodes)[1:600] == c(t(sxy.start[1:M.aug,,1]))
 
 ## ---- 2.1. PCR inside core buffer ----
 ## ------ 2.1.1. Projection ----
@@ -261,8 +275,10 @@ nimData1 <- nimData
 Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
 
 # To store as simlist
-sxy.proj.core <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.core <- age.cat.proj.core <- array(NA, c(length(itera), M.new, t.new+1))
+sxy.proj.core.consDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
+z.proj.core.consDist <- age.cat.proj.core.consDist <- array(NA, c(length(itera), M.new, t.new+1))
+sex.proj.core.consDist <- matrix(NA, length(itera), M.new)
+
 
 detachAllPackages()
 library(nimbleSCR)
@@ -318,6 +334,12 @@ for(ite in 1:length(itera)){
   nimData1$age.cat <- age.start 
   values(cmodelSims, age.cat.Nodes) <- age.start
   
+  ## Also replace sex, because for the augmented individuals it changes each iteration
+  
+  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
+  nimData1$sex <- sex.start
+  values(cmodelSims, sexNodes) <- sex.start
+  
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
@@ -345,9 +367,11 @@ for(ite in 1:length(itera)){
   Nmat.core[ite,] <- apply(cmodelSims$z,2,sum)
   Rmat.core[ite,] <- cmodelSims$R
   
-  sxy.proj.core[ite,,,] <- c(cmodelSims$sxy)
-  z.proj.core[ite,,] <- cmodelSims$z
-  age.cat.proj.core[ite,,] <- cmodelSims$age.cat
+  sxy.proj.core.consDist[ite,,,] <- c(cmodelSims$sxy)
+  z.proj.core.consDist[ite,,] <- cmodelSims$z
+  age.cat.proj.core.consDist[ite,,] <- cmodelSims$age.cat
+  
+  sex.proj.core.consDist[ite,] <- cmodelSims$sex
   
 }
 
@@ -356,6 +380,8 @@ for(ite in 1:length(itera)){
 # Conver buffers state space and core sampling to rasters
 
 library(raster)
+library(viridis)
+
 setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
 r <- raster("logDistcore_hrbear.tif")
 raster::values(r) <- NA
@@ -449,8 +475,9 @@ nimData1 <- nimData
 Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
 
 # To store as simlist
-sxy.proj.core <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.core <- age.cat.proj.core <- array(NA, c(length(itera), M.new, t.new+1))
+sxy.proj.core.decDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
+z.proj.core.decDist <- age.cat.proj.core.decDist <- array(NA, c(length(itera), M.new, t.new+1))
+sex.proj.core.decDist <- matrix(NA, length(itera), M.new)
 
 
 detachAllPackages()
@@ -507,6 +534,12 @@ for(ite in 1:length(itera)){
   nimData1$age.cat <- age.start 
   values(cmodelSims, age.cat.Nodes) <- age.start
   
+  ## Also replace sex, because for the augmented individuals it changes each iteration
+  
+  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
+  nimData1$sex <- sex.start
+  values(cmodelSims, sexNodes) <- sex.start
+  
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
@@ -534,9 +567,12 @@ for(ite in 1:length(itera)){
   Nmat.core[ite,] <- apply(cmodelSims$z,2,sum)
   Rmat.core[ite,] <- cmodelSims$R
   
-  sxy.proj.core[ite,,,] <- c(cmodelSims$sxy)
-  z.proj.core[ite,,] <- cmodelSims$z
-  age.cat.proj.core[ite,,] <- cmodelSims$age.cat
+  sxy.proj.core.decDist[ite,,,] <- c(cmodelSims$sxy)
+  z.proj.core.decDist[ite,,] <- cmodelSims$z
+  age.cat.proj.core.decDist[ite,,] <- cmodelSims$age.cat
+  
+  sex.proj.core.decDist[ite,] <- cmodelSims$sex
+
   
 }
 
@@ -642,8 +678,10 @@ nimData1 <- nimData
 Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
 
 # To store as simlist
-sxy.proj.all <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.all <- age.cat.proj.all <- array(NA, c(length(itera), M.new, t.new+1))
+sxy.proj.all.consDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
+z.proj.all.consDist <- age.cat.proj.all.consDist <- array(NA, c(length(itera), M.new, t.new+1))
+sex.proj.all.consDist <- matrix(NA, length(itera), M.new)
+
 
 detachAllPackages()
 library(nimbleSCR)
@@ -694,6 +732,12 @@ for(ite in 1:length(itera)){
   nimData1$age.cat <- age.start 
   values(cmodelSims, age.cat.Nodes) <- age.start
   
+  ## Also replace sex, because for the augmented individuals it changes each iteration
+  
+  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
+  nimData1$sex <- sex.start
+  values(cmodelSims, sexNodes) <- sex.start
+  
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
@@ -724,9 +768,11 @@ for(ite in 1:length(itera)){
   Nmat.all[ite,] <- apply(cmodelSims$z,2,sum)
   Rmat.all[ite,] <- cmodelSims$R
   
-  sxy.proj.all[ite,,,] <- c(cmodelSims$sxy)
-  z.proj.all[ite,,] <- cmodelSims$z
-  age.cat.proj.all[ite,,] <- cmodelSims$age.cat
+  sxy.proj.all.consDist[ite,,,] <- c(cmodelSims$sxy)
+  z.proj.all.consDist[ite,,] <- cmodelSims$z
+  age.cat.proj.all.consDist[ite,,] <- cmodelSims$age.cat
+  
+  sex.proj.all.consDist[ite,] <- cmodelSims$sex
   
 }
 
@@ -828,8 +874,10 @@ nimData1 <- nimData
 Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
 
 # To store as simlist
-sxy.proj.all <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.all <- age.cat.proj.all <- array(NA, c(length(itera), M.new, t.new+1))
+sxy.proj.all.decDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
+z.proj.all.decDist <- age.cat.proj.all.decDist <- array(NA, c(length(itera), M.new, t.new+1))
+sex.proj.all.decDist <- matrix(NA, length(itera), M.new)
+
 
 detachAllPackages()
 library(nimbleSCR)
@@ -880,6 +928,12 @@ for(ite in 1:length(itera)){
   nimData1$age.cat <- age.start 
   values(cmodelSims, age.cat.Nodes) <- age.start
   
+  ## Also replace sex, because for the augmented individuals it changes each iteration
+  
+  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
+  nimData1$sex <- sex.start
+  values(cmodelSims, sexNodes) <- sex.start
+  
   ##set pcr, phi, sigD, beta.dens
   ##not sure if needed to set in data and cmodelSims...
   ##simplified since we calculated pcr for all iterations above
@@ -910,9 +964,12 @@ for(ite in 1:length(itera)){
   Nmat.all[ite,] <- apply(cmodelSims$z,2,sum)
   Rmat.all[ite,] <- cmodelSims$R
   
-  sxy.proj.all[ite,,,] <- c(cmodelSims$sxy)
-  z.proj.all[ite,,] <- cmodelSims$z
-  age.cat.proj.all[ite,,] <- cmodelSims$age.cat
+  sxy.proj.all.decDist[ite,,,] <- c(cmodelSims$sxy)
+  z.proj.all.decDist[ite,,] <- cmodelSims$z
+  age.cat.proj.all.decDist[ite,,] <- cmodelSims$age.cat
+  
+  sex.proj.all.decDist[ite,] <- cmodelSims$sex
+  
   
 }
 
