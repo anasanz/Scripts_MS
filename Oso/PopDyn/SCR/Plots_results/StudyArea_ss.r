@@ -137,3 +137,12 @@ plot(distcoreMask, legend = FALSE, col = viridis(50), add = TRUE)
 plot(eur, xlim = c(bbox(sa)[1,1], bbox(sa)[1,2]), ylim = c(bbox(sa)[2,1], bbox(sa)[2,2]), border = adjustcolor("black", alpha.f = 0.2), add = TRUE)
 
 dev.off()
+
+
+#---- PLOT SEX PROPORTION ---- 
+
+Xbuf2 <- readOGR("Buffer_8500_traps.shp") # Load sampling area (where we estimate abundance)
+
+
+plot(eur, xlim = c(bbox(sa)[1,1], bbox(sa)[1,2]), ylim = c(bbox(sa)[2,1], bbox(sa)[2,2]), border = adjustcolor("black", alpha.f = 0.2))
+
