@@ -19,8 +19,9 @@ dat <- read.csv(file = "Data_HDS_Farmdindis.csv")
 
 ## ---- Choose analyzed transects and assign habitat quality ----
 
-tr <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "Trans_Ganga_FarmDindis") 
+tr <- readOGR("D:/MargSalas/Ganga/Data/GIS", "Trans_Ganga_FarmDindis") 
 
+proj4string(tr)
 # We take all transects where species is present or absent (all categories)
 # Abs-Pres classification (David Giralt):
 #   0: Transectos donde nunca se ha visto ganga (2010-2022)
@@ -91,9 +92,9 @@ all_pol2 <- do.call(rbind, pol_list2)
 #  mapview(all_pol2)
 
 # Not perfect but I keep all_pol2. I save it to improve it manually
-#writeOGR(all_pol2, "Buffer", dsn = "D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", driver = "ESRI Shapefile")
+#writeOGR(all_pol2, "Buffer_Farmdindis", dsn = "D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", driver = "ESRI Shapefile")
 
-all_pol2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "BufferImproved") 
+all_pol2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "BufferImproved_Farmdindis") 
 
 ## -------------------------------------------------
 ##                  SDM 2011
@@ -184,7 +185,7 @@ for (t in 1:length(year)){
 
 # Save
 setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
-write.csv(df_habBuf2, file = "HQvariable2011.csv")
+write.csv(df_habBuf2, file = "HQvariable2011_Farmdindis.csv")
 
 # Save removing transects that are hq = 0
 #df_habBuf3 <- df_habBuf2[which(df_habBuf2$WeightedQuality != 0), ]
@@ -303,7 +304,7 @@ for (t in 1:length(year)){
 
 # Save
 setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
-write.csv(df_habBuf2, file = "HQvariable2021.csv")
+write.csv(df_habBuf2, file = "HQvariable2021_Farmdindis.csv")
 
 ## Save removing transects that are hq = 0
 #df_habBuf3 <- df_habBuf2[which(df_habBuf2$WeightedQuality != 0), ]

@@ -5,6 +5,8 @@
 ##    but include habitat quality cov in lamda
 ## ------------------------------------------------- 
 
+## THIS IS THE GOOD FINAL MODEL USED (RESULTS BELOW)
+
 rm(list=ls())
 
 library(rjags)
@@ -231,7 +233,7 @@ save(out, file = "2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData") # 60000 iter, 4 t
 
 ## ---- Results ----
 
-setwd("D:/MargSalas/Ganga/Results/HDS/Model_results")
+setwd("D:/MargSalas/Ganga/Results/HDS/Farmdindis/Model_results")
 load("2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData")
 
 # Load hq areas
@@ -455,14 +457,6 @@ lci <- quantile(ab[,4],probs = 0.025)
 uci <- quantile(ab[,4],probs = 0.975)
 
 #### CONCLUSION: IT DOESN'T CHANGE MUCH, SO I KEEP THE MODEL PREDICTION WITHOUT W
-
-
-
-
-
-
-
-
 
 
 ## ---- 2. Predictions from posterior distribution ALL YEARS ----
