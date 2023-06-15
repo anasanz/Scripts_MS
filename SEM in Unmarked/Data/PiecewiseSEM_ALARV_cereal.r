@@ -22,6 +22,31 @@ library(tidyverse)
 library(lme4)
 library(lmerTest)
 
+# Function for goodness of fit parboot
+fitstats2 <- function(fm) {
+  
+  observed <- getY(fm@data)
+  
+  expected <- fitted(fm)
+  
+  resids <- residuals(fm)
+  
+  sse <- sum(resids^2)
+  
+  #chisq <- sum((observed - expected)^2 / expected)
+  
+  freeTuke <- sum((sqrt(observed) - sqrt(expected))^2)
+  
+  out <- c(
+    SSE=sse, 
+    #Chisq=chisq, 
+    freemanTukey=freeTuke
+  )
+  
+  return(out)
+  
+}
+
 setwd("D:/MargSalas/Scripts_MS/SEM in Unmarked/Sim")
 source('Standardization R function unmarked GLMM.R')
 source('GOF function improved.R')
@@ -66,7 +91,7 @@ records_species <- subset(records_birds, Especie == "ALARV")
 records_species_light <- subset(records_species, Us == "C")
 
 # I can't difference the observation type, so I am going to keep only the seen ones
-records_species_light <- subset(records_species_light, Tipus_observacio == "V")
+#records_species_light <- subset(records_species_light, Tipus_observacio == "V")
 
 #------------ Change format of data to define HDS model --------------
 
@@ -110,40 +135,40 @@ covariates$cereal_height_sc <- scale(covariates$cereal_height)
 covariates$cultius_de_cereal_sc <- scale(covariates$cultius_de_cereal)
 covariates$spring_precipitation_sc <- scale(covariates$spring_precipitation)
 
-covariates <- covariates[,colnames(covariates) %in% c("ID", "cereal_height_sc", "cultius_de_cereal_sc", "spring_precipitation_sc")]
+covariates$tag <- gsub(" ", "_", covariates$tag)
+covariates$tag <- as.factor(covariates$tag)
 
-# Now, we can build the "umf object", the basic format for analysis in Unmarked 
-umf <- unmarkedFrameDS(y=as.matrix(yDat), siteCovs = covariates,  survey="line",
-                       dist.breaks=c(0,25,50, 100, 200, 500), tlength=rep(500, 1694),
-                       unitsIn="m")
+## ---- **UNStandardized variables** ----
+
+covariates_unsc <- covariates[,colnames(covariates) %in% c("ID", "cereal_height", "cultius_de_cereal", "spring_precipitation", "tag")]
+
+umf_unsc <- unmarkedFrameDS(y=as.matrix(yDat), siteCovs = covariates_unsc,  survey="line",
+                            dist.breaks=c(0,25,50, 100, 200, 500), tlength=rep(500, 1694),
+                            unitsIn="m")
 
 # I remove NA because otherwise piecewise functions don't work
-umf@siteCovs <- umf@siteCovs[which(complete.cases(umf@siteCovs)),]
-umf@tlength <- umf@tlength[which(complete.cases(umf@siteCovs))]
-umf@y <- umf@y[which(complete.cases(umf@siteCovs)),]
+umf_unsc@siteCovs <- umf_unsc@siteCovs[which(complete.cases(umf_unsc@siteCovs)),]
+umf_unsc@tlength <- umf_unsc@tlength[which(complete.cases(umf_unsc@siteCovs))]
+umf_unsc@y <- umf_unsc@y[which(complete.cases(umf_unsc@siteCovs)),]
 
-# Based on this umf, we can see the summary of transects information and make a histogram
-summary(umf)
-hist(umf,xlab="distance (m)", main = "Histogram of observations restricted to cereals")
-
-## ---- Build the piecewise sem model ----
-
-##model: Spring precipitation -> Cereal Height -> Abundance ALARV <- nº of surrounding cereal crops
+## Build the piecewise sem model: 
+# Spring precipitation -> Cereal Height -> Abundance <- nº of surrounding cereal crops
 
 #first component: abundance (DS) model
-ds.mlu <- distsamp(~ cereal_height_sc  ~ cereal_height_sc + cultius_de_cereal_sc + (1|ID), 
-                       data = umf, keyfun='halfnorm', output = "abun")
-summary(ds.mlu) # RESULT: No effect of cereal height on detection (p = 0.43)
-#                         No effect of cereal height en abundance (p = 0.9)
-#                         No effect of n cereal crops en abundance (p = 0.5)
+ds.mlu <- distsamp(~ cereal_height  ~ cereal_height + cultius_de_cereal + (1|ID), 
+                   data = umf_unsc, keyfun='halfnorm', output = "abun")
+summary(ds.mlu) 
+
+pb1 <- parboot(ds.mlu, fitstats2, nsim=25, report=1) # test goodness of fit
+# Freeman Tuckey test shows model fit
 
 #second component: model on cereal height
-siteCovs<-data.frame(cereal_height_sc = umf@siteCovs$cereal_height_sc, 
-                     spring_precipitation_sc = umf@siteCovs$spring_precipitation_sc,
-                     cultius_de_cereal_sc = umf@siteCovs$cultius_de_cereal_sc,
-                     ID = umf@siteCovs$ID)
+siteCovs_unsc <- data.frame(cereal_height = umf_unsc@siteCovs$cereal_height, 
+                            spring_precipitation = umf_unsc@siteCovs$spring_precipitation,
+                            cultius_de_cereal = umf_unsc@siteCovs$cultius_de_cereal,
+                            ID = umf_unsc@siteCovs$ID)
 
-lm.ml <- lmer( cereal_height_sc ~ spring_precipitation_sc + (1|ID), siteCovs)
+lm.ml <- lmer( cereal_height ~ spring_precipitation + (1|ID), siteCovs_unsc)
 summary(lm.ml) # RESULT: Positive effect of spring precipitation in cereal height
 
 ##bundle both paths into full piecewise SEM
@@ -157,24 +182,19 @@ stand_beta(ds.mlu)
 ##or for list of models making up full SEM
 stand_beta_wrap(M.focal)
 
-# RESULT: Estimates don't really change with standardize vS independent model coefficients
 
-## ---- Identify missing paths ----
-
-## Here I assume missing paths are:
-## Spring precipitation -> Abundance (in DS model)
-
+##Identify missing paths, I assume:  Spring precipitation -> Abundance (in DS model)
 ##Build fully saturated model with all missing paths
-lm.full <- lmer( cereal_height_sc ~ spring_precipitation_sc + (1|ID), siteCovs) # In this case it is the same
+lm.full <- lmer( cereal_height ~ spring_precipitation + (1|ID), siteCovs_unsc) # In this case it is the same
 
-ds.mlu.full <- distsamp(~ cereal_height_sc  ~ cereal_height_sc + cultius_de_cereal_sc + spring_precipitation_sc + (1|ID), 
-                        data = umf, keyfun='halfnorm', output = "abun")
+ds.mlu.full <- distsamp(~ cereal_height  ~ cereal_height + cultius_de_cereal + spring_precipitation + (1|ID) + (1|tag), 
+                        data = umf_unsc, keyfun='halfnorm', output = "abun")
 
 ##Bundle into saturated piecewise SEM
 M.sat<-list(lm.full, ds.mlu.full)
 
 #includes missing path coefficient estimates
-GOF_LL(M.focal, M.sat) # No missing path
+GOF_LL(M.focal, M.sat) 
 
 #returns:
 #  AIC of focal model
@@ -188,7 +208,6 @@ GOF_LL(M.focal, M.sat) # No missing path
 #get coefficients, p-values of missing paths only
 missing.path(M.focal, M.sat) 
 
-# There is no missing path
 
 
 
