@@ -455,6 +455,8 @@ for(i in 1:n){
   if(last_alive[i] != Inf) zdatAGE[i, (last_alive[i]+1):Tt] <- 0 # Death after the last occasion alive (when available, so when last_alive !=Inf)
 }
 
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+#save(zdatAGE, file = "zObserved_yAgeDeaths.RData")
 
 #---- 4. FIT NIMBLE MODEL    ---- 
 

@@ -46,7 +46,7 @@ f <- rasterize(Xbuf, ras, mask = TRUE)
 # Load posterior distribution
 library(nimbleSCR) # Load nimbleSCR here, otherwise it gets in conflict with raster package, weird
 
-setwd("D:/MargSalas/Oso/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
 load("myResults_3-3.1_sxy.RData")
 
 # Load original habitat coordinates

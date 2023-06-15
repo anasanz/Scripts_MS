@@ -240,10 +240,8 @@ mapview(core, col.regions = "red") +
 
 core_kernel_n1n2 <- bind(core_area_kernelpol_n1, core_area_kernelpol_n2)
 core_kernel_n1n2 <- aggregate(core_kernel_n1n2, dissolve = TRUE)
-plot(core_kernel_n1n2)
+plot(core_kernel_n1n2) ## BETTER TO CALCULATE A KERNEL PER POPULATION NUCLEUS
 
-
-## BETTER TO CALCULATE A KERNEL PER POPULATION NUCLEUS
 
 # 3. Sum of individuals MCP total MCP
 core_mcp <- core_spatial[,2]
@@ -253,9 +251,70 @@ core_area_mcppol <- aggregate(mcp.poly, dissolve = TRUE)
 
 mapview(core, col.regions = "red") +
   mapview(core_area_kernelpol2, col.regions = "green") +
-  mapview(core_area_mcppol, col.regions = "yellow") 
+  mapview(core_area_mcppol, col.regions = "yellow") ## KERNEL LOOKS BETTER AND IT TAKES INTO ACCOUNT THE DISTRIBUTION OF THE DATA  
+ 
 
-## KERNEL LOOKS BETTER AND IT TAKES INTO ACCOUNT THE DISTRIBUTION OF THE DATA  
+# 4. Kernel per population nucleus + sample GPS locations to avoid over-representation
+
+# After comment of Pierre-Yves Quennette.
+# Especially for Sorita, in order to be able to estimate Kernel 95% for BOTH nucleus (more fancy)
+
+f <- core_spatial@data[which(core_spatial$Obs_type == "GPS"),]
+
+# I need to take their locations directly from the Radiotracking data, to get the fixes
+setwd("D:/MargSalas/Oso/Datos/GPS")
+
+os_spatial_rt <- read.csv("Radiotracking_ossos_1996_2020_taula_final.csv", header = TRUE, row.names = NULL)  
+
+core_spatial_rt <- os_spatial_rt %>%
+  filter(Year %in% c(1997,1998, 2007,2008, 2019, 2020) 
+         & Bear_name %in% c("Mellba", "Ziva", "Hvala", "Sorita") 
+         & With_cubs_estimated %in% c("<6month", "1", "2"))
+
+hv <- core_spatial_rt[core_spatial_rt$Bear_name == "Hvala",] # 1 year (2007). 8 locations per day (or even more), GPS
+so <- core_spatial_rt[core_spatial_rt$Bear_name == "Sorita",] # 2 years (2019 - 2020). 8 locations per day (or even more), GPS
+mb <- core_spatial@data[core_spatial@data$Confirmed_Individual == "Mellba",] # 1 year 1997. 1 location per day or less, only VHF (NOT in radiotracking df)
+zv <- core_spatial_rt[core_spatial_rt$Bear_name == "Ziva",] # 2 years (1997 - 1998). 1 location per DAY, only VHF
+
+nrow(hv) + nrow(so) + nrow(mb) + nrow(zv) # Similar to df with all locations core_spatial (core_spatial has more, which makes sense)
+# For Hvala and Sorita, sample dataset to get one location per day. I can do it in the original dataset, as I have the date there
+
+#core_spatial@data$Date <- as.Date(core_spatial@data$Date, format = "%d/%m/%Y")
+core_spatial_thinned <- core_spatial@data %>% group_by(Confirmed_Individual,Date_register_formated) %>% sample_n(1) %>% arrange(Confirmed_Individual,Year,Date_register_formated)
+
+coordinates(core_spatial_thinned) <- core_spatial_thinned[,c("x_long", "y_lat")]
+proj4string(core_spatial_thinned) <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+
+core_spatial_thinned$Nucleus <- ifelse(core_spatial_thinned$Confirmed_Individual %in% c("Mellba", "Ziva", "Hvala"), 1, 2)
+core_kernel3 <- core_spatial_thinned[,24]
+kref3 <- kernelUD(core_kernel3, h="href")
+kernel.poly3 <- getverticeshr(kref3, percent = 95)
+core_area_kernelpol3 <- aggregate(kernel.poly3, dissolve = TRUE)
+
+setwd("D:/MargSalas/Oso/Datos/Plots/2022/Dist_core")
+pdf("core_thinned_kernel95_n1n2.pdf")
+plot(st_geometry(map), col = "grey")
+mtext("Kernel 95% per nucleus thinned", side = 3, line = -1.5, cex = 2)
+plot(os, pch = 19, col = "darkblue", add = TRUE)
+plot(core, pch = 19, col = "red", add = TRUE)
+plot(core_area_kernelpol3, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
+
+dev.off()
+
+
+kernel.poly4 <- getverticeshr(kref3, percent = 80)
+core_area_kernelpol4 <- aggregate(kernel.poly4, dissolve = TRUE)
+
+setwd("D:/MargSalas/Oso/Datos/Plots/2022/Dist_core")
+pdf("core_thinned_kernel80_n1n2.pdf")
+plot(st_geometry(map), col = "grey")
+mtext("Kernel 80% per nucleus thinned", side = 3, line = -1.5, cex = 2)
+plot(os, pch = 19, col = "darkblue", add = TRUE)
+plot(core, pch = 19, col = "red", add = TRUE)
+plot(core_area_kernelpol4, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
+
+dev.off()
+
 
 
 ## ---- Raster distance to core area ----

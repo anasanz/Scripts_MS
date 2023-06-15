@@ -53,7 +53,7 @@ myMap <- get_map(location = bbox(sa_t), source = "stamen", maptype = "terrain", 
 # PLOT STUDY AREA
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots")
-pdf("ss_sat.pdf",7,7)
+#pdf("ss_sat.pdf",7,7)
 p1 <- ggmap(myMap) +
   theme(panel.grid = element_blank(),
         axis.title = element_blank(),
@@ -62,12 +62,12 @@ p1 <- ggmap(myMap) +
         legend.position = "none") + 
   geom_polygon(data = Xbuf_t, aes(x = long, y = lat), colour = "black", fill = "transparent", size = 0.8)
 p1
-dev.off()
+#dev.off()
 
 # PLOT STUDY AREA + TRAPS
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots")
-pdf("ss_sat_traps.pdf",7,7)
+#pdf("ss_sat_traps.pdf",7,7)
 
 p2 <- ggmap(myMap) +
   theme(panel.grid = element_blank(),
@@ -79,7 +79,7 @@ p2 <- ggmap(myMap) +
   geom_point(data = X_t@data, aes(x = x , y = y), colour = adjustcolor("darkred", alpha = 0.5), size = 0.5)
 p2
 
-dev.off()
+#dev.off()
 
 
 #----   GET A RASTER FOR EACH  HABITAT ---- 
@@ -108,17 +108,17 @@ rugMask <- resample(rugMask, distcoreMask, method = 'bilinear')
 
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots")
-pdf("ss_traps.pdf",7,7)
+#pdf("ss_traps.pdf",7,7)
 
 plot(eur, xlim = c(bbox(sa)[1,1], bbox(sa)[1,2]), ylim = c(bbox(sa)[2,1], bbox(sa)[2,2]), border = adjustcolor("black", alpha.f = 0.2))
 points(X, col = adjustcolor("darkred", alpha.f = 0.2), pch = 19)
 plot(eur, xlim = c(bbox(sa)[1,1], bbox(sa)[1,2]), ylim = c(bbox(sa)[2,1], bbox(sa)[2,2]), border = adjustcolor("black", alpha.f = 0.2), add = TRUE)
 
-dev.off()
+#dev.off()
 
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots")
-pdf("ss_distCore.pdf",7,7)
+#pdf("ss_distCore.pdf",7,7)
 
 plot(eur, xlim = c(bbox(sa)[1,1], bbox(sa)[1,2]), ylim = c(bbox(sa)[2,1], bbox(sa)[2,2]), border = adjustcolor("black", alpha.f = 0.2))
 plot(distcoreMask, legend = FALSE, col = viridis(50), add = TRUE)

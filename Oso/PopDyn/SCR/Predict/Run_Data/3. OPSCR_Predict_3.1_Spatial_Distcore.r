@@ -950,7 +950,7 @@ for(ite in 1:length(itera)){
   nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-beta.dens.predict1
+  nimData1$beta.dens<-beta.dens.predict2
   #values(cmodelSims,"beta.dens") <- nimData1$beta.dens
   values(cmodelSims,"beta.dens") <- beta.dens.predict2
   
@@ -1002,8 +1002,8 @@ f[] <- as.factor(as.character(f[]))
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 load("habcoord.RData")
 
-dimnames(sxy.proj.all)[[3]] <- c('x','y')
-sxy.proj.all.uns <- scaleCoordsToHabitatGrid(coordsData = sxy.proj.all,## this are your sxy
+dimnames(sxy.proj.all.decDist)[[3]] <- c('x','y')
+sxy.proj.all.uns <- scaleCoordsToHabitatGrid(coordsData = sxy.proj.all.decDist,## this are your sxy
                                              coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
                                              scaleToGrid = FALSE)$coordsDataScaled
 
@@ -1035,7 +1035,7 @@ for(t in 1:n.years){
   DensityCountriesRegions[[t]] <- GetDensity_PD(
     sx = densityInputRegions$sx[,,t],# X COORDINATES
     sy =  densityInputRegions$sy[,,t],# Y COORDINATES
-    z = z.proj.all[,,t],# Z 
+    z = z.proj.all.decDist[,,t],# Z 
     IDmx = densityInputRegions$habitat.id,
     aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
     regionID = densityInputRegions$regions.rgmx,

@@ -778,3 +778,128 @@ for(t in 1:n.years){
 
 
 
+
+## ---- Plot to see where AC of adult males fall ----
+
+Tt <- 5
+M.aug <- 300
+
+# Put sxy in right format for plotting
+sampmat2 <- do.call(rbind, nimOutputSXY) 
+s.which <- grep('sxy', colnames(sampmat2)) # ASP: index columns all sxy (sampmat matrix)
+sampmat2_sxy <- sampmat2[, s.which]
+dim(sampmat2_sxy)
+mean_sampmat <- colMeans(sampmat2_sxy) # I will plot the mean location over iterations
+
+sxy <- array(NA, c(300, 2, 5))
+for(t in 1:Tt){
+  s.which.year <- grep(paste(t,"]", sep = ""), colnames(sampmat2_sxy)) # ASP: index columns all sxy (sampmat matrix)
+  sxy[,,t] <- matrix(mean_sampmat[s.which.year] , M.aug, 2) 
+}
+
+dimnames(sxy)[[2]] <- c('x','y') 
+sxy.uns <- scaleCoordsToHabitatGrid(coordsData = sxy,## this are your sxy
+                                          coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
+                                          scaleToGrid = FALSE)$coordsDataScaled
+
+######  ALL ADULT MALES ####
+
+ZZadMAL <- myResultsSXYZ$sims.list$z
+ZZadMAL[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 0 # Considers all individuals that are not 5 (ADULTS) as dead
+ZZadMAL[!myResultsSXYZ$sims.list$sex %in% c(1) ]  <- 0 # Considers all individuals that dont have a sex 1 (males) as dead
+
+dim(ZZadMAL)
+ZZadMAL_mean <- colMeans(ZZadMAL)
+ZZadMAL_mean2 <- ifelse(ZZadMAL_mean > 0.5, 1, 0)
+
+ZZadMAL_mean2[100:300]
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1")
+pdf("AC_AdultMales_ALL.pdf",7,7)
+par(mfrow = c(3,2))
+for (t in 1:5){
+  plot(Xbuf, main = yearnames[t])
+  plot(Xbuf2, add = TRUE)
+  p <- sxy.uns[which(ZZadMAL_mean2[,t] == 1),,t]
+  sp <- SpatialPoints(p, proj4string=CRS(proj4string(Xbuf2)))
+  points(sp, pch= 21, col = "red")
+}
+dev.off()
+
+######  ONLY OBSERVED ADULT MALES ####
+
+all_class_observed$adMales
+ZZadMAL_obs <- myResultsSubset$sims.list$z
+ZZadMAL_obs[!myResultsSubset$sims.list$sex %in% c(1) ]  <- 0 # Considers all individuals that are not 0 (females) as dead
+ZZadMAL_obs[!myResultsSubset$sims.list$age.cat %in% c(5) ]  <- 0 # Considers all individuals that are not 5 (ADULTS) as dead
+
+sxy.uns_obs <- sxy.uns[1:61,,]
+
+dim(ZZadMAL)
+ZZadMAL_obs_mean <- colMeans(ZZadMAL_obs)
+ZZadMAL_obs_mean2 <- ifelse(ZZadMAL_obs_mean > 0.5, 1, 0)
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1")
+pdf("AC_AdultMales_obs.pdf",7,7)
+par(mfrow = c(3,2))
+for (t in 1:5){
+  plot(Xbuf, main = yearnames[t])
+  plot(Xbuf2, add = TRUE)
+  p <- sxy.uns_obs[which(ZZadMAL_obs_mean2[,t] == 1),,t]
+  sp <- SpatialPoints(p, proj4string=CRS(proj4string(Xbuf2)))
+  points(sp, pch= 21, col = "red")
+}
+dev.off()
+
+all_class$adMales[,,5]
+all_class_observed$adMales[,,5]
+
+######  ALL ADULT FEMALES ####
+
+ZZadFEM <- myResultsSXYZ$sims.list$z
+ZZadFEM[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 0 # Considers all individuals that are not 5 (ADULTS) as dead
+ZZadFEM[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 0 # Considers all individuals that dont have a sex 1 (males) as dead
+
+dim(ZZadFEM)
+ZZadFEM_mean <- colMeans(ZZadFEM)
+ZZadFEM_mean2 <- ifelse(ZZadFEM_mean > 0.5, 1, 0)
+
+ZZadFEM_mean2[100:300]
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1")
+pdf("AC_AdultFemales_ALL.pdf",7,7)
+par(mfrow = c(3,2))
+for (t in 1:5){
+  plot(Xbuf, main = yearnames[t])
+  plot(Xbuf2, add = TRUE)
+  p <- sxy.uns[which(ZZadFEM_mean2[,t] == 1),,t]
+  sp <- SpatialPoints(p, proj4string=CRS(proj4string(Xbuf2)))
+  points(sp, pch= 21, col = "red")
+}
+dev.off()
+
+######  ONLY OBSERVED ADULT FEMALES ####
+
+ZZadFEM_obs <- myResultsSubset$sims.list$z
+ZZadFEM_obs[!myResultsSubset$sims.list$sex %in% c(0) ]  <- 0 # Considers all individuals that are not 0 (females) as dead
+ZZadFEM_obs[!myResultsSubset$sims.list$age.cat %in% c(5) ]  <- 0 # Considers all individuals that are not 5 (ADULTS) as dead
+
+sxy.uns_obs <- sxy.uns[1:61,,]
+
+dim(ZZadFEM)
+ZZadFEM_obs_mean <- colMeans(ZZadFEM_obs)
+ZZadFEM_obs_mean2 <- ifelse(ZZadFEM_obs_mean > 0.5, 1, 0)
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1")
+pdf("AC_AdultFemales_obs.pdf",7,7)
+par(mfrow = c(3,2))
+for (t in 1:5){
+  plot(Xbuf, main = yearnames[t])
+  plot(Xbuf2, add = TRUE)
+  p <- sxy.uns_obs[which(ZZadFEM_obs_mean2[,t] == 1),,t]
+  sp <- SpatialPoints(p, proj4string=CRS(proj4string(Xbuf2)))
+  points(sp, pch= 21, col = "red")
+}
+dev.off()
+
+all_class$adFemales[,,5]
+all_class_observed$adFemales[,,5]
