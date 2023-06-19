@@ -903,3 +903,41 @@ dev.off()
 
 all_class$adFemales[,,5]
 all_class_observed$adFemales[,,5]
+
+## ---- Plot to see where AC fall: Only observed individuals known alive ----
+
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+load("zObserved_yAgeDeaths.RData")
+
+zdatAGE[is.na(zdatAGE)] <- 0
+ageMatAug
+sex
+
+######  ALL INDIVIDUALS ####
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1")
+pdf("AC_observed_alive.pdf",7,7)
+par(mfrow = c(3,2))
+for (t in 1:5){
+  plot(Xbuf, main = yearnames[t])
+  plot(Xbuf2, add = TRUE)
+  p <- sxy.uns[which(zdatAGE[,t] == 1),,t]
+  sp <- SpatialPoints(p, proj4string=CRS(proj4string(Xbuf2)))
+  points(sp, pch= 21, col = "red")
+  
+  over(sp,Xbuf2)
+}
+dev.off()
+
+# Identify which ones are outside
+o <- list()
+w <- list()
+for (t in 1:5){
+  which.alive <- which(zdatAGE[,t] == 1)
+  p <- sxy.uns[which.alive,,t]
+  sp <- SpatialPoints(p, proj4string=CRS(proj4string(Xbuf2)))
+  which.in <- which(is.na(over(sp,Xbuf2)))
+  w$age <- ageMatAug[which.alive[which.in],t]
+  w$sex <- sex[which.alive[which.in]]
+  o[[t]] <- w
+} # All are adult and subadult males

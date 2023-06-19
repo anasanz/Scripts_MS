@@ -54,7 +54,9 @@ load("proj_pcr.all.fem.sc3.RData")
 # Load buffer core area and habitat grid (to subset in sampling area)
 
 setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
-Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+#Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+Xbuf2 <- readOGR("Buffer_8500_traps_sxyObs.shp") # Added into the sampling buffer AC of observed ind
+
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 load("habcoord.RData")

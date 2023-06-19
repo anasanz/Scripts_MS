@@ -456,7 +456,7 @@ for(i in 1:n){
 }
 
 #setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
-#save(zdatAGE, file = "zObserved_yAgeDeaths.RData")
+#save(zdatAGE,ageMatAug,sex, file = "zObserved_yAgeDeaths.RData")
 
 #---- 4. FIT NIMBLE MODEL    ---- 
 
