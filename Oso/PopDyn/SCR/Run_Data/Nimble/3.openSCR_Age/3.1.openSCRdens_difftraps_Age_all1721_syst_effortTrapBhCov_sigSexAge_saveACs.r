@@ -395,6 +395,9 @@ age <- x+1
 #set known unborn individuals to 0
 age[is.na(age)]<-0
 
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+#save(age, file = "age_detectedInd.RData") # Save for summary tables
+
 ###convert to 'raw' age categories: 
 ### age = 0: not yet recruited (category 1)
 ### age = 1: cub1 ( category 2), 

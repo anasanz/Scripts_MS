@@ -50,7 +50,8 @@ corepol@data <- corepol@data[2]
 # Load state space
 setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
 Xbuf <- readOGR("Buffer_statespace.shp")
-Xbuf2 <- readOGR("Buffer_8500_traps.shp") # Load sampling area (where we estimate abundance)
+#Xbuf2 <- readOGR("Buffer_8500_traps.shp") # Load sampling area (where we estimate abundance)
+Xbuf2 <- readOGR("Buffer_8500_traps_sxyObs.shp") # This sampling buffer includes AC of observed individuals a bit outside the trapping array
 proj4string(Xbuf2) <- proj4string(corepol)
 
 # Load distCore (ONLY FOR VISUALIZATION PURPOSES HERE)
@@ -84,6 +85,12 @@ nuc2 <- crop(nuc, Xbuf2)
 Xbuf2_peri2 <- gDifference(Xbuf2, nuc2)
 p.df <- data.frame( ID=1 )
 Xbuf2_peri2 <- SpatialPolygonsDataFrame(Xbuf2_peri2, p.df) 
+
+plot(Xbuf)
+plot(Xbuf2, add = TRUE)
+plot(Xbuf2_peri2, col = adjustcolor("green", alpha = 0.3), add = TRUE)
+plot(nuc2, col = adjustcolor("red", alpha = 0.3), add = TRUE)
+
 
 setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
 #writeOGR(nuc2, "D:/MargSalas/Oso/Datos/GIS/Countries/nuc.shp", layer = "nuc", driver = "ESRI Shapefile")
@@ -338,7 +345,7 @@ age_st_sex <- function(nucleus, periphery){
 ageSt_bear <- age_st_sex(nucleus = nuc2, periphery = Xbuf2_peri2)
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
-save(ageSt_bear, file = "Nbuffer.RData")
+save(ageSt_bear, file = "Nbuffer_newSize.RData")
 
 ## ---- 3. Plots ----
 

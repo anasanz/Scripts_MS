@@ -964,7 +964,7 @@ for(ite in 1:length(itera)){
       sp <- SpatialPoints(which.turnAliveSXY, proj4string=CRS(proj4string(Xbuf2)))
       ovr <- is.na(over(sp, Xbuf3)) # ovr is TRUE when there is NA (not overlap)
       previously.alive <- unlist(allwhich.turnAlive) # To make a condition in line below that ensures not resampling the same individual
-      if(ovr == FALSE & (which.kill %in% previously.alive == FALSE)) break
+      if(ovr == FALSE & (which.turnAlive %in% previously.alive == FALSE)) break
     }
     allwhich.turnAlive[[a]] <- which.turnAlive
   }
@@ -1117,7 +1117,7 @@ for(ite in 1:length(itera)){
       sp <- SpatialPoints(which.turnAliveSXY, proj4string=CRS(proj4string(Xbuf2)))
       ovr <- is.na(over(sp, Xbuf3)) # ovr is TRUE when there is NA (not overlap)
       previously.alive <- unlist(allwhich.turnAlive) # To make a condition in line below that ensures not resampling the same individual
-      if(ovr == FALSE & (which.kill %in% previously.alive == FALSE)) break
+      if(ovr == FALSE & (which.turnAlive %in% previously.alive == FALSE)) break
     }
     allwhich.turnAlive[[a]] <- which.turnAlive
   }

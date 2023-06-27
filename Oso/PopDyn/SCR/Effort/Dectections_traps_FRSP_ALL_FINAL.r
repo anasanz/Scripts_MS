@@ -5,7 +5,7 @@
 
 # Divided in three parts:
 # 1. Period 2017-2019
-# 2. Period 2021-2021
+# 2. Period 2020-2021
 # 3. Join all data in edf and tdf for SCR analysis
 
 rm(list = ls())

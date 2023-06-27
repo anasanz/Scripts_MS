@@ -32,7 +32,7 @@ coordinates(df2) <- df2[,c(1:2)]
 plot(df2)
 
 
-save(df, file = "Density_scaledCoords.RData")
+#save(df, file = "Density_scaledCoords.RData")
 
 load("Density_scaledCoords.RData")
 
@@ -75,9 +75,39 @@ plot(pols_sc, add = TRUE)
 points(centroids_sc, col = "red", pch = 19)
 points(init, col = "blue", pch = 19)
 
-
-
 plot(pol_sc[[1]])
 points(centroid_sc[[1]])
 
 coordinates(centroid_sc[[1]])
+
+#####
+# Scale distcore cov
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+logDistcore <- raster("logDistcore_hrbear.tif")
+setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
+Xbuf <- readOGR("Buffer_statespace.shp")
+
+habitat.r <- crop(logDistcore, Xbuf) 
+distcoreMask <- rasterize(Xbuf, habitat.r, mask = TRUE)
+plot(distcoreMask)
+
+# Scale
+X_mean <- mean(coordinates(distcoreMask)[,1])
+X_sd <- sd(coordinates(distcoreMask)[,1])
+X_sc <- (coordinates(distcoreMask)[,1] - X_mean) / X_sd
+
+Y_mean <- mean(coordinates(distcoreMask)[,2])
+Y_sd <- sd(coordinates(distcoreMask)[,2])
+Y_sc <- (coordinates(distcoreMask)[,2] - Y_mean) / Y_sd
+
+df_distcore <- data.frame(X_sc = X_sc, Y_sc = Y_sc, 
+                 distcore = values(distcoreMask))
+df_distcore2 <- df_distcore[complete.cases(df_distcore),c(1:2)]
+coordinates(df_distcore2) <- df_distcore2[,c(1:2)]
+plot(df_distcore2)
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Density")
+save(df_distcore, file = "DistCore_scaledCoords.RData")
+load("DistCore_scaledCoords.RData")
+
+
