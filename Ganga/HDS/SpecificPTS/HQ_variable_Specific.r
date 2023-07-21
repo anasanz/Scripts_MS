@@ -88,7 +88,7 @@ mapview(trbuf1) +
   mapview(all_pol2)
 
 # This one doesn't need improvement, so I keep it as it is and I don't improve it manually (as I did with Farmdindis)
-writeOGR(all_pol2, "Buffer_Specific", dsn = "D:/MargSalas/Ganga/Data/GIS", driver = "ESRI Shapefile")
+#writeOGR(all_pol2, "Buffer_Specific", dsn = "D:/MargSalas/Ganga/Data/GIS", driver = "ESRI Shapefile")
 
 all_pol2 <- readOGR("D:/MargSalas/Ganga/Data/GIS", "Buffer_Specific") 
 

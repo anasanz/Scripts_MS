@@ -2,6 +2,8 @@
 ##      Size estimation PTS using Bayesian
 ##              Close population model
 ## ------------------------------------------------- 
+rm(list=ls())
+setwd("D:/MargSalas/Ganga/Data/CMR")
 
 ## Function to estimate the mode
 getmode <- function(v) {
@@ -12,8 +14,6 @@ getmode <- function(v) {
 ##                1. M0: Constant p
 ## ------------------------------------------------- 
 
-rm(list=ls())
-setwd("D:/MargSalas/Ganga/Data")
 
 library(jagsUI)
 library(rjags)
@@ -90,7 +90,7 @@ abline(v = mean(out_sim_M0$sims.list$N), col = "blue", lwd = 3)
 
 ## ---- Data ----
 
-setwd("D:/MargSalas/Ganga/Data")
+setwd("D:/MargSalas/Ganga/Data/CMR")
 
 load("cr_sandgrouse_2022_new.RData")
 capt.hist <- as.data.frame(capt.hist$ch)
@@ -204,7 +204,7 @@ abline(v = mean(out_sim_mt$sims.list$N), col = "blue", lwd = 3)
 
 ## ---- Data ----
 
-setwd("D:/MargSalas/Ganga/Data")
+setwd("D:/MargSalas/Ganga/Data/CMR")
 
 load("cr_sandgrouse_2022_new.RData")
 capt.hist <- as.data.frame(capt.hist$ch)
@@ -264,6 +264,7 @@ dev.off()
 
 ## -------------------------------------------------
 ##            4. Mh: p varies per individual
+##   Not enough N, and not enough recaptures of id
 ## ------------------------------------------------- 
 ## ---- Simulation ----
 
@@ -346,7 +347,7 @@ abline(v = mean(out_sim_mh$sims.list$N), col = "blue", lwd = 3)
 
 ## ---- Data ----
 
-setwd("D:/MargSalas/Ganga/Data")
+setwd("D:/MargSalas/Ganga/Data/CMR")
 
 load("cr_sandgrouse_new.RData")
 capt.hist <- as.data.frame(capt.hist$ch)

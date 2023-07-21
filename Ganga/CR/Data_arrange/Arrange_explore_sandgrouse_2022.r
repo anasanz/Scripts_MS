@@ -72,7 +72,7 @@ library(tidyverse)
 library(tidyr)
 library(magrittr)
 
-setwd("D:/MargSalas/Ganga/Data")
+setwd("D:/MargSalas/Ganga/Data/CMR")
 
 ganga <- readxl::read_excel("sandgrouse_Individual ID+sex_FINAL.xlsx") %>%
   select(7,8,16) %>%
@@ -120,6 +120,45 @@ capt.hist[which(apply(data_ganga,1,sum) > 1),]
 
 recaptures_new <- as.data.frame(capt.hist[which(apply(data_ganga,1,sum) > 1),])
 
-save(capt.hist, file = "cr_sandgrouse_2022_new.RData")
+#save(capt.hist, file = "cr_sandgrouse_2022_new.RData")
 
+## ---- Create table with sex of each individual ----
+
+ganga_sex <- readxl::read_excel("sandgrouse_Individual ID+sex_FINAL.xlsx") %>%
+  select(7,8,15,16) %>%
+  rename("id" = "INDIVIDUAL ID") %>%
+  rename( "Occasion"= "Id_Visit")
+
+ganga_sex <- ganga_sex[which(!is.na(ganga_sex$id)), ] 
+ganga_sex <- ganga_sex[ganga_sex$Year == 2022, ]
+ganga_sex$id <- as.factor(ganga_sex$id)
+ganga_sex <- ganga_sex %>% group_by(id) %>% arrange(id)
+
+# Check if there are inconsistencies (i.e., one individual assigned to 2 sexes)
+# And store sex in table with same order as capture histories
+id_sex <- data.frame(id = capt.hist$id, sex = NA)
+
+id <- unique(ganga_sex$id)
+
+for(i in 1:nrow(ganga_sex)){
+  sex_id <- ganga_sex[which(ganga_sex$id %in% id[i]),]
+  if ((length(unique(sex_id$sex))) == 1) {
+    id_sex$sex[id_sex$id %in% id[i]] <- sex_id$sex[1]
+  } else {
+    id_sex$sex[id_sex$id %in% id[i]] <- "inconsistent"
+  }
+}
+
+# Fix inconsistencies (few, so manually)
+id_check <- id_sex$id[which(id_sex$sex == "inconsistent")]
+ganga_sex[which(ganga_sex$id %in% id_check), ] # All females
+id_sex$sex[id_sex$id %in% c("SG19", "SG45", "SG57","SG69")] <- "F"
+
+# Check if there are individuals with unknown sex
+unique(id_sex$sex)
+id_sex$id[which(id_sex$sex %in% "X")] # SG71 unknown sex :(
+
+capt.hist[capt.hist$id %in% "SG71",] # Captured once, maybe I can delete it?
+
+save(id_sex, file = "id_sex_sandgrouse_2022.RData")
 

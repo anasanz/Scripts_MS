@@ -21,6 +21,31 @@ dat$Effort <- 500
 
 dat <- dat[,c(1,22,2,3,4,7,21,14,16,5,23)]
 
+## ---- Estimate hour and julian day as Pepe did in National Surveys ----
+
+dat$Start_time[14] <- "9:00"
+
+# Hour of day from 0-1
+dat$time <- data.table::as.ITime(dat$Start_time) # Convert to time
+dat$time <- factor(dat$time)
+
+a <- hms(as.character(dat$time)) # Extract hours and minuts
+hour <- hour(a) # get hours
+minute <- minute(a) # get minutes
+
+convert_to_decimal <- function(hour, minute) {
+  decimal_value <- (hour + minute / 60) / 24
+  return(decimal_value)
+} # Function to convert hours and minutes to a decimal value in the range 0-1
+
+dat$time01 <- convert_to_decimal(hour = hour, minute = minute)
+
+# Julian date
+dat$date <- as.Date(dat$Data, format = "%d/%m/%y")
+dat$jd <- as.POSIXlt(dat$date)$yday 
+
+dat <- dat[,c(1:3,15,4:5,13,6:11)]
+
 ## ---- Add info of distance bands ----
 
 # Checking the detections I think we should keep the same bins than in Farmdindis 
