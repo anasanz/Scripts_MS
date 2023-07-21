@@ -116,6 +116,8 @@ X.d <- values(distcoreMask)[!is.na(distcoreMask[])]
 X.d_mean <- mean(X.d)
 X.d_sd <- sd(X.d)
 X.d_sc <- (X.d - X.d_mean) / X.d_sd
+## HERE: FIX VALUES TO 1 to remove covariate effect
+X.d_sc[1:length(X.d_sc)] <- rep(1,length(X.d_sc))
 
 #----   2.7 GET THE LOCAL DETECTORS OBJECTS  ---- 
 # USE THE HABITAT GRID PROVIDED BY GETWINDOWCOORDS
@@ -492,6 +494,7 @@ nimConstants <- list(
 
 ##compile data
 nimData <- list(habDens = X.d_sc,
+                beta.dens = 1, # FIX coefficient value
                 y = y.sp,
                 lowerHabCoords = lowerHabCoords,
                 upperHabCoords = upperHabCoords,
@@ -619,7 +622,7 @@ inits<-function(){list(beta=c(0.15,rep(0.85/(Tt-1), Tt-1)),
                        phi.ad=runif(1,0.5,1),
                        phi.sub=runif(1,0.5,1),
                        phi.cub=runif(1,0.5,1),
-                       beta.dens = runif(1,-0.1, 0.1), 
+                       #beta.dens = runif(1,-0.1, 0.1), 
                        piAGE=piAGE.in,
                        u = zstAGE,
                        w=w.in,
@@ -634,13 +637,15 @@ inits<-function(){list(beta=c(0.15,rep(0.85/(Tt-1), Tt-1)),
 ##one script and just execute the code
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('3.7.SCRopen_diftraps_Age_trapsBhCov_sigsexAge in Nimble.r')
+source('3.7.1.SCRopen_diftraps_Age_trapsBhCov_sigsexAge_NODC in Nimble.r')
 
 ##determine which parameters to monitor
 params <- c("p.ad", "p.sub","p.cub","phi.ad","phi.sub","phi.cub", 
-          "beta", "psi", "piAGE", "Nsuper", "N", "B", "N.cub", "N.sub", "N.ad",
-          'sigma', 'beta.dens', 'sigD',
-          'trapBetas', 'b.bh', 'omega')
+            "beta", "psi", "piAGE", "Nsuper", "N", "B", "N.cub", "N.sub", "N.ad",
+            'sigma', 
+            #'beta.dens', 
+            'sigD',
+            'trapBetas', 'b.bh', 'omega')
 params2 <- c("sxy", "z", "age.cat", "sex") 
 
 ## Check how many elements I would save if I save sxy, z and age.cats
@@ -654,65 +659,17 @@ M*Tt # 1500 ACs (matrix of two columns, so 3000 in total) + 1500 z + 1500 age.ca
 
 ###### SAVE FOR RUNNING #####
 
-modelcode = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage
-
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
-save(nimData, nimConstants, 
-     inits, Tt, sex.in, piAGE.in, zstAGE, w.in, age.cat.in ,S.in.sc_coords, 
-     params, params2, run_MCMC_allcode, modelcode, file = "Data_Model3-3.1.RData")
+modelcode = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.NODC
 
 # For Cyril
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 save(nimData, nimConstants, 
      inits, Tt, sex.in, piAGE.in, zstAGE, w.in, age.cat.in ,S.in.sc_coords, 
-     params, params2, modelcode, file = "Data_Model3-3.1_CYRIL_allparams.RData")
-
-#### OPTION 1: PARALLEL ####
-detectCores()
-
-##start cluster w/ 3 cores (for 3 chains)
-this_cluster <- makeCluster(3)
-
-
-##run wrapper function in parallel - cl and X need to be this way
-## cl defines which cluster to use, X provides random number seeds to each core
-
-old <- Sys.time()
-
-chain_output <- parLapply(cl = this_cluster, X = 1:3, 
-                          fun = run_MCMC_allcode,      ##function in "Parallel Nimble function.R"
-                          data = nimData,              ##your data list
-                          code = SCRhab.Open.diftraps.age,   ##your model code
-                          inits = inits,                 ##your inits function
-                          constants = nimConstants,      ##your list of constants
-                          params = params,               ##your vector with params to monitor
-                          niter = 150000,                  ##iterations per chain
-                          nburnin = 100000,                ##burn-in
-                          nthin = 10,                  ##thinning, main parameters
-                          Tt = Tt,                     ##additional objects needed within inits
-                          piAGE.in = piAGE.in,
-                          zstAGE = zstAGE,
-                          w.in = w.in,
-                          age.cat.in = age.cat.in,
-                          S.in.sc_coords = S.in.sc_coords 
-)
-new <- Sys.time() - old
-
-## ALWAYS close cluster when model is done
-stopCluster(this_cluster)
-
-### output is a list 
-
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age")
-#setwd("~/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/Results/3.openSCRdenscov_Age")
-save(chain_output, file = "sampOpenSCR_diftraps_age_2021.RData")
-
-
-#### OPTION 2: NO PARALLEL (TO TRY INITIAL VALUES AND SEE IF MODEL WORKS) ####
+     params, params2, modelcode, file = "Data_Model3-3.1.2_CYRIL_allparams.RData")
 
 #(1) set up model
 
-model <- nimbleModel(SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage, constants = nimConstants, 
+model <- nimbleModel(SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.NODC, constants = nimConstants, 
                      data=nimData, inits=inits(), check = FALSE)
 ##ignore error message, only due to missing initial values at this stage
 
@@ -741,388 +698,3 @@ cmcmc <- compileNimble(mcmc, project = cmodel, resetFunctions = TRUE)
 system.time(
   (samp <- runMCMC(cmcmc, niter = 10, nburnin = 5, nchains=3, inits = inits) )
 )
-
-
-
-
-## -------------------------------------------------
-##                   PROCESS RESULTS
-## ------------------------------------------------- 
-
-library(MCMCvis)
-library(rgdal)
-library(nimbleSCR)
-
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-load("myResults_3-3.1_param.RData")
-summary(nimOutput)
-
-setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
-load("habcoord.RData")
-
-#----  1. WHICH STUDY AREA WILL I KEEP TO ESTIMATE ABUNDANCE? ---- 
-
-setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
-Xbuf <- readOGR("Buffer_statespace.shp")
-#Xbuf2 <- readOGR("Buffer_8500_traps.shp")
-Xbuf2 <- readOGR("Buffer_8500_traps_sxyObs.shp") # This sampling buffer includes AC of observed individuals a bit outside the trapping array
-osbuf <- readOGR("Buffer_8500_allobs.shp")
-osbuf2 <- readOGR("Buffer_8000_allobs_cropped_noOut.shp")
-osMAE <- readOGR("Min_Pol_Maelis_clip.shp")
-
-osbuf2@data$ID <- 1
-osMAE@data$ID <- 1
-osMAE@data <- osMAE@data[2]
-
-# Plots to decide
-
-plot(Xbuf, col = "lightblue")
-plot(Xbuf2, col = adjustcolor("pink", alpha = 0.5), add = TRUE)
-plot(osbuf, col = adjustcolor("green", alpha = 0.5), add = TRUE)
-plot(osbuf2, col = adjustcolor("yellow", alpha = 0.5), add = TRUE)
-
-
-
-#---- 2.  ESTIMATE ABUNDANCE IN BUFFER ---- 
-
-# Load results
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-load("myResults_3-3.1_sxy.RData")
-
-dim(nimOutputSXY[[1]]) #  iterations * 6000 elements (e.g., z[1,5]) ???
-5*300 + 5*300 + 5*300*2 # 6000 elements
-
-dim(myResultsSXYZ$sims.list$sxy) 
-dim(myResultsSXYZ$sims.list$z)
-
-# Unscale the sxy coordinates
-
-dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
-myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
-                                                        coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
-                                                        scaleToGrid = FALSE)$coordsDataScaled
-
-# Each iteration is a reality of the model, so for each iteration I take the activity center of alive individuals, test
-# if its in the buffer and sum them to get abundance.
-
-#---- 2.1.  ESTIMATE ABUNDANCE IN BUFFER OF ALL BEAR OBSERVATIONS (OSBUF2, Buffer of 8000 m) ---- 
-
-# Matrix to store abundance in the buffer each iteration and year
-NIn_obsBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
-
-ite=1
-t=1
-
-for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-    
-  which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
-
-  which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
-  
-  sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(osbuf2))) # CONVERT SXY TO SPATIAL POINTS 
-  
-  which.In <- over(sp, osbuf2) # Check which ones are in the buffer
-  
-  NIn_obsBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
-  }
-}
-
-#average number of individuals without the buffer for each year 
-colMeans(NIn_obsBuf)
-NIn_obsBuf[,1]#posterior distrib for the first year
-
-par(mfrow = c(2,3))
-for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-  plot(density(NIn_obsBuf[,t]), main = t)
-  abline(v = colMeans(NIn_obsBuf)[t], col = "blue")
-}
-
-# Sum of individuals alive in total each year (without buffer)
-NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
-colMeans(NALL)
-
-
-
-
-#---- 2.2.  ESTIMATE ABUNDANCE INSIDE THE MINIMUN POLYGON CONTAINING TRAPS AND PREDATIONS (maelis) ---- 
-
-# Matrix to store abundance in the buffer each iteration and year
-NIn_MAE <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
-
-ite=1
-t=1
-
-for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-    
-    which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
-    
-    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
-    
-    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(osMAE))) # CONVERT SXY TO SPATIAL POINTS 
-    
-    which.In <- over(sp, osMAE) # Check which ones are in the buffer
-    
-    NIn_MAE[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
-  }
-}
-
-#average number of individuals without the buffer for each year 
-colMeans(NIn_MAE)
-NIn_MAE[,1]#posterior distrib for the first year
-
-par(mfrow = c(2,3))
-for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-  plot(density(NIn_MAE[,t]), main = t)
-  abline(v = colMeans(NIn_MAE)[t], col = "blue")
-}
-
-# Sum of individuals alive in total each year (without buffer)
-NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
-colMeans(NALL)
-
-
-# Maybe this code is useful in the future:
-coord_years <- list()
-for (i in 1:Tt){
-  coord_years[[i]] <- as.data.frame(meanSXY[,c(1,2),i])
-  coordinates(coord_years[[i]]) <- coord_years[[i]]
-}
-
-plot(Xbuf, col = "lightblue", add = TRUE)
-plot(Xbuf2, col = adjustcolor("pink", alpha = 0.5), add = TRUE)
-points(coord_years[[1]], col = "darkblue", pch = 19)
-points(coord_years[[2]], col = "darkred", pch = 19)
-points(coord_years[[3]], col = "darkorange", pch = 19)
-points(coord_years[[4]], col = "darkgreen", pch = 19)
-points(coord_years[[5]], col = "black", pch = 19)
-
-#---- 2.3.  ESTIMATE ABUNDANCE IN BUFFER OF THE TRAPS (Xbuf2) --> GOOD ONE! ---- 
-
-# Matrix to store abundance in the buffer each iteration and year
-NIn_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
-
-ite=1
-t=1
-
-for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-    
-    which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
-    
-    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
-    
-    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
-    
-    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
-    
-    NIn_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
-  }
-}
-
-#average number of individuals without the buffer for each year 
-colMeans(NIn_trapBuf)
-NIn_trapBuf[,1]#posterior distrib for the first year
-
-par(mfrow = c(2,3))
-for (t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-  plot(density(NIn_trapBuf[,t]), main = t)
-  abline(v = colMeans(NIn_trapBuf)[t], col = "blue")
-}
-
-# Sum of individuals alive in total each year (without buffer)
-NALL <- apply(myResultsSXYZ$sims.list$z,c(1,3),function(x) sum(x==1))
-colMeans(NALL)
-
-
-## ---- 3. AGE STRUCTURE ----
-# 1. Estimate abundance in buffer of the traps of each age category
-# 2. Estimate proportion of total abundance in the sampling buffer (NIn_trapBuf)
-
-## ---- 3.1. CUBS ----
-ZZcubs <- myResultsSXYZ$sims.list$z
-ZZcubs[!myResultsSXYZ$sims.list$age.cat %in% c(1,2) ]  <- 3 # Considers all individuals that are not 1 and 2 as dead
-
-cub_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
-
-
-for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-    
-    which.alive <- which(ZZcubs[ite,,t]==1) # Select only the individuals alive (z=1)
-    
-    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
-    
-    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
-    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
-    
-    cub_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
-  }}
-
-
-## ---- 3.2. SUBADULTS ----
-
-ZZsub <- myResultsSXYZ$sims.list$z
-ZZsub[!myResultsSXYZ$sims.list$age.cat %in% c(3,4) ]  <- 3 # Considers all individuals that are not 3 and 4 (SUBADULTS) as dead
-
-subad_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
-
-for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-    
-    which.alive <- which(ZZsub[ite,,t]==1) # Select only the individuals alive (z=1)
-    
-    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
-    
-    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
-    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
-    
-    subad_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
-  }}
-
-
-## ---- 3.3. ADULTS ----
-
-ZZad <- myResultsSXYZ$sims.list$z
-ZZad[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 3 and 4 (SUBADULTS) as dead
-
-ad_trapBuf <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=dim(myResultsSXYZ$sims.list$z)[3]) # nrow = iterations, ncol = year
-
-for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-    
-    which.alive <- which(ZZad[ite,,t]==1) # Select only the individuals alive (z=1)
-    
-    which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
-    
-    sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(Xbuf2))) # CONVERT SXY TO SPATIAL POINTS 
-    which.In <- over(sp, Xbuf2) # Check which ones are in the buffer
-    
-    ad_trapBuf[ite,t] <- sum(which.In,na.rm = T) # The sum of the points in the buffer is the abundance that year and iteration. Store
-  }}
-
-
-## ---- 3.4. Estimate abundance proportion of each age class ----
-
-prop_years <- list()
-
-prop <- matrix(NA,nrow=dim(myResultsSXYZ$sims.list$z)[1],ncol=3) # nrow = iterations, ncol = age categories
-
-ite = 1
-t = 1
-
-for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-  for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
-    prop[ite, 1] <- cub_trapBuf[ite,t]/NIn_trapBuf[ite,t]
-    prop[ite, 2] <- subad_trapBuf[ite,t]/NIn_trapBuf[ite,t]
-    prop[ite, 3] <- ad_trapBuf[ite,t]/NIn_trapBuf[ite,t]
-  }
-  prop_years[[t]] <- prop
-  }
-
-## ---- 3.5. Plot ----
-
-source("D:/PhD/MyScripts_PhD/Ch. 2-3/Ch. 3/Results/Functions/plot.violins3.r")
-years <- c(2017, 2018, 2019, 2020, 2021)
-
-setwd("D:/MargSalas/Oso/Results/Plots/model3.1")
-pdf("age_structure.pdf", 9, 7)
-
-par(mfrow = c(2,3))
-
-for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-  
-plot(1, ylim = c(0.5, ncol(prop_years[[t]])+0.5), 
-     xlim = c(0,1), 
-     type ="n", yaxt="n", 
-     #xaxt="n", 
-     xlab = " ", ylab = "", main = years[t],
-     cex.axis = 0.8)
-
-axis(2, c(1:ncol(prop_years[[t]])), labels = c("Cub","Subadult","Adult"), las = 2, cex.axis = 1)
-
-for(i in 1:ncol(prop_years[[t]])){
-  plot.violins3(list(prop_years[[t]][ ,i]),
-                x = i,
-                at = i,
-                violin.width = 0.2,
-                plot.ci = 0.95,
-                col = c("darksalmon"),
-                add = T,
-                alpha = 0.3,
-                scale.width = FALSE,
-                border.col = "black",
-                horizontal = TRUE)}}
-
-dev.off()
-
-# Plot bonito
-
-setwd("D:/MargSalas/Oso/Results/Plots/model3.1")
-pdf("age_structure2.pdf", 6, 10)
-
-par(mfrow = c(1,1))
-
-plot(1, ylim = c(0, 19 + 0.5), 
-     xlim = c(0,1), 
-     type ="n", yaxt="n", 
-     #xaxt="n", 
-     xlab = " ", ylab = "", main = "",
-     cex.axis = 0.8)
-
-axis(2, c(1:20), las = 2, cex.axis = 1)
-
-cubs_at <- c(1,5,9,13,17)
-subad_at <- c(2,6,10,14,18)
-ad_at <- c(3,7,11,15,19)
-ats <- list(cubs_at, subad_at, ad_at)
-
-polygon(x = c(0,0,1,1), y = c(0,4,4,0), col = adjustcolor("grey", alpha.f = 0.5), border = NA)
-
-color_cat1 <- c("lightgoldenrod1", "darkolivegreen4", "darkslategrey")
-color_cat2 <- c("lightgoldenrod1", "darkgoldenrod1", "sienna4") # no mucho
-color_cat3 <-c("aquamarine1", "aquamarine4","darkslategrey")
-color_cat4 <- c("aquamarine1","lightseagreen", "darkslategrey")
-color_cat5 <- c("lightgoldenrod1", "darksalmon", "sienna4") # no mucho
-
-for(i in 1:ncol(prop_years[[1]])){ # Look into cubs
-  
-  for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
-  
-    plot.violins3(list(prop_years[[t]][ ,i]),
-                  x = i,
-                  at = ats[[i]][t],
-                  violin.width = 0.4,
-                  plot.ci = 0.95,
-                  col = color_cat4[i],
-                  add = T,
-                  alpha = 0.3,
-                  scale.width = FALSE,
-                  border.col = "black",
-                  horizontal = TRUE)}}
-dev.off()
-
-
-
-## ---- 3.6. Compare with age structure of data ----
-# This is to see where the model placed the undetected individuals (if is especially in one age cat)
-
-zdatAGE.det <- zdatAGE[1:61,]
-zdatAGE.det[is.na(zdatAGE.det)] <- 0
-zdatAGE
-
-
-prop_det <- data.frame(matrix(NA, nrow = 5, ncol = 3))
-rownames(prop_det) <- c("2017", "2018", "2019", "2020", "2021")
-colnames(prop_det) <- c("Cub", "Subadult", "Adult")
-t = 1
-
-for(t in 1:5){
-  alive.age <- age.cat.z[,t]*zdatAGE.det[,t]
-  prop_det[t,1] <- length(alive.age[which(alive.age == 3 | alive.age == 2)])/length(alive.age[which(alive.age != 0)])
-  prop_det[t,2] <- length(alive.age[which(alive.age == 5 | alive.age == 4)])/length(alive.age[which(alive.age != 0)])
-  prop_det[t,3] <- length(alive.age[which(alive.age == 6)])/length(alive.age[which(alive.age != 0)])
-}
- rowSums(prop_det)
-

@@ -22,7 +22,8 @@ source("getDensityInput.R")
 # Load buffers
 setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
 Xbuf <- readOGR("Buffer_statespace.shp")
-Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+#Xbuf2 <- readOGR("Buffer_8500_traps.shp")
+Xbuf2 <- readOGR("Buffer_8500_traps_sxyObs.shp") # This sampling buffer includes AC of observed individuals a bit outside the trapping array
 
 # Conver to rasters
 
@@ -393,6 +394,8 @@ for(t in 1:n.years){
 } # Sex structure is shifting along years
 
 ## Total sex ratio only in buffer: Very skewed to females! 70/30
+# Although including the ACs of observed males into the buffer (new Xbuf2: "Buffer_8500_traps_sxyObs.shp")
+# it is less skewed as we include more males: 66/34
 
 apply(all_class$males, c(1,2), sum)[2,1]/apply(all_class$all, c(1,2), sum)[2,1]
 apply(all_class$females, c(1,2), sum)[2,1]/apply(all_class$all, c(1,2), sum)[2,1]

@@ -360,7 +360,7 @@ source("D:/MargSalas/Scripts_MS/Functions/DoScale.r")
 source("D:/MargSalas/Scripts_MS/Functions/PlotViolinsHoriz.r")
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
-load("Nbuffer.RData")
+load("Nbuffer_newSize.RData") # Obtained from script: 3.3. Core_vS_Periphery_polygonBigCore_ageCatSt.r
 
 ## ---- 3.1. Absolute number/Ageclass/year/sex ----
 

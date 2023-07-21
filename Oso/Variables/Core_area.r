@@ -16,6 +16,7 @@ library(lubridate)
 library(adehabitatHR)
 library(sp)
 library(raster)
+library(ggplot2)
 
 ## ---- Visual exploration of reintroduction patterns ----
 
@@ -185,7 +186,35 @@ plot(core, pch = 19, col = "red", add = TRUE)
 plot(core_area_kernelpol, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
 dev.off()
 
+# Estimate saturation curve per individual
+estimateHomeRange <- function(locations, n_locations, percent) {
+  # Select subset of locations
+  subset_locations <- locations[1:n_locations, ]
+  # Perform KDE home range estimation
+  hr <- kernelUD(subset_locations, h = "href")
+  # Calculate home range size
+  hr_size <- kernel.area(hr, percent = percent) 
   
+  # Return home range size
+  return(hr_size)
+}
+ind <- unique(core_kernel$Confirmed_Individual)
+
+par(mfrow = c(2,2))
+for(i in 1:length(ind)){
+  core_kernel_ind <- core_kernel[which(core_kernel$Confirmed_Individual %in% ind[i]),]
+  saturation_data <-  data.frame(
+    Num_Locations = 50:nrow(core_kernel_ind),
+    Home_Range_Size = NA)
+  for(l in 1:nrow(saturation_data)){
+    saturation_data[l,2] <- estimateHomeRange(locations = core_kernel_ind, n_locations = saturation_data[l,1], percent = 95)
+  }
+  plot(saturation_data$Home_Range_Size ~ saturation_data$Num_Locations,
+       xlab = "Number of Locations", ylab = "Home Range Size", main = ind[i])
+}
+
+
+
 # 2. Calculate kernel for each population nucleus
   
 core_spatial$Nucleus <- ifelse(core_spatial$Confirmed_Individual %in% c("Mellba", "Ziva", "Hvala"), 1, 2)
@@ -206,6 +235,25 @@ plot(core, pch = 19, col = "red", add = TRUE)
 plot(core_area_kernelpol2, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
 dev.off()
 
+# Check saturation curve for home range for both nucleus
+# Estimate saturation curve per individual
+
+ind <- unique(core_kernel2$Nucleus)
+nuc <- c("central", "occidental")
+par(mfrow = c(1,2))
+for(i in 1:length(ind)){
+  core_kernel_ind <- core_kernel2[which(core_kernel2$Nucleus %in% ind[i]),]
+  saturation_data <-  data.frame(
+    Num_Locations = 50:nrow(core_kernel_ind),
+    Home_Range_Size = NA)
+  for(l in 1:nrow(saturation_data)){
+    saturation_data[l,2] <- estimateHomeRange(locations = core_kernel_ind, n_locations = saturation_data[l,1], percent = 95)
+  }
+  plot(saturation_data$Home_Range_Size ~ saturation_data$Num_Locations,
+       xlab = "Number of Locations", ylab = "Home Range Size", main = nuc[i])
+}
+
+
 # Try also to limit the % to 90 in the occidental core, because it is only one female
 # and is over-represented?
 
@@ -221,10 +269,10 @@ kernel.poly <- getverticeshr(kref, percent = 80)
 core_area_kernelpol_n2 <- aggregate(kernel.poly, dissolve = TRUE)
 
 setwd("D:/MargSalas/Oso/Datos/Plots/2022/Dist_core")
-pdf("core_kernel_95n1_80n2.pdf")
+pdf("core_kernel_95n1_80n2_SI.pdf")
 plot(st_geometry(map), col = "grey")
 mtext("Kernel 95% (central), 80% (occidental)", side = 3, line = -1.5, cex = 2)
-plot(os, pch = 19, col = "darkblue", add = TRUE)
+#plot(os, pch = 19, col = "darkblue", add = TRUE)
 plot(core, pch = 19, col = "red", add = TRUE)
 plot(core_area_kernelpol_n1, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
 plot(core_area_kernelpol_n2, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
@@ -318,7 +366,7 @@ dev.off()
 
 
 ## ---- Raster distance to core area ----
-
+## ----  1. 95% central, 80% western ----
 ## FROM KERNEL
 # Create empty raster with extent study area rasterize polygon core area
 setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/EU_DEM")
@@ -365,4 +413,25 @@ setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
 writeRaster(logDistcore, filename = 'dist_corekernel_log', format = 'GTiff')
 
 plot(logDistcore)
+
+## ----  2. 80% central, 80% western, thinned ----
+
+# Rasterize polygon core area
+core_area_kernelpol_thinned <- spTransform(core_area_kernelpol4, crs(rs) )
+core_area_kernelpol_thinned <- as(core_area_kernelpol_thinned, "SpatialPolygonsDataFrame")
+
+r <- rasterize(core_area_kernelpol_thinned,rs)
+plot(r)
+#values(r)[is.na(values(r))] <- 0
+dist_corekernel_thinned <- distance(r)
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
+writeRaster(dist_corekernel_thinned, filename = 'dist_corekernel_thinned', format = 'GTiff')
+
+## ---- -> Check correlation between 1 and 2 ----
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/DistCore")
+distcore <- raster("dist_corekernel.tif")
+dist_corekernel_thinned <- raster("dist_corekernel_thinned.tif")
+d <- stack(distcore, dist_corekernel_thinned)
+cor1 <- cor(sampleRandom(d, size= ncell(distcore), method = "spearman") )
 
