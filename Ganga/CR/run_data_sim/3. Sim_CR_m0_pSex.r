@@ -44,20 +44,23 @@ colnames(p2df) <- c("mean", "sd", "2.5%", "97.5%")
     C <- sum(ever.detected)
     
     yobs <- yfull[ever.detected == 1,]
+    sexobs <- sex[ever.detected == 1]
     
     cat(C, "out of", N, "animals present were detected.\n")
     
-    return(list(N = N, p = p, C = C, T = T, yfull = yfull, yobs = yobs, sex = sex))
+    return(list(N = N, p = p, C = C, T = T, yfull = yfull, yobs = yobs, sex = sex, sexobs = sexobs))
   }
   
   data <- data.fn()
   
   str(data)
   
+  data$yobs
+  sum(data$sex)
   # Augment data set by 150 potential individuals
   nz <- 150
   yaug <- rbind(data$yobs, array(0, dim = c(nz, data$T)))
-  sexAug <- c(data$sex[1:data$C], rep(NA, nz))
+  sexAug <- c(data$sexobs, rep(NA, nz))
   
   # Specify model in BUGS language
   setwd("D:/MargSalas/Ganga/Data/CMR")
@@ -115,6 +118,7 @@ N <- sum(z[])
   
 #}
 
+# It is corrected now, I was not sppecifying correctly the sex of observed individuals
 # Plot posterior summaries
 
 setwd("D:/MargSalas/Ganga/Results/CR")

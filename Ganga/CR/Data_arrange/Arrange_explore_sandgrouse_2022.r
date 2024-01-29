@@ -92,7 +92,7 @@ ganga <- ganga[which(!is.na(ganga$id)), ]
 # Select year 2022
 g <- ganga[which(ganga$Year == 2022), ]
 g <- g[,-1]
-g$detect <- 1
+g$detect <- 1 # 122 detections
 
 
 capt.hist <- g %>%

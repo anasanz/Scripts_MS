@@ -8,8 +8,9 @@
 # 2. From individuals in core buffer: R in core/NºAdults in core
 
 # Recruitment is the same all over the state space, but the number of adults is lower 
-# in core area, therefore PCR will be higher in core area. 
+# in core area (buffer), therefore PCR will be higher in core area. 
 # BEcause of how we subset abundance (keeping adults only in core), this PCR (core) would make more sense
+# At the end we use that of the whole state space
 
 rm(list = ls())
 

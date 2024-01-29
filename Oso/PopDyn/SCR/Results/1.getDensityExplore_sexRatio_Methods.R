@@ -376,7 +376,17 @@ for(t in 1:n.years){
 
 all_class$adMales <- summary_class
 
-## ---- Descriptive results: Explore sex ratio ----
+## ---- Methods ----
+###### Abundance estimates and BCI ######
+all_class$all
+
+###### Sex ratio (proportion of males) ######
+apply(all_class$males, c(1,2), sum)[2,1]/apply(all_class$all, c(1,2), sum)[2,1] # Mean
+apply(all_class$males, c(1,2), sum)[2,4]/apply(all_class$all, c(1,2), sum)[2,4] # Low CI
+apply(all_class$males, c(1,2), sum)[2,5]/apply(all_class$all, c(1,2), sum)[2,5] # Up CI
+
+
+## ---- Descriptive results (Methods): Explore sex ratio ----
 
 ######  ALL INDIVIDUALS  #####
 
@@ -394,12 +404,23 @@ for(t in 1:n.years){
 } # Sex structure is shifting along years
 
 ## Total sex ratio only in buffer: Very skewed to females! 70/30
-# Although including the ACs of observed males into the buffer (new Xbuf2: "Buffer_8500_traps_sxyObs.shp")
-# it is less skewed as we include more males: 66/34
+
+# This led us to include the ACs of observed males into the buffer:
+# (new Xbuf2: "Buffer_8500_traps_sxyObs.shp")
+# Now it is a bit less skewed as we include more males: 66/34
 
 apply(all_class$males, c(1,2), sum)[2,1]/apply(all_class$all, c(1,2), sum)[2,1]
-apply(all_class$females, c(1,2), sum)[2,1]/apply(all_class$all, c(1,2), sum)[2,1]
+apply(all_class$females, c(1,2), sum)[2,1]/apply(all_class$all, c(1,2), sum)[2,1] # Mean
 
+
+# To write in METHODS:
+## Proportion males
+apply(all_class$males, c(1,2), sum)[2,1]/apply(all_class$all, c(1,2), sum)[2,1] # Mean
+apply(all_class$males, c(1,2), sum)[2,4]/apply(all_class$all, c(1,2), sum)[2,4] # Low CI
+apply(all_class$males, c(1,2), sum)[2,5]/apply(all_class$all, c(1,2), sum)[2,5] # Up CI
+
+
+# Get 
 ## Total sex ratio in all ss: Also quite skewed to females: 68/32
 
 apply(all_class$males, c(1,2), sum)[3,1]/apply(all_class$all, c(1,2), sum)[3,1]

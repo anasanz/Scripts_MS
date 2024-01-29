@@ -150,7 +150,7 @@ dev.off()
 
 ## ---- Calculate kernel utilization distribution and MCP ----
 
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2021")
 os_spatial <- read.csv("Data_os_96_21_cubLocations.csv", header = TRUE, row.names = NULL)  %>% 
   filter(Confirmed_Individual != "Indetermined") 
 
@@ -218,6 +218,11 @@ for(i in 1:length(ind)){
 # 2. Calculate kernel for each population nucleus
   
 core_spatial$Nucleus <- ifelse(core_spatial$Confirmed_Individual %in% c("Mellba", "Ziva", "Hvala"), 1, 2)
+
+###### Count the number of locations per nucleus for methods
+nrow(core_spatial[which(core_spatial$Nucleus == 1),])
+nrow(core_spatial[which(core_spatial$Nucleus == 2),])
+#######################################################
 
 core_kernel2 <- core_spatial[,24]
 

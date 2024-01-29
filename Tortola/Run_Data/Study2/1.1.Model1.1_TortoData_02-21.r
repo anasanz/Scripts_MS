@@ -59,6 +59,11 @@ for (i in 1:nrow(tor_no)){
 # Only to check: Count of individuals per year
 count.year <- colSums(m,na.rm = TRUE)
 
+# Save m
+setwd("D:/Otros/Tórtola/Data")
+write.csv(m, file = "m_counts_all_transects.csv")
+
+
 ## ---- SUBSET the data by transect ----
 
 # 1. Keep transects with > 7 time points

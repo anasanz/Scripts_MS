@@ -28,7 +28,7 @@ stderr <- function(x, na.rm=FALSE) {
 }
 
 # Load Dispersal distances
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2021")
 d <- read.csv("disp_distance.csv", header = TRUE, row.names = NULL, sep = ",")
 mean_dist <- d %>% # Calculate dispersal distance by sex
   group_by(Sex) %>%
@@ -96,8 +96,17 @@ setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
 #writeOGR(nuc2, "D:/MargSalas/Oso/Datos/GIS/Countries/nuc.shp", layer = "nuc", driver = "ESRI Shapefile")
 #writeOGR(Xbuf2_peri2, "D:/MargSalas/Oso/Datos/GIS/Countries/per.shp", layer = "per", driver = "ESRI Shapefile")
 
+# Load again as st
+nuc <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/nuc.shp")
+per <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/per.shp")
+
+st_area(nuc)/st_area(per) # Core is almost half of periphery
+area <- c(st_area(nuc), st_area(per))
+
+area <- units::set_units(area, km^2)
 
 ## ---- 2. Estimation of age structure in nuc vS periphery per sex and year ----
+## ---- 2.1. Abundance ----
 
 age_st_sex <- function(nucleus, periphery){
   
@@ -346,6 +355,236 @@ ageSt_bear <- age_st_sex(nucleus = nuc2, periphery = Xbuf2_peri2)
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
 save(ageSt_bear, file = "Nbuffer_newSize.RData")
+
+## ---- 2.2. Density ----
+
+agesex_DENS <- function(nucleus, periphery, area){
+  
+  # 1. Total abundance in each zone
+  
+  zones <- c(nucleus, periphery)
+  
+  # Matrix to store abundance in the buffer each iteration and year
+  NIn_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones))) # nrow = iterations, ncol = year, dim3 = Zone
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(myResultsSXYZ$sims.list$z[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        NIn_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+        
+      }
+    }
+  }
+  
+  
+  # 2. Abundance of each age category and sex in each zone
+  
+  ## FEMALE ALL
+  
+  ZZFEM <- myResultsSXYZ$sims.list$z
+  ZZFEM[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 3 # Considers all individuals that dont have a sex 0 (females) as dead
+  
+  allFEM_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones))) # nrow = iterations, ncol = year, dim3 = Zone
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZFEM[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        allFEM_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  
+  ## FEMALE CUBS
+  ZZcubsFEM <- myResultsSXYZ$sims.list$z
+  ZZcubsFEM[!myResultsSXYZ$sims.list$age.cat %in% c(1,2) ]  <- 3 # Considers all individuals that are not 1 and 2 as dead
+  ZZcubsFEM[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 3 # Considers all individuals that dont have a sex 0 (females) as dead
+  
+  
+  cubFEM_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones))) # nrow = iterations, ncol = year, dim3 = Zone
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZcubsFEM[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        if(length(which.alive) == 1){
+          which.aliveSXY <- data.frame(x = which.aliveSXY[1], y = which.aliveSXY[2])
+        }
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        cubFEM_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  
+  ## FEMALE SUBADULTS 
+  
+  ZZsubFEM <- myResultsSXYZ$sims.list$z
+  ZZsubFEM[!myResultsSXYZ$sims.list$age.cat %in% c(3,4) ]  <- 3 # Considers all individuals that are not 3 and 4 (SUBADULTS) as dead
+  ZZsubFEM[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 3 # Considers all individuals that dont have a sex 0 (females) as dead
+  
+  subadFEM_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones)))
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZsubFEM[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        if(length(which.alive) == 0) next
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        if(length(which.alive) == 1){
+          which.aliveSXY <- data.frame(x = which.aliveSXY[1], y = which.aliveSXY[2])
+        }
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        subadFEM_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  
+  ## FEMALE ADULTS
+  
+  ZZadFEM <- myResultsSXYZ$sims.list$z
+  ZZadFEM[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (ADULTS) as dead
+  ZZadFEM[!myResultsSXYZ$sims.list$sex %in% c(0) ]  <- 3 # Considers all individuals that dont have a sex 0 (females) as dead
+  
+  adFEM_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones)))
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZadFEM[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        adFEM_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  ## MALE ALL
+  ZZMAL <- myResultsSXYZ$sims.list$z
+  ZZMAL[!myResultsSXYZ$sims.list$sex %in% c(1) ]  <- 3 # Considers all individuals that dont have a sex 1 (males) as dead
+  
+  allMAL_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones)))
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZMAL[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        allMAL_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  ## MALE CUBS
+  
+  ZZcubsMAL <- myResultsSXYZ$sims.list$z
+  ZZcubsMAL[!myResultsSXYZ$sims.list$age.cat %in% c(1,2) ]  <- 3 # Considers all individuals that are not 1 and 2 as dead
+  ZZcubsMAL[!myResultsSXYZ$sims.list$sex %in% c(1) ]  <- 3 # Considers all individuals that dont have a sex 1 (males) as dead
+  
+  cubMAL_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones))) # nrow = iterations, ncol = year, dim3 = Zone
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZcubsMAL[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        cubMAL_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  ## MALE SUBADULTS
+  
+  ZZsubMAL <- myResultsSXYZ$sims.list$z
+  ZZsubMAL[!myResultsSXYZ$sims.list$age.cat %in% c(3,4) ]  <- 3 # Considers all individuals that are not 3 and 4 (SUBADULTS) as dead
+  ZZsubMAL[!myResultsSXYZ$sims.list$sex %in% c(1) ]  <- 3 # Considers all individuals that dont have a sex 1 (males) as dead
+  
+  subadMAL_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones)))
+  
+  for(s in 1:length(zones)){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZsubMAL[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        subadMAL_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  
+  ## MALE ADULTS
+  
+  ZZadMAL <- myResultsSXYZ$sims.list$z
+  ZZadMAL[!myResultsSXYZ$sims.list$age.cat %in% c(5) ]  <- 3 # Considers all individuals that are not 5 (ADULTS) as dead
+  ZZadMAL[!myResultsSXYZ$sims.list$sex %in% c(1) ]  <- 3 # Considers all individuals that dont have a sex 1 (males) as dead
+  
+  adMAL_trapBuf <- array(NA,c(dim(myResultsSXYZ$sims.list$z)[1], dim(myResultsSXYZ$sims.list$z)[3], length(zones)))
+  
+  for(s in 1:2){
+    for(ite in 1:dim(myResultsSXYZ$sims.list$z)[1]){
+      for(t in 1:dim(myResultsSXYZ$sims.list$z)[3]){
+        
+        which.alive <- which(ZZadMAL[ite,,t]==1) # Select only the individuals alive (z=1)
+        
+        which.aliveSXY <- myResultsSXYZ$sims.list$sxy[ite,which.alive,,t] # Retrieve the activity center for those individuals
+        
+        sp <- SpatialPoints(which.aliveSXY,proj4string=CRS(proj4string(zones[[s]]))) # CONVERT SXY TO SPATIAL POINTS 
+        which.In <- over(sp, zones[[s]]) # Check which ones are in the buffer
+        
+        adMAL_trapBuf[ite,t,s] <- sum(which.In,na.rm = T)/area[s] # The sum of the points in the buffer is the abundance that year and iteration. Store
+      }}}
+  
+  
+  results <- list(totDens = NIn_trapBuf, cubFEM = cubFEM_trapBuf, cubMAL = cubMAL_trapBuf, subadFEM = subadFEM_trapBuf, subadMAL = subadMAL_trapBuf, adFEM = adFEM_trapBuf, adMAL = adMAL_trapBuf, allFEM = allFEM_trapBuf, allMAL = allMAL_trapBuf) 
+  #cub = cub_trapBuf, subad = subad_trapBuf, ad = ad_trapBuf, adfem = adFEM_trapBuf, admal = adMAL_trapBuf)
+  return(results)
+  
+}
+agesex_DENS_bear <- agesex_DENS(nucleus = nuc2, periphery = Xbuf2_peri2, area = area)
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams")
+save(agesex_DENS_bear, file = "Densbuffer_newSize.RData")
 
 ## ---- 3. Plots ----
 

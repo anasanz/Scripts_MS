@@ -4,20 +4,48 @@
 ##   I ran it 5 times to show how different are results
 ## ------------------------------------------------- 
 
+rm(list=ls())
+
 ## ---- Results ----
 
-setwd("D:/MargSalas/Ganga/Results/HDS/SpecificPTS/Model")
-load("out_1.2_1.RData")
-out_list <- list()
-out_list <- out
+## LOAD all model runs 
+# Set the path to the folder containing the RData files
+folder_path <- "D:/MargSalas/Ganga/Results/HDS/SpecificPTS/Model"
 
-sum <- out$summary
+# Get a list of all RData files in the folder
+file_list <- list.files(path = folder_path, pattern = "\\.RData$", full.names = TRUE)
 
-library(MCMCvis)
+# Create a list to store the data from each file
+data_list <- list()
 
-MCMCtrace(out, 
-          params = params, 
-          pdf = FALSE)
+# Loop through the files, read the data, and assign to different object names
+for (i in seq_along(file_list)) {
+  # Extract the file name without the path and extension
+  file_name <- basename(file_list[i])
+  object_name <- gsub("\\.RData$", "", file_name)
+  
+  # Load the data from the file and assign it to the corresponding object name
+  load(file_list[i])
+  data_list[[object_name]] <- out
+}
+
+# Store all results in lists to just visualize
+
+summary <- list()
+mean <- list()
+mode <- list()
+
+for(xxx in 1:length(data_list)){
+
+out <- data_list[[xxx]]
+
+summary[[xxx]] <- out$summary
+
+#library(MCMCvis)
+
+#MCMCtrace(out, 
+#          params = params, 
+#          pdf = FALSE)
 
 # Load hq areas
 
@@ -25,7 +53,7 @@ setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
 hq_area <- read.csv(file = "HQ_area.csv", sep = ";")
 
 area_transect <- 500*800 # m2
-
+average_clus2 <- 4.33 # From model script
 
 ## ---- 1. Predictions from posterior distribution ----
 
@@ -65,6 +93,9 @@ dens_obs1 <- density(ab[,4])
 mode_ab <- dens_obs1$x[dens_obs1$y == max(dens_obs1$y)]
 mean_ab <- mean(ab[,4])
 
+mode[[xxx]] <- mode_ab 
+mean[[xxx]] <- mean_ab 
+
 # 95% CI (excludes the 2.5% of obs with lower and higher values)
 
 lci <- quantile(ab[,4],probs = 0.025) 
@@ -86,8 +117,8 @@ uci3 <- quantile(ab[,4],probs = 0.925)
 
 ## ---- 1.1.1. Plot ----
 
-#setwd("D:/MargSalas/Ganga/Results/HDS/Plots")
-#pdf("Abundance_estimate.pdf", 7, 9)
+setwd("D:/MargSalas/Ganga/Results/HDS/SpecificPTS/Plots/Abundance")
+#pdf(paste("Abundance_estimate_",names(data_list)[[xxx]], ".pdf", sep = ""), 7, 9)
 
 par(mfrow = c(2,1),
     mar = c(3.2,3,2,1))
@@ -130,5 +161,10 @@ segments(x0=uci3,y0=0,x1=uci3,y1=dens_obs2$y[270],col="yellow", lwd = 1.5)
 
 #dev.off()
 
-mode_ab 
-mean_ab 
+}
+
+for(xxx in 1:length(data_list)){
+  print(summary[[xxx]])
+  print(mean[[xxx]])
+  print(mode[[xxx]])
+}

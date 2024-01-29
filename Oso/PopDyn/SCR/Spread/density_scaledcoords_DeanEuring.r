@@ -31,6 +31,10 @@ df2 <- df[complete.cases(df),c(1:2)]
 coordinates(df2) <- df2[,c(1:2)]
 plot(df2)
 
+##### THIS IS NOT WELL DONE!!
+# They should be in the same scale in both the x and y
+# (now an unit sd in x doesn't mean the same than a unit ir y)
+# To put it to the same origin Rahel divided all by 5000 (5 km utm)
 
 #save(df, file = "Density_scaledCoords.RData")
 

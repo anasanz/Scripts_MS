@@ -182,6 +182,8 @@ for (i in 1:nyrs){
 
 m_index <- m
 m_index[which(is.na(m_index))] <- 0
+colSums(m, na.rm = TRUE)
+sum(colSums(m, na.rm = TRUE))
 
 site.dclass <- year.dclass <- NULL
 
@@ -239,7 +241,7 @@ load("2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData")
 # Load hq areas
 
 setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
-hq_area <- read.csv(file = "HQ_area.csv")
+hq_area <- read.csv(file = "HQ_area.csv", sep = ";")
 
 area_transect <- 500*1000 # m2
 

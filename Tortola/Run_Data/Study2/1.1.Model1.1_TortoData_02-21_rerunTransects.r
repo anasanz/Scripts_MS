@@ -65,6 +65,11 @@ for (i in 1:nrow(tor_no)){
 # Only to check: Count of individuals per year
 count.year <- colSums(m,na.rm = TRUE)
 
+setwd("D:/Otros/Tórtola/Data")
+a <- as.data.frame(m)
+a$transect <- rownames(m)
+openxlsx::write.xlsx(a, file = 'detections_tortola_0221.xlsx')
+
 
 ## ---- SUBSET the data by transect ----
 # Only transects to add, less restrictive (from 2.1. Explore_timeframe....r)

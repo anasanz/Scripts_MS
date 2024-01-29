@@ -18,7 +18,7 @@ library(sp)
 library(dplyr)
 library(parallel)
 
-setwd("D:/MargSalas/Scripts_MS/Stats/Nimble")
+setwd("D:/MargSalas/Scripts_MS/Functions/Nimble")
 #source('dbinomLocal_normalBear.R')
 source('dbinomLocal_normalBear_rbinom2.R')
 
@@ -28,6 +28,8 @@ setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 #---- 1. LOAD THE DETECTION DATA ---- 
 
 load("edf1721.RData")
+# This edf, minus the samples from Nere and Goiat (deleted before deleting the replicates),
+# are the number of genetic samples (680)
 
 # As the model is set, there can be only one capture per trap and occasion
 # --> The number of trials is 7 (From may to November): So max number of captures per trap = 7
@@ -295,6 +297,10 @@ for (t in 1:Tt){
   }
 }
 
+# Save for Maelis
+setwd("D:/Otros/Maelis")
+save(Y, file = "detections_ijkt.RData")
+
 max(Y) # Check the number max number of detections (it can't be higher than K)
 
 #----   3.1.1 BEHAVIOURAL RESPONSE COVARIATE FROM Y   ---- 
@@ -366,7 +372,7 @@ ones <- rep(1, max(Jyear))
 
 ## ---- 3.4 INCLUDE AGE DATA ----
 
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2021")
 #setwd("~/Data_server")
 
 info <- readxl::read_excel("info_individuals_2021.xlsx")
@@ -414,6 +420,9 @@ age.cat[age==2]<-3
 age.cat[age==3]<-4
 age.cat[age==4]<-5
 age.cat[age>=5]<-6
+
+#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Spread")
+#save(age.cat, file = "ages.RData") # For Deon's stuff
 
 ageMatAug <- matrix(NA,M,Tt)
 ageMatAug[1:n,] <- age.cat #Matrix with age categories augmented

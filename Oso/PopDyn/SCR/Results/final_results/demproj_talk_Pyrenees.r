@@ -199,15 +199,14 @@ colMeans(apply(z.allyears[,,,5],c(1,3),function(x) sum(x==1, na.rm = TRUE)))
 
 ## ---- Plot ----
 
-
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Results_section/Plots")
-pdf("4.prediction_abundance.pdf", 7, 5)
+setwd("D:/MargSalas/Oso/OPSCR_project/Workshop Pyrenees/2023")
+pdf("prediction_abundance1.pdf", 7, 5)
 
 # Adjust according to the number of scenarios
 
-Nscenarios <- dim(NIn)[3]
-offset <- seq(0,2,length.out = Nscenarios)
-at.sc0 <- c(1,2,3,4,5,6,9,12,15,18)
+Nscenarios <- dim(NIn)[3] - 3
+offset <- seq(0,0.5,length.out = Nscenarios)
+at.sc0 <- c(1,2,3,4,5,6,8,10,12,14)
 
 
 plot(1, ylim = c(-10,max(NIn)+50), 
@@ -236,26 +235,38 @@ for (i in 1:5){
                 horizontal = FALSE)}
 
 # Scenarios
-colSc <- c("yellow4", "yellow3","lightgoldenrod3","khaki", "lightgoldenrod1")
-for(s in 1:Nscenarios){
+colSc <- c("yellow4", "yellow3")
+#for(s in 1:Nscenarios){
   for (i in 6:10){
-    plot.violins3(list(NIn[ ,i,s]),
+    plot.violins3(list(NIn[ ,i,1]),
                   x = i,
-                  at = at.sc0[i]+offset[s],
+                  at = at.sc0[i]+offset[1],
                   violin.width = 0.2,
                   plot.ci = 0.95,
-                  col = colSc[s],
+                  col = colSc[1],
                   add = T,
                   alpha = 0.8,
                   scale.width = FALSE,
-                  border.col = colSc[s],
+                  border.col = colSc[1],
                   horizontal = FALSE)
   }
-}
+#}
 
-legend("topleft", inset=c(0,0), legend = c("Sc0(Normal)", "Sc1(-5%F in 2021)", "Sc2(-10%F in 2021)", "Sc3(-20%F in 2021)", "Sc4 (-10%F in 2021 + 5ind in 2024)" ),
-       fill = colSc, border = NA, cex = 0.8)
+for (i in 6:10){
+  plot.violins3(list(NIn[ ,i,3]),
+                x = i,
+                at = at.sc0[i]+offset[2],
+                violin.width = 0.2,
+                plot.ci = 0.95,
+                col = colSc[2],
+                add = T,
+                alpha = 0.8,
+                scale.width = FALSE,
+                border.col = colSc[2],
+                horizontal = FALSE)
+}
+legend("topleft", inset=c(0,0), legend = c("Sc0"),
+       fill = colSc, border = NA, cex = 1.5)
 
 dev.off()
-
 

@@ -1,4 +1,6 @@
 
+rm(list=ls())
+
 ## ---- Results ----
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Farmdindis/Model_results")
@@ -7,10 +9,10 @@ load("2.2.Dat_HDS_trendmodel_lam[hq]_sigHR.RData")
 # Load hq areas
 
 setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
-hq_area <- read.csv(file = "HQ_area.csv")
+hq_area <- read.csv(file = "HQ_area.csv", sep = ";")
 
 area_transect <- 500*1000 # m2
-
+average_clus2022 <- 2.5
 
 ## ---- 1. Predictions from posterior distribution ----
 
@@ -67,6 +69,9 @@ for (i in 1:length(hqzones)) {
 ab[,4] <- rowSums(ab[,c(1:3)])
 de[,4] <- rowSums(de[,c(1:3)])
 
+setwd("D:/MargSalas/Ganga/Results/HDS/Farmdindis/Model_results")
+save(ab, de, file = "2.2.Procesed.RData")
+
 # All observations
 
 dens_obs1 <- density(ab[,4]) 
@@ -78,7 +83,7 @@ mean_ab <- mean(ab[,4])
 lci <- quantile(ab[,4],probs = 0.025) 
 uci <- quantile(ab[,4],probs = 0.975)
 
-# Observations of value lower than the upper ci 474.58 (97.5%)
+# Observations of value lower than the upper ci (97.5%)
 
 dens_obs2 <- density(ab[,4][which(ab[,4]<uci)]) 
 
@@ -95,8 +100,8 @@ uci3 <- quantile(ab[,4],probs = 0.925)
 
 ## ---- 1.1.1. Plot ----
 
-setwd("D:/MargSalas/Ganga/Results/HDS/Plots")
-pdf("Abundance_estimate.pdf", 7, 9)
+#setwd("D:/MargSalas/Ganga/Results/HDS/Plots")
+#pdf("Abundance_estimate.pdf", 7, 9)
 
 par(mfrow = c(2,1),
     mar = c(3.2,3,2,1))
@@ -137,7 +142,7 @@ text(x = 82, y = 0.0007, labels = "Mean:\n85 ind", adj = 0, pos = 4, col = "dark
 text(x = 34, y = 0.0007, labels = "Mode:\n37 ind", adj = 0, pos = 4, col = "darkslategrey", cex = 1, font = 2)
 
 
-dev.off()
+#dev.off()
 
 
 ## ---- 1.1.1. Table ----
@@ -164,68 +169,21 @@ write.csv(results, file = "resultsHDS_2022.csv")
 
 ## --------- HDI interval ----
 
+# High density interval: All points within this interval have a higher 
+#  probability density than points outside the interval
+
 library(HDInterval)
+# 95%
+(c(lci,uci))
+hdi(ab[,4], credMass = 0.95)
 
+# 90%
+(c(lci2,uci2))
+hdi(ab[,4], credMass = 0.90)
+
+# 85%
+(c(lci3,uci3))
 hdi(ab[,4], credMass = 0.85)
-
-## ---- 1.2. Including w ----
-
-summary <- out$summary 
-# w in a year t depends on the overdispersion and ac that year, and the previous one 
-# Explore how it changes each year
-wvec <- summary[grep("w", rownames(summary)), 1]
-w <- matrix(wvec, nrow = nSites, ncol = nyrs, byrow = FALSE)
-
-#setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
-#save(w, file = "w.RData")
-
-library("RColorBrewer")
-
-plot(colMeans(w) , type = "l")
-
-plot(0, xlim = c(0,13), ylim = c(-1,1))
-cl <- rainbow(nSites)
-for (i in 1:nSites){
-  m <- lm(w[i,] ~ c(1:13))
-  points(w[i,] ~ c(1:13), col = cl[i])
-  abline(m, col = cl[i])
-}
-
-dim(out$sims.list$w) # Take last year
-
-w.2022.sites <- out$sims.list$w[,,13] # Mean of w accross sites per iteration
-w.2022 <- rowMeans(w.2022.sites)
-
-hqzones <- c("hq1", "hq2", "hq3")
-
-ab <- data.frame(matrix(NA, nrow = length(mu.site), ncol = 4))
-colnames(ab) <- c(hqzones, "total")
-
-for (i in 1:length(hqzones)) {
-  
-  lambda <- exp(mu.site + random.year.2022 + bYear.lam*year1 + bHQ * i + w.2022) # Expected abundance
-  
-  dens <- lambda/area_transect
-  abundance <- dens*hq_area$x[i]
-  total_abundance <- abundance*average_clus2022
-  ab[,i] <- total_abundance
-}
-
-ab[,4] <- rowSums(ab[,c(1:3)])
-
-# All observations
-
-dens_obs1 <- density(ab[,4]) 
-mode_ab <- dens_obs1$x[dens_obs1$y == max(dens_obs1$y)]
-mean_ab <- mean(ab[,4])
-
-# 95% CI (excludes the 2.5% of obs with lower and higher values)
-
-lci <- quantile(ab[,4],probs = 0.025) 
-uci <- quantile(ab[,4],probs = 0.975)
-
-#### CONCLUSION: IT DOESN'T CHANGE MUCH, SO I KEEP THE MODEL PREDICTION WITHOUT W
-
 
 ## ---- 2. Predictions from posterior distribution ALL YEARS ----
 

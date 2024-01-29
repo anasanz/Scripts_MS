@@ -6,6 +6,11 @@
 
 rm(list=ls())
 
+
+library(jagsUI)
+library(rjags)
+
+
 ## ---- Data ----
 
 setwd("D:/MargSalas/Ganga/Data/CMR")

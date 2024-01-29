@@ -7,6 +7,9 @@
 
 rm(list=ls())
 
+library(jagsUI)
+library(rjags)
+
 ## ---- Data ----
 
 setwd("D:/MargSalas/Ganga/Data/CMR")
@@ -23,35 +26,28 @@ T = ncol(data_ganga)
 nz <- 150
 yaug <- rbind(data_ganga, array(0, dim = c(nz, T)))
 
-# Load sex
-
-setwd("D:/MargSalas/Ganga/Data/CMR")
-load("id_sex_sandgrouse_2022.RData") # It is in the same order than capt.hist
-id_sex$sex[which(id_sex$sex == "F")] <- 0
-id_sex$sex[which(id_sex$sex == "M")] <- 1
-id_sex$sex[which(id_sex$sex == "X")] <- NA
-
-sex <- as.numeric(id_sex$sex)
-sexAug <- c(sex, rep(NA, nz))
 
 # Bundle data
-win.data <- list(yaug = yaug, M = nrow(yaug), T = ncol(yaug), sex = sexAug)
+win.data <- list(yaug = yaug, M = nrow(yaug), T = ncol(yaug))
 
 
 # Initial values
 inits <- function() list(z = rep(1, nrow(yaug)), p = runif(2, 0, 1),
-                         sex = c(rep(NA,nrow(data_ganga)), rbinom(nz,1,0.5)))
+                         group = c(rbinom(nrow(data_ganga) + nz,1,0.5)))
+
 
 # Parameters monitored
 params <- c("N", "p", "omega", "psi")
 
 # MCMC settings
-ni <- 2500
+ni <- 20000
 nt <- 2
-nb <- 500
+nb <- 1000
 nc <- 3
 
 # Call WinBUGS from R (BRT <1 min)
-out_sim_M0_psex <- jags(win.data, inits, params, "model_m0_pSex.txt", n.chains = nc, 
+out_sim_M0_2partMixt <- jags(win.data, inits, params, "model_m0_2partMixt.txt", n.chains = nc, 
                         n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
+# There is not a group with higher p than the other, and estimates are not that different.
+# So better to use the sex model (even if I have to double check with RS the sim script)

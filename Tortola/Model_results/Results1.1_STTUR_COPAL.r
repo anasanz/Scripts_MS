@@ -48,6 +48,8 @@ converge4_files <-paste("1.1TortoData_0221_", converge4, "_15e5iter", ".RData", 
 
 converged_files$file[which(converged_files$transect_ID %in% converge4)] <- converge4_files # Substitute, keep the ones that converged better with more iter
 
+converged_files2 <- converged_files # To add info of trend and estimate together
+
 ## ---- Probability of increase in trend ----
 
 converged_files$p_increasing <- NA
@@ -65,6 +67,33 @@ converged_files$p_increasing <- round(converged_files$p_increasing,4)
 converged_files <- arrange(converged_files,p_increasing)
 
 #write.csv(converged_files, file = "pInc_transects_converged.csv")
+
+## ---- Join info of trend and estimate together for data exploration ----
+ 
+converged_files2$p_increasing <- NA
+converged_files2$b_estimate <- NA
+converged_files2$sd <- NA
+
+for (i in 1:nrow(converged_files2)){
+  load(converged_files2$file[i])
+  df.outall <- as.data.frame(out$sims.list)
+  total.samples <- nrow(df.outall)
+  # Prob increasing
+  increasing <- df.outall$bYear.lam[which(df.outall$bYear.lam > 0)]
+  prob_increasing <- length(increasing)/total.samples
+  converged_files2$p_increasing[i] <- prob_increasing
+  # Estimate
+  converged_files2$b_estimate[i] <- mean(df.outall$bYear.lam)
+  converged_files2$sd[i] <- sd(df.outall$bYear.lam)
+  }
+
+converged_files2$p_increasing <- round(converged_files2$p_increasing,4)
+converged_files2$b_estimate <- round(converged_files2$b_estimate,4)
+converged_files2$sd <- round(converged_files2$sd,4)
+
+converged_files2 <- arrange(converged_files2,p_increasing)
+
+write.csv(converged_files2, file = "pInc_bEst_sd_transects_converged.csv")
 
 
 ## ---- COPAL ----
