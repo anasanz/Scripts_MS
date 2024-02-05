@@ -16,8 +16,8 @@ library(sp)
 library(dplyr)
 library(parallel)
 
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
-setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
+#setwd("~/data/data/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 
 
 #---- 1. LOAD THE DETECTION DATA ---- 
@@ -68,8 +68,8 @@ e <- as(raster::extent(xmin, xmax, ymin, ymax), "SpatialPolygons") # Extent of s
 #----   2.3 GET A RASTER FOR THE HABITAT ---- 
 # USE A FOREST RASTER TO GET A BASIS FOR THE HABITAT RASTER
 # Set up a raster file 
-#setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
-setwd("~/data/data/Data_server/Variables_hrscale")
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+#setwd("~/data/data/Data_server/Variables_hrscale")
 distcore <- raster("logDistcore_hrbear.tif")
 
 # Crop it to extent of state-space

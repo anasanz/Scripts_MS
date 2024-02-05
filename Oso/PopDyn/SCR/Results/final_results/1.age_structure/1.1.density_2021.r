@@ -165,6 +165,13 @@ plot(ACDens2, legend.only=TRUE, col=palette(),
      axis.args=list(at = seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),
                     labels = round(seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),2), 
                     cex.axis = 1))
+
+# Save for other issues (predation)
+
+#setwd('D:/JdC/Predación/Data')
+#writeRaster(ACDens2, 'cubDens2021')
+
+
 ## SUBADULTS
 
 DensityCountriesRegions <- GetDensity_PD(
@@ -193,6 +200,11 @@ plot(ACDens2, legend.only=TRUE, zlim=c(r.range[1],r.range[2]), col=palette(),
      axis.args = list(at = seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),
                       labels = round(seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),2), 
                       cex.axis = 1))
+# Save for other issues (predation)
+
+#setwd('D:/JdC/Predación/Data')
+#writeRaster(ACDens2, 'subAdDens2021')
+
 ## ADULTS
 
 DensityCountriesRegions <- GetDensity_PD(
@@ -223,6 +235,11 @@ plot(ACDens2, legend.only=TRUE, col=palette(),
 
 #mtext(c("Adult", "Subadult", "Cub", "All"), at = c(0.17,0.45,0.67,0.92), outer = TRUE, line = 0, side = 2, adj = 1)
 
+# Save for other issues (predation)
+
+#setwd('D:/JdC/Predación/Data')
+#writeRaster(ACDens2, 'AdDens2021')
+
 ## ALL INDIVIDUALS
 
 DensityCountriesRegions <- GetDensity_PD(
@@ -251,5 +268,10 @@ plot(ACDens2, legend.only=TRUE, col=palette(),
      axis.args=list(at = seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),
                     labels = round(seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),2), 
                     cex.axis = 1))
+
+# Save for other issues (predation)
+
+#setwd('D:/JdC/Predación/Data')
+#writeRaster(ACDens2, 'AllDens2021')
 
 dev.off()

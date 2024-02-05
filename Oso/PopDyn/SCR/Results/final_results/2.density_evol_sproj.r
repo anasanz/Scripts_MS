@@ -67,7 +67,7 @@ library(nimbleSCR) # Load nimbleSCR here, otherwise it gets in conflict with ras
 #### LOAD AND PLOT
 
 setwd("D:/MargSalas/Oso/OPSCR_project/Results/Results_section/Plots")
-pdf("2.1.density_evol_allinds4.pdf", 9,6)
+pdf("2.1.density_evol_allinds3.pdf", 9,6)
 
 par(mfrow = c(3,5),
     mar = c(0,0,0,0),
@@ -124,7 +124,7 @@ for(t in 1:n.years){
   ACDens2 <- ACDens[[t]]
   raster::values(ACDens2)[which(raster::values(Xbuf2_raster) == 0)]  <- NA
   
-  plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxdens1), col = rev(viridis(100)), legend = leg[t])
+  plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxdens1), col = rev(magma(100)), legend = leg[t])
 }
 
 ## ---- Prediction 1: Constant effect of distcore accross time ----
@@ -177,7 +177,7 @@ for(t in 2:n.years){ # Start in 2 because we don't plot year 2021
   ACDens2 <- ACDens[[t]]
   raster::values(ACDens2)[which(raster::values(Xbuf2_raster) == 0)]  <- NA
   
-  plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxdens2), col = rev(viridis(100)), legend = leg[t])
+  plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxdens2), col = rev(magma(100)), legend = leg[t])
 }
 
 ## ---- Prediction 2: Effect of distcore decreases progressively accross time ----
@@ -230,7 +230,7 @@ for(t in 2:n.years){
   ACDens2 <- ACDens[[t]]
   raster::values(ACDens2)[which(raster::values(Xbuf2_raster) == 0)]  <- NA
   
-  plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxdens3), col = rev(viridis(100)), legend = leg[t])
+  plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxdens3), col = rev(magma(100)), legend = leg[t])
 }
 
 

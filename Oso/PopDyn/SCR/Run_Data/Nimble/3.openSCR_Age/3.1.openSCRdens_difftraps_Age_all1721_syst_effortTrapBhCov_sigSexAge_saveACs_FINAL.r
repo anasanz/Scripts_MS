@@ -676,6 +676,19 @@ save(nimData, nimConstants,
      inits, Tt, sex.in, piAGE.in, zstAGE, w.in, age.cat.in ,S.in.sc_coords, 
      params, params2, modelcode, file = "Data_Model3-3.1_CYRIL_allparams.RData")
 
+###### SAVE FOR JOURNAL REPOSITORY #####
+modelcode = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage
+
+datalist <- list(nimData = nimData, nimConstants = nimConstants, inits = inits, Tt = Tt,
+                 sex.in = sex.in, piAGE.in = piAGE.in, zstAGE = zstAGE, w.in = w.in, 
+                 age.cat.in = age.cat.in, S.in.sc_coords = S.in.sc_coords)
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Docs/Submit/Data_Code/data-raw")
+saveRDS(datalist, file = "bear_opscr_data.rds")
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Docs/Submit/Data_Code/data-raw")
+data <- readRDS("bear_opscr_data.rds")
+
 #### OPTION 1: PARALLEL ####
 detectCores()
 

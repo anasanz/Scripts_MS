@@ -5,6 +5,7 @@ rm(list = ls())
 
 library(sf)
 library(terra)
+library(raster)
 
 # Load europe
 sa <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2_WGS84_31N_all.shp")

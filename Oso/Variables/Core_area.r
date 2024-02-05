@@ -20,7 +20,7 @@ library(ggplot2)
 
 ## ---- Visual exploration of reintroduction patterns ----
 
-setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2022")
+setwd("D:/MargSalas/Oso/Datos/Tablas_finales/2021")
 os <- read.csv("Data_os_96_21_cubLocations.csv", header = TRUE, row.names = NULL)  %>% 
   filter(Confirmed_Individual != "Indetermined") %>%
   st_as_sf(coords = c("x_long","y_lat"), crs = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
@@ -281,6 +281,33 @@ mtext("Kernel 95% (central), 80% (occidental)", side = 3, line = -1.5, cex = 2)
 plot(core, pch = 19, col = "red", add = TRUE)
 plot(core_area_kernelpol_n1, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
 plot(core_area_kernelpol_n2, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
+dev.off()
+
+########## Plot for methods
+
+sa <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2_WGS84_31N_all.shp")
+eur <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/esp_fr_2.shp") %>%
+  st_transform(dpts, crs = crs(sa))
+esp <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/ESP_adm/ESP_adm0.shp") %>%
+  st_transform(dpts, crs = crs(sa))
+fr <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/FRA_adm/FRA_adm0.shp") %>%
+  st_transform(dpts, crs = crs(sa))
+
+core <- core %>% st_transform(32631)
+core_area_kernelpol_n1 <- spTransform(core_area_kernelpol_n1,CRS("+proj=utm +zone=31 +datum=WGS84 +units=m +no_defs +type=crs"))
+core_area_kernelpol_n2 <- spTransform(core_area_kernelpol_n2,CRS("+proj=utm +zone=31 +datum=WGS84 +units=m +no_defs +type=crs"))
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Results_section/Plots")
+pdf("SI_core_kernel_95n1_80n2.pdf",7,7)
+
+plot(st_geometry(sa), col = "beige", border = "beige",  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000)) # To add andorra with same color (not present in eur)
+plot(st_geometry(eur), col = "beige", border = "beige",  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(esp), col = "beige", border = "white",  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(fr), col = "beige", border = "white",  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(core, pch = 19, col = "brown", add = TRUE)
+plot(core_area_kernelpol_n1, pch = 19, col = adjustcolor("yellow", alpha.f = 0.7), add = TRUE)
+plot(core_area_kernelpol_n2, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
+
 dev.off()
 
 

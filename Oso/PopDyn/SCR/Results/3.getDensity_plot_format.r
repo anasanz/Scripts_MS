@@ -521,7 +521,7 @@ plot(ACDens2, legend.only=TRUE, col=palette(),
 
 dev.off()
 
-## ---- Plot only in year 2021 with country borders ----
+## ---- Plot only in year 2021 with country borders (municipalities) ----
 
 # Load europe
 sa <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2_WGS84_31N_all.shp")
@@ -652,6 +652,159 @@ ACDens2 <- rasterize(Xbuf2, ACDens, mask = TRUE)
 
 plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", col = palette(), legend = FALSE)
 plot(st_geometry(eur), border = adjustcolor("white", alpha.f = 0.3),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+
+r.range <- c(minValue(ACDens2), maxValue(ACDens2))
+plot(ACDens2, legend.only=TRUE, col=palette(),
+     legend.width = 0.5,
+     axis.args=list(at = seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),
+                    labels = round(seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),2), 
+                    cex.axis = 1))
+
+dev.off()
+
+## ---- Plot only in year 2021 with country borders ----
+
+# Load europe
+sa <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/clip_pyros2_WGS84_31N_all.shp")
+eur <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/esp_fr_2.shp") %>%
+  st_transform(dpts, crs = crs(sa))
+#and <- sa[which(sa$NAME_0 == "Andorra"),]
+#eur2 <- st_union(and,eur) 
+
+esp <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/ESP_adm/ESP_adm0.shp") %>%
+  st_transform(dpts, crs = crs(sa))
+fr <- st_read("D:/MargSalas/Oso/Datos/GIS/Countries/FRA_adm/FRA_adm0.shp") %>%
+  st_transform(dpts, crs = crs(sa))
+
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Plots/model3.1")
+pdf("density_scale_2021_borders_countries.pdf", 6,9)
+
+par(mfrow = c(4,1),
+    mar = c(0,1,0,3),
+    bty = "n")
+
+## CUBS
+
+DensityCountriesRegions <- GetDensity_PD(
+  sx = densityInputRegions$sx[,,5],# X COORDINATES
+  sy =  densityInputRegions$sy[,,5],# Y COORDINATES
+  z = ZZcubs[,,5],# Z 
+  IDmx = densityInputRegions$habitat.id,
+  aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+  regionID = densityInputRegions$regions.rgmx,
+  returnPosteriorCells = F)
+
+
+ACDens <- densityInputRegions$regions.r
+ACDens[] <- NA
+ACDens[!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions$MeanCell
+
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1))
+#plot(ACDens, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxden.tot), col = palette(), add = TRUE)
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1), add = TRUE)
+ACDens2 <- rasterize(Xbuf2, ACDens, mask = TRUE)
+plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", col = palette(), legend = FALSE)
+#plot(st_geometry(eur), border = adjustcolor("white", alpha.f = 0.3),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(esp), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(fr), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+
+r.range <- c(minValue(ACDens2), maxValue(ACDens2))
+plot(ACDens2, legend.only=TRUE, col=palette(),
+     legend.width = 0.5,
+     axis.args=list(at = seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),
+                    labels = round(seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),2), 
+                    cex.axis = 1))
+## SUBADULTS
+
+DensityCountriesRegions <- GetDensity_PD(
+  sx = densityInputRegions$sx[,,5],# X COORDINATES
+  sy =  densityInputRegions$sy[,,5],# Y COORDINATES
+  z = ZZsub[,,5],# Z 
+  IDmx = densityInputRegions$habitat.id,
+  aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+  regionID = densityInputRegions$regions.rgmx,
+  returnPosteriorCells = F)
+
+ACDens <- densityInputRegions$regions.r
+ACDens[] <- NA
+ACDens[!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions$MeanCell
+
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1))
+#plot(ACDens, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxden.tot), col = palette(), add = TRUE)
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1), add = TRUE)
+ACDens2 <- rasterize(Xbuf2, ACDens, mask = TRUE)
+r.range <- c(minValue(ACDens2), 0.4)
+plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", zlim=c(r.range[1],r.range[2]), col = palette(), legend = FALSE)
+#plot(st_geometry(eur), border = adjustcolor("white", alpha.f = 0.3),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(esp), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(fr), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+
+
+plot(ACDens2, legend.only=TRUE, zlim=c(r.range[1],r.range[2]), col=palette(),
+     legend.width = 0.5,
+     axis.args = list(at = seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),
+                      labels = round(seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),2), 
+                      cex.axis = 1))
+## ADULTS
+
+DensityCountriesRegions <- GetDensity_PD(
+  sx = densityInputRegions$sx[,,5],# X COORDINATES
+  sy =  densityInputRegions$sy[,,5],# Y COORDINATES
+  z = ZZad[,,5],# Z 
+  IDmx = densityInputRegions$habitat.id,
+  aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+  regionID = densityInputRegions$regions.rgmx,
+  returnPosteriorCells = F)
+
+ACDens <- densityInputRegions$regions.r
+ACDens[] <- NA
+ACDens[!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions$MeanCell
+
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1))
+#plot(ACDens, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxden.tot), col = palette(), add = TRUE)
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1), add = TRUE)
+ACDens2 <- rasterize(Xbuf2, ACDens, mask = TRUE)
+plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", col = palette(), legend = FALSE)
+#plot(st_geometry(eur), border = adjustcolor("white", alpha.f = 0.3),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(esp), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(fr), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+
+
+r.range <- c(minValue(ACDens2), maxValue(ACDens2))
+plot(ACDens2, legend.only=TRUE, col=palette(),
+     legend.width = 0.5,
+     axis.args=list(at = seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),
+                    labels = round(seq(r.range[1], r.range[2], by = (r.range[2] - r.range[1])/5),2), 
+                    cex.axis = 1))
+
+#mtext(c("Adult", "Subadult", "Cub", "All"), at = c(0.17,0.45,0.67,0.92), outer = TRUE, line = 0, side = 2, adj = 1)
+
+## ALL INDIVIDUALS
+
+DensityCountriesRegions <- GetDensity_PD(
+  sx = densityInputRegions$sx[,,5],# X COORDINATES
+  sy =  densityInputRegions$sy[,,5],# Y COORDINATES
+  z = ZZall[,,5],# Z 
+  IDmx = densityInputRegions$habitat.id,
+  aliveStates = 1,# WHICH Z STATE IS CONSIDERED ALIVE, E.G. IF MULTIPLE = C(1,2)
+  regionID = densityInputRegions$regions.rgmx,
+  returnPosteriorCells = F)
+
+ACDens <- densityInputRegions$regions.r
+ACDens[] <- NA
+ACDens[!is.na(densityInputRegions$regions.r[])] <- DensityCountriesRegions$MeanCell
+
+#g <- crop(eur, ACDens)
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1))
+#plot(ACDens, xaxt = "n", yaxt = "n", bty = "n", zlim=c(0,maxden.tot), col = palette())
+#plot(g, bty = "n", xaxt = "n", yaxt = "n", border = adjustcolor("black", alpha.f = 0.1), add = TRUE)
+ACDens2 <- rasterize(Xbuf2, ACDens, mask = TRUE)
+
+plot(ACDens2, xaxt = "n", yaxt = "n", bty = "n", col = palette(), legend = FALSE)
+#plot(st_geometry(eur), border = adjustcolor("white", alpha.f = 0.3),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(esp), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
+plot(st_geometry(fr), border = adjustcolor("white", alpha.f = 0.5),  xlim = c(st_bbox(sa)[1]-10000, st_bbox(sa)[3]+10000),  ylim = c(st_bbox(sa)[2] - 50000 , st_bbox(sa)[4] + 50000), add = TRUE)
 
 r.range <- c(minValue(ACDens2), maxValue(ACDens2))
 plot(ACDens2, legend.only=TRUE, col=palette(),

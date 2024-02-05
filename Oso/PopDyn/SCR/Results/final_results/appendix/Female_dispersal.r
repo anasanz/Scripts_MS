@@ -183,6 +183,10 @@ id_females <- id_females[id_females %in% d$ID] # Females for which we could esti
 unique(os_females$Age_class_cub)
 os_females$Age_class_cub[which(os_females$Age_class_cub %in% c("Cub0","Cub1", "Cub2"))] <- "Cub"
 
+# This is to put it anonymous
+info$Year_birth <- as.integer(info$Year_birth)
+info$Year_death[which(info$Year_death == "Alive")] <- 2021
+info$Year_death <- as.integer(info$Year_death)
 
 #pdf("ID_females2.pdf")  
 f <- list()
@@ -238,6 +242,12 @@ f <-  lapply(1:length(id_females), function(xxx){
       est[[xxx]] <- as.data.frame(coordinates(est[[xxx]]))
       
     }
+    
+    # Calculate years of study for individual (for anonymous ids)
+    
+    study_years <- info$Year_death[info$ID %in% id_females[xxx]] - info$Year_birth[info$ID %in% id_females[xxx]]
+    
+    
     #f[[xxx]] <-
     p <- ggplot() + 
       geom_sf(data = sa, colour = "white", fill = "beige") +
@@ -255,8 +265,9 @@ f <-  lapply(1:length(id_females), function(xxx){
             axis.text = element_blank(),
             axis.ticks = element_blank(),
             legend.position = "none" ) + 
-      ggtitle(paste(id_females[xxx]," (",info$Year_birth[info$ID %in% id_females[xxx]], "-", info$Year_death[info$ID %in% id_females[xxx]], ")", sep = ""))
-    
+      # ggtitle(paste(id_females[xxx]," (",info$Year_birth[info$ID %in% id_females[xxx]], "-", info$Year_death[info$ID %in% id_females[xxx]], ")", sep = ""))
+      ggtitle(paste("ID",xxx," (",study_years, " years)", sep = ""))
+      
     
     p
 })

@@ -97,8 +97,8 @@ hpts <- chull(coordinates(Xpoints))
 hpts <- c(hpts, hpts[1])
 
 ## ---- 2. Smaller buffer ----
-
 Xbuf2 <- gBuffer(Xpoints, width = 8500)
+# ASp of the future: not sure why 8500? radius hr according to hr of 200km2 (maelis) = sqrt(200/pi) = 8 km, so it could be
 
 pid <- sapply(slot(Xbuf2, "polygons"), function(x) slot(x, "ID"))  # All this is only to convert to spdf and save it takes ages otherwise to make each time
 p.df <- data.frame( ID=1:length(Xbuf2), row.names = pid) 

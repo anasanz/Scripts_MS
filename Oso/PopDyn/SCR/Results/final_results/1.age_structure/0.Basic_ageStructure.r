@@ -7,8 +7,23 @@ library(MCMCvis)
 library(rgdal)
 library(nimbleSCR)
 
+source("D:/MargSalas/Scripts_MS/Functions/plot.violins3.r")
+source("D:/MargSalas/Scripts_MS/Functions/DoScale.r")
+source("D:/MargSalas/Scripts_MS/Functions/PlotViolinsHoriz.r")
+
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 load("habcoord.RData")
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+load("myResults_3-3.1_sxy.RData")
+
+# Unscale the sxy coordinates
+
+dimnames(myResultsSXYZ$sims.list$sxy)[[3]] <- c('x','y')
+myResultsSXYZ$sims.list$sxy <- scaleCoordsToHabitatGrid(coordsData = myResultsSXYZ$sims.list$sxy,## this are your sxy
+                                                        coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
+                                                        scaleToGrid = FALSE)$coordsDataScaled
+
 
 setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
 Xbuf <- readOGR("Buffer_statespace.shp")
@@ -212,7 +227,7 @@ for(i in 1:ncol(prop_years[[1]])){ # Look into cubs
                   horizontal = TRUE)
   }}
 
-legend("topright", legend = c("Cub", "Subadult", "Adult"), fill = rev(color_cat4), border = NA)
+legend("topright", legend = c("Juveniles", "Subadults", "Adults"), fill = rev(color_cat4), border = NA)
 
 dev.off()
 
