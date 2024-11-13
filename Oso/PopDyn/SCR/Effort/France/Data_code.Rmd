@@ -1,0 +1,50 @@
+---
+title: "Data and code for: Lonely males at the front: A new open SCR model reveals the spatial sex-age structure of an expanding brown bear population. Submitted to Ecography (2024)"
+output: html_document
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      cache = FALSE)
+
+library(tidyverse)
+library(lubridate)
+library(rgdal)
+library(sf)
+library(oSCR)
+library(mapview) 
+library(raster)
+
+theme_set(theme_light())
+``` 
+
+## Description of the data and file structure
+
+### This repository contains the following code files:
+#### <ins>opscr_model folder</ins>
+*model_code.r*: R code of the opscr model  
+*run_model.r*: R code to run the opscr model with nimbleSCR  
+
+The Zenodo repository [https://doi.org/10.5281/zenodo.10686506](https://doi.org/10.5281/zenodo.10686506) contains:  
+- *bear_opscr_data.RData*: Data to run the opscr model. All objects in this data file are formatted to feed the model into the *nimbleSCR* package. Given the sensitivity of the study species, coordinates in the data objects are only given in the scaled format. A more detailed description of the data objects is provided in the *run_model.r* script.  
+- *myResults_3-3.1_param.RData*: Posterior samples of structural parameters obtained as results from the opscr model.  
+- *myResults_3-3.1_sxy.RData*: Posterior samples of Activity centers, z, age, and sex obtained as results from the opscr model.  
+
+#### <ins>functions folder</ins>
+Additional functions to the R package *nimbleSCR* to run the *model_code.r* file. These include:  
+- *getSexSigma*: R function to index cubs with the sigma of the females in the opscr model.  
+- *dbinomLocal_normalBear_rbinom2*: R function to improve computational efficiency in detection component.  
+  
+#### <ins>Projections folder</ins>  
+*proj_model_code*: R code of the spatial and demographic projection models  
+*1. Estimate_female_pcr.r*: R code to estimate female per capita recruitment from the results of the opscr model  
+*2.1. Run_demographic_projection.r*: R code to format and run the demographic projection  
+*2.2. Run_spatial_projection.r*:  R code to format and run the spatial projection  
+
+
+The Zenodo repository [https://doi.org/10.5281/zenodo.10686791](https://doi.org/10.5281/zenodo.10686791) contains:  
+- *itera.RData*: iterations randomly selected from the opscr model results to run the projection model  
+- *pcr_all_fem.RData*: Results (posterior samples) of female per capita recruitment. Output from the r script *1. Estimate_female_pcr.r*  
+- *proj_pcr.all.fem.sc0.RData - proj_pcr.all.fem.sc3.RData*: Posterior samples of the demographic projection model (scenarios 0 -3)  
+- *proj_pcr.core.fem.consDist.RData, proj_pcr.core.fem.decDistProg1.RData*: Posterior samples from the spatial projection model (scenarios of constant and decreasing distance to core).  

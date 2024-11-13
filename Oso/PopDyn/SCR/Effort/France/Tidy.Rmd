@@ -1,0 +1,1415 @@
+---
+title: "From raw to tidy data"
+author: "Maëlis Kervellec"
+date: "28/10/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      cache = TRUE)
+
+library(tidyverse)
+library(lubridate)
+library(rgdal)
+library(sf)
+library(oSCR)
+library(mapview) 
+
+theme_set(theme_light())
+``` 
+
+# 0 - Functions
+```{r}
+# Distance to the nearest feature
+# Function which find the closest trap from a detection and compute the distance between them
+dist_nearest <- function(point, piege){
+  point <- point %>%
+    mutate(trap = st_nearest_feature(point,piege))
+  
+  A <- rep(NA, nrow(point))
+  
+  for (i in 1 : nrow(point)){
+    A[i] <- st_distance(point[i,], piege[point$trap[i],])}
+  
+  point <- point %>%
+    mutate(dist = A)
+  
+  return(point)
+}
+```
+
+# I - Background map 
+
+Load background map and delineate the study area
+
+```{r}
+dpts <- st_read("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/shp/departements.shp") %>%
+  st_transform(dpts, crs = 27572)
+
+# Delineate the study area
+AireEtude <- tibble(X = c(280019.8,280019.8,678222.7,678222.7),
+                    Y = c(1646112.0,1847275.0,1847275.0,1646112.0)) %>%
+  st_as_sf(coords = c("X","Y"), crs = 27572) %>%
+  st_make_grid() %>%
+  st_union()
+```
+
+# *SYSTEMATIC MONITORING*
+# I - France
+## 1) Load and tidy data
+*Objective* : Load data, remove detection with no individual identification, split systematic and opportunist samples
+
+We load the table Prospind between 2017 and 2019. This table gather all indices collect in France (type, date, GPS coordinates (in Lambert II etendu), individual when it's identify).\
+For the systematic monitoring, we just select indices from itinerary and camera trap. The study period is from mai to november = 7 months.\
+The date when the indice is collect is chosen to identify the occasion of capture. 
+
+```{r}
+
+dat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Prospind_2017-2019_Maelisv2.xlsx") %>%
+  janitor::clean_names() %>%
+  mutate(departement = as_factor(num_departement),
+         libelle_pyrenees = as_factor(libelle_pyrenees),
+         libelle_type_indice = as_factor(libelle_type_indice),
+         libelle_validation_indice = as_factor(libelle_validation_indice),
+         libelle_type_operation_terrain = as_factor(libelle_type_operation_terrain),
+         libelle_itineraire = as_factor(libelle_itineraire),
+         libelle_ap_photo = as_factor(libelle_ap_photo),
+         date = as_date(date_temoin),
+         an = year(date),
+         month = month(date)) %>%
+  rename(x = x_lamb_ii_etendu,
+         y = y_lamb_ii_etendu) %>%
+  filter(month < 12, month > 4) %>% # 7 months form mai to november 
+  filter(libelle_type_operation_terrain =="Itinéraire" | libelle_type_operation_terrain == "Suivi appareil photo" | libelle_type_operation_terrain == "prospection suite à dégât") %>% # systematic or opportunistic monitoring
+  dplyr::select(num_departement, libelle_type_indice, x, y, libelle_type_operation_terrain, libelle_validation_indice,  libelle_itineraire, libelle_ap_photo, libelle_nom_individu, date_temoin, id_precision_date, date, an, month)
+
+```
+
+We remove indices when the identification is not sure (name contain possible, probable). Those indices are considered to be "Indéterminée". We rename indices to have one name by bear. 
+
+```{r}
+dat[which(str_detect(dat$libelle_nom_individu, "possible") | str_detect(dat$libelle_nom_individu, "probable") | str_detect(dat$libelle_nom_individu, "Proche")),'libelle_nom_individu'] <- "Indéterminé" 
+
+# We modify name to match the "Individus_Sexe_Age_Nom" table
+dat[which(dat$libelle_nom_individu == "S29Slo6"),'libelle_nom_individu'] <- "Nougat" 
+dat[which(dat$libelle_nom_individu == "New18_01"),'libelle_nom_individu'] <- "Blizzard"
+
+dat %>%
+  count(libelle_nom_individu, sort = TRUE)
+```
+
+We add the variable sex
+```{r}
+# Import table with names and sex
+sex <- read.table("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Individus_Sexe_Age_Nom.csv", dec=",", header=T, sep=";") %>% 
+  janitor::clean_names() 
+
+colnames(sex) <- c("genotype", "nom_connu_remarques", "sexe", "x4", "annee_naissance",
+                   "mere","pere", "pere2_compatible", "age")
+Encoding(sex$mere) <- "UTF-8"
+Encoding(sex$pere) <- "UTF-8"
+
+
+# Join tables by names 
+dat <- dat %>% 
+  left_join(sex, by = c("libelle_nom_individu" = "nom_connu_remarques")) %>%
+  dplyr::select(-genotype, -x4, -mere, -pere, -pere2_compatible, -annee_naissance, -age) %>%
+  mutate(sexe = replace_na(sexe, "U")) 
+
+# Add sex for Bonabé because his name has an accent !!
+dat[which(dat$libelle_nom_individu == "Bonabé"),"sexe"] <- "M"
+
+# Count how many times each ind has been detected 
+dat %>%
+  count(sexe, sort = TRUE)
+```
+
+We remove indices/rows when the individual has not been identify, or the date or the coordinates are incorrect or absent 
+
+```{r}
+dat2 <- dat %>%
+  filter(!is.na(x)) %>%
+  filter(!is.na(date)) %>%
+  filter(libelle_nom_individu != "Indéterminé") 
+
+# We convert libelle_nom_individu to factor
+dat2 <- dat2 %>%
+  mutate(id = as_factor(libelle_nom_individu))
+```
+
+We split dat2 into dat2 = detection from systematic monitoring and dat2_op = detections from opportunistic monitoring (depredations)
+
+```{r}
+# Opportunist monitoring
+dat2_op <- dat2 %>%
+  filter(libelle_type_operation_terrain == "prospection suite à dégât") %>%
+  filter(x > 1) # Remove detection in Algeria
+
+# Determinist monitoring 
+dat2 <- dat2 %>%
+  filter(libelle_type_operation_terrain != "prospection suite à dégât")
+
+```
+
+## 2) Systematic monitoring
+### A - Traps
+*Objective* : Import shapefiles with itinerary, camera traps and hair traps. Format them to have one trap table by year. 
+
+#### a) Itineraries
+Make one file by year with only itineraries that have been made. 
+```{r}
+itineraires <- st_read("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/shp/Traps2017_2019/Itineraires_2017_2020.shp")%>%
+  distinct(.keep_all = TRUE) %>%
+  rename("NOM"="nom") %>%
+  dplyr::select(NOM) %>%
+  mutate(id = row_number())
+
+# On enlève à la main les doublons qu'il reste
+# l'intinéraire sans nom est le même que Rouze, Ste Colombe Escouloubre1 correspond à Ste Colombe, Ste Colombe Escouloubre2 correspond à Escouloubre. 
+itineraires <- itineraires %>%
+  filter(NOM != "Ste Colombe Escouloubre1" & NOM != "Ste Colombe Escouloubre2" & NOM != "Cazaux de Larboust") %>%
+  # Il reste à enlever ceux qui ont le même nom mais qui diffère légèrement, soit : Arrioutort2014 : id = 44,    Er_Gazies2014 : id = 41, Larry2014 : id = 38, Sost  : id = 63 et Tuquet2014 : id = 48
+  filter(id != 44 & id != 41 & id != 38 & id != 48)
+
+# Les itinéraires qui n'ont pas été parcouru en 2017 : 
+# "Bern", "Saoubette, "Orlu", "Formiguere", "Mijanes1", "Majanes2", "Rouze ou id = 64", "Escouloubre", "St Collombe", "Cazaux-Larboust"
+itineraires_2017 <- itineraires %>%
+  filter(NOM !="Bern" & NOM !="Saoubette" & NOM != "Escouloubre" & NOM != "Formiguere" & NOM != "Orlu" & NOM != "Mijanes1" & NOM != "Majanes2" & NOM != "Cazaux-Larboust" & NOM != "St Collombe" & NOM != "Rouze")  
+
+# Les itinéraires de 2018
+# St Collombe, Esouloubre et Formiguères actif à partir de juin
+itineraires_2018 <- itineraires %>%
+  filter(NOM !="Saoubette")
+
+# Les itinéraires qui n'ont pas été parcouru en 2019 : 
+# Prunadière, Burat et Bezin Garraux 
+itineraires_2019 <- itineraires %>%
+  filter(id != 53) %>% # retire Prunadière : Problème d'accent
+  filter(NOM != "Burat" & NOM != "Bezin Garraux 2014")
+
+# Normalement en 2017 : 53 itinéraires, en 2018 : 57 itinéraires et en 2019 : 56 itinéraires. 
+# possibilité que j'en ai plus car certains sont coupés en deux et donc j'en compte 2 alors qu'il n'y a que un.
+```
+
+#### b) Hair traps
+Make one hair traps file by year. 
+
+```{r}
+piege_poils <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/shp/Traps2017_2019/PiegesPoils_2017_2019.shp", use_iconv=TRUE, encoding = "UTF-8")
+
+# On formate les pièges à poils en spatial
+piege_poils <- piege_poils %>%
+  st_as_sf(coords = coords) %>%
+  dplyr::select(Nom) %>%
+  rename("NOM"="Nom") %>%
+  st_transform(crs = 27572)
+
+# Importer les pièges à poils de Arrioutort 
+arrioutort <- read.table("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/AppatsSmola_PO_2019Bis.csv", dec=",", header=T, sep=";")  %>%
+  janitor::clean_names() %>% 
+  rename("NOM" = "field_1",
+         "X" = "x", 
+         "Y" = "y") %>%
+  dplyr::select(NOM, X, Y)  %>%
+  filter (str_detect(NOM, "arrioutort")) %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 27572)
+
+# Importer les pièges à poils de Haute Arriège
+haute_arriege <- read.table("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/AppareilsAutos2019Haute_Ariege_Maelis.csv", dec=",", header=T, sep=";") %>%
+  janitor::clean_names() %>% 
+  rename("X" = "x_lb_ii_etendu",
+         "Y" = "y_lb_ii_etendu",
+         "NOM" = "lieu") %>%
+  dplyr::select(NOM, X, Y) %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 27572)
+
+# Fusionner tous les fichiers pièges 
+piege_poils <- rbind(piege_poils,haute_arriege, arrioutort) %>%
+  distinct(.keep_all = TRUE) 
+
+```
+
+We distinguish hair trap that are on an itinerary (because they are more frequently visited) from hair trap outside an itinerary. Hair trap on an itinerary = at least 500m from the closest itinerary.\ 
+500m is arbitary and can be modify. 
+
+```{r}
+seuil <- 500
+
+piege_poils_it <- dist_nearest(piege_poils,itineraires) %>%
+  filter(dist < seuil) %>%
+  mutate("itineraire" = NA) 
+
+# Pour chaque piège a poils on remet le bon numéro correspondant à l'itinéraire associé
+for (i in 1 : length(piege_poils_it$trap)) {
+  piege_poils_it$itineraire[i] <- itineraires$id[piege_poils_it$trap[i]]
+  piege_poils_it$NOM[i] <- itineraires$NOM[piege_poils_it$trap[i]]
+}
+
+# On enlève la variable trap pour ne pas se mélanger par la suite 
+piege_poils_it <- piege_poils_it  %>%
+  dplyr::select(geometry,NOM,itineraire)
+```
+
+We make one hair trap file by year, i.e. we remove traps that are on an itinerary that haven't been made. 
+
+```{r}
+## 2017 
+piege_poils_it_2017 <- piege_poils_it %>% 
+  filter(NOM !="Bern" & NOM !="Saoubette" & NOM != "Escouloubre" & NOM != "Formiguere" & NOM != "Orlu" & NOM != "Mijanes1" & NOM != "Majanes2" & NOM != "Cazaux-Larboust" & NOM != "St Collombe" & NOM != "Rouze") 
+
+## 2018 
+piege_poils_it_2018 <- piege_poils_it %>% 
+  filter(NOM !="Saoubette")
+
+## 2019 
+piege_poils_it_2019 <- piege_poils_it %>%
+  filter(itineraire != 53) %>% # retire Prunadière : Problème d'accent
+  filter(NOM != "Burat" & NOM != "Bezin Garraux 2014")
+```
+
+#### c) Camera traps
+
+Make one camera traps file by year, i.e. remove camera traps that aren't close to a hair trap. Only camera traps can't allow the identification of individuals so we remove them from the study. 
+
+```{r}
+# Modification des coordonnées de Bibet :  X = 501083 et Y = 1755754 
+# sinon : X = 501292.999994 et Y= 1754615.999986
+bibet <- data.frame(NOM = "Bibet", 
+                    X = 501083,
+                    Y = 1755754) %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 27572)
+
+piege_photos_2017 <- st_read("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/shp/Camera_trap_france/AppareilsAuto2017.shp") %>%
+  rename("NOM" = "Nom") %>%
+  st_drop_geometry() # On arrondit les coordonnnées pour avoir la même précision entre les années et pouvoir joindre le tableau avec le format des appareils (photo, vidéo)
+
+# on évite de perdre de l'info 
+piege_photos_2017$X[49] <- 433673 
+piege_photos_2017$Y[49] <- 1751301
+piege_photos_2017$X[50] <- 362206
+piege_photos_2017$Y[50] <- 1763137
+piege_photos_2017$X <- round(piege_photos_2017$X,0) 
+piege_photos_2017$Y <- round(piege_photos_2017$Y,0) 
+
+# On repasse en spatial
+piege_photos_2017 <- piege_photos_2017 %>%
+  dplyr::select(NOM, X, Y) %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 27572) %>%
+  filter(NOM != "Bibet" | is.na(NOM)) %>% # on enlève Bibet car on va modifier ses coordonnées
+  filter(NOM != "Galedre" & NOM != "St Jean" & NOM != "St Mamet" & NOM != "Paloumère" & NOM != "Saubé"  & NOM != "Soulas" | is.na(NOM)) # on enlève les pièges qui n'ont pas de pièges à poils à proximité, ils ont pour objectif de faire de la détection mais ne permettent pas l'identification des individus. 
+piege_photos_2017 <-piege_photos_2017[-43,] # Il reste à enlever Coueq
+
+piege_photos_2018 <- st_read("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/shp/Camera_trap_france/AppareilsAutos2018.shp")
+piege_photos_2018 <- st_set_crs(piege_photos_2018,27572) %>%
+  filter(NOM != "Bibet"|is.na(NOM)) %>%
+  filter(NOM != "Rib\u0082rot" & NOM != "St Jean" & NOM != "Sarrouges" & NOM != "Paloum\u008are" & NOM != "Coueq"  | is.na(NOM)) %>% # Piège photo de détection
+  dplyr::select(NOM)
+
+piege_photos_2019 <- st_read("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/shp/Camera_trap_france/AppareilsAutos2019.shp")
+piege_photos_2019 <- st_set_crs(piege_photos_2019,27572) %>%
+  dplyr::select(NOM) %>%
+  filter(NOM != "Bibet"|is.na(NOM)) %>%
+  filter(NOM != "Galedre" & NOM != "Rib\u0082rot" & NOM != "St Jean" & NOM != "Sarrouges"  & NOM != "Coueq"& NOM != "Comus"& NOM != "Merial"  | is.na(NOM)) # Pieges photos de détection
+
+# Ajout d'un appareil photo vallée du lys 
+vallee_lys <- data.frame(NOM = "Vallee du lys", 
+                         X = 456512,
+                         Y = 1749685) %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 27572)
+
+# Ajout de l'appareil Bibet et vallee du lys. Puis on ajoute un numéro a chaque piège photo
+piege_photos_2017 <- rbind(piege_photos_2017,bibet)
+piege_photos_2018 <- rbind(piege_photos_2018,bibet, vallee_lys)
+piege_photos_2019 <- rbind(piege_photos_2019, bibet, vallee_lys)
+
+```
+
+### B - Sites
+
+In this study we define a site as a zone where different kind of traps (photo, video, hair) can capture an individual in a radius of 500m (this value is arbitrary and can be change). We consider that detections among those trap can be independant because they are really close to each other. Then we consider them together and define a special detection probability for each of these sites. 
+
+We can differentiates these sites by a categorical covariate which take into account the types of traps present at a site :
+- camera = only camera trap
+- hair = only  hair trap (have to be on an itinerary)
+- both = camera trap/ hair trap
+
+-   1.  On sélectionne d'abord les pièges à poils qui se trouvent sur
+des itinéraires. Ils serviront de points GPS pour nos sites.
+Ensuite, pour l'ensemble de ces pièges à poils sur des
+itinéraires, on regarde lesquels ont un appareil photo à
+proximité. On associe à chaque appareil photo à moins de 500m
+d'un piège à poils, le piège à poils le plus proche. Ainsi, pour
+tous les pièges à poils sur les itinéraires on sait par la
+covarible "site" lesquels sont un piège à poils seul (2) et
+lesquels sont associés à au moins un appareil photo ou vidéo
+(3). Parfois des pièges à poils sont situé à quelques mètres les
+uns des autres sur les itinéraires mais je les ai tous conservé.
+
+SP: - 1. Primero seleccionamos las trampas de pelo que están en los
+transectos. Servirán como puntos GPS de nuestros "sites". Entonces, para todas 
+estas trampas de pelo en transectos, miramos cuales tienen cámara en
+proximidad. Asociamos a cada cámara a menos de 500m de una trampa de pelo,
+la trampa de pelo más cercana. Así, para todas las trampas de pelo en transectos
+sabemos gracias a la covariable "site" las que son solo una trampa para de pelo (2) y
+las que están asociadas con al menos una cámara de fotos o video (3). 
+A veces, las trampas de pelo se encuentran a pocos metros de distancia en los 
+transectos, pero las he conservado todas.
+
+-   2.  Deuxièment, on s'intéresse aux appareils photos qui ne sont pas
+sur des itinéraires (i.e. tout appareil à plus de 500m d'un
+piège photo qui se situe sur un itinéraire). Pour ces pièges
+photos on regarde s'il y a un piège à poils à moins de 500m de
+sa position. Si oui on modifie la covariable "site" (3) sinon on
+ne fait rien (1).
+
+SP: - 2. En segundo lugar, nos interesan las cámaras que no están
+en transectos (es decir, cualquier cámara a más de 500 m de una
+cámara ubicada en un transecto). Para estas cámaras de
+fotos miramos si hay una trampa de pelo a menos de 500 m de
+su posición. En caso afirmativo, modificamos la covariable "site" (3); de lo contrario,
+no se hace nada (1).
+
+-   3.  Il reste à former le tableau de sites. Les sites correspondent
+aux pièges à poils sur les itinéraires (associés ou non à un
+appareil photo) et aux appareils photos qui ne sont pas sur des
+itinéraires (associé ou non à un piège à poils). Dans ce cas,
+tous les pièges à poils qui ne sont pas sur un itinéraire ou qui
+ne sont pas associé à un appareil photo sont enlevés de la liste
+des pièges puisqu'ils ne sont pas visité régulièrement.
+
+SP: - 3. Queda por formar la matriz de "sites". Los "sites" corresponden a:
+  - Trampas de pelo en transectos (asociadas o no a un
+cámara) 
+  - y Cámaras que no están en transectos (asociadas o no a una trampa de pelo). En este caso,
+todas las trampas de pelo que no están en transecto o que no están asociados con una cámara se eliminan de la lista ya que no son visitados regularmente.
+
+```{r}
+# pour tout appareil photo on cherche le piège à poils sur un itinéraire le plus proche. Et on calcule la distance les séparants
+piege_photos_2017 <- dist_nearest(piege_photos_2017, piege_poils_it_2017) 
+
+## ASP: trap es el id (número de fila en piege_poils_it_2017) de la trampa de pelo 
+# más cercana a esa cámara
+
+
+# On sépare les pièges photos qui sont à plus de 500m d'un piège à poils de ceux qui sont à moins de 500 m d'un piège à poils qui se situe sur un itinéraire. 
+piege_photos_it_2017 <- piege_photos_2017 %>%
+  filter(dist < seuil) # piège photo sur un itineraire
+
+piege_photos_syst_2017 <-  piege_photos_2017 %>%
+  filter(dist >= seuil) %>% # piege photo hors d'un itineraire
+  mutate("site" = "camera") %>% # piège photo seul
+  dplyr::select(NOM, site)
+
+piege_poils_it_2017 <- piege_poils_it_2017 %>%
+  mutate("site" = "hair") # Site possède un piège à poils seul
+
+# Si les pièges à poils des itinéraires sont associés à au moins un piège photos alors on modifie la covariable site pour les rattacher au piège à poil le plus proche. 
+# Pour chaque piège photo sur un itinéraire on l'associé au piège à poil le plus proche, ce qui forme un site de type 3 (piège à poil + piège photo) 
+for (i in 1 : length(piege_photos_it_2017$trap)){ 
+  piege_poils_it_2017$site[piege_photos_it_2017$trap[i]] <- "both"
+}
+
+# Ajout d'un piège à poils combiné à un appareil photo qu'il manque
+mines_blende <- data.frame(NOM = "Mines de Blende", 
+                           X = 476618,
+                           Y = 1765777,
+                           site = "both") %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 27572)
+
+# Ajout d'un appareil vidéo à Bouquemont 
+bouquemont <- data.frame(NOM = "Bouquemont", 
+                         X = 473144,
+                         Y = 1762179,
+                         site = "both") %>%
+  st_as_sf(coords = c("X", "Y"),
+           crs = 27572)
+# On vérifie que les différents tableaux ont les mêmes variables
+piege_poils_it_2017 <- piege_poils_it_2017 %>%
+  dplyr::select(NOM, site)
+
+# On combine tous les sites
+sites_2017 <- rbind(piege_poils_it_2017, piege_photos_syst_2017, mines_blende, bouquemont) 
+
+# On ajoute la variable effort qui indique si le site se situe ou non sur un itinéraire
+effort <- c(rep("it",length(piege_poils_it_2017$NOM)),
+            rep("hors it",length(piege_photos_syst_2017$NOM)),
+            "hors it","it")
+
+sites_2017 <- cbind(sites_2017, effort)
+
+# Fos aussi piège à poils -> site == 3 
+sites_2017[which(sites_2017$NOM == "Fos"), "site"] <- "both"
+
+# On enlève les sites avec uniquement des cameras car il ne permettent pas l'identification des individus 
+sites_2017 <- sites_2017 %>%
+  filter(site != "camera")
+
+# On les range par type de site et on leur attribue un numéro
+sites_2017 <- sites_2017 %>%
+  arrange(site) %>%
+  mutate(trap_id = paste(row_number(),"f"))
+```
+
+We do the same thing for 2018
+
+```{r}
+# Identifier les appareils qui sont associé à des pièges à poils qui sont sur des itinéraires  
+piege_photos_2018 <- dist_nearest(piege_photos_2018, piege_poils_it_2018) 
+
+# On sépare les pièges photos qui sont à plus de 500m d'une piège à poils de ceux qui sont à moins de 500 m d'un piège à poils qui se situe sur un itinéraire. 
+piege_photos_it_2018 <- piege_photos_2018 %>%
+  filter(dist < seuil) 
+
+piege_photos_syst_2018 <-  piege_photos_2018 %>%
+  filter(dist >= seuil) %>%
+  mutate("site" = "camera") %>% # Site possède un piège photo et un piège à poils
+  dplyr::select(NOM, site)
+
+piege_poils_it_2018 <- piege_poils_it_2018 %>%
+  mutate("site" = "hair") # Site possède au moins un piège à poils seul
+
+# Si les pièges à poils des itinéraires sont associés à un piège photos alors on modifie la covariable site
+for (i in 1 : length(piege_photos_it_2018$trap)){
+  piege_poils_it_2018$site[piege_photos_it_2018$trap[i]] <- "both"
+}
+
+# On vérifie que les différents tableaux ont les mêmes variables
+piege_poils_it_2018 <- piege_poils_it_2018 %>%
+  dplyr::select(NOM, site)
+
+# On combine tous les sites
+sites_2018 <- rbind(piege_poils_it_2018, piege_photos_syst_2018, mines_blende, bouquemont) 
+effort <- c(rep("it",length(piege_poils_it_2018$NOM)),
+            rep("hors it",length(piege_photos_syst_2018$NOM)),
+            "hors it","it")
+sites_2018 <- cbind(sites_2018, effort)
+
+# Camera trap hors des itinéraires qui possèdent tout de même un piège à poil 
+sites_2018[which(sites_2018$NOM == "Fos"), "site"] <- "both"
+sites_2018[which(sites_2018$NOM == "Bouquemont"), "site"] <- "both"
+sites_2018[which(sites_2018$NOM == "Seridere"), "site"] <- "both"
+sites_2018[which(sites_2018$NOM == "Le Mail"), "site"] <- "both"
+
+# On enlève les sites avec uniquement des cameras car il ne permettent pas l'identification des individus 
+sites_2018 <- sites_2018 %>%
+  filter(site != "camera")
+
+# On les range par type de site et on leur attribue un numéro
+sites_2018 <- sites_2018 %>%
+  arrange(site) %>%
+  mutate(trap_id = paste(row_number(),"f"))
+```
+
+We do the same thing for 2019
+
+```{r}
+# Identifier les appareils qui sont associé à des pièges à poils qui sont sur des itinéraires  
+piege_photos_2019 <- dist_nearest(piege_photos_2019, piege_poils_it_2019) 
+
+# On sépare les pièges photos qui sont à plus de 500m d'une piège à poils de ceux qui sont à moins de 500 m d'un piège à poils qui se situe sur un itinéraire. 
+piege_photos_it_2019 <- piege_photos_2019 %>%
+  filter(dist < seuil) 
+
+piege_photos_syst_2019 <-  piege_photos_2019 %>%
+  filter(dist >= seuil)
+
+piege_photos_syst_2019 <- dist_nearest(piege_photos_syst_2019, piege_poils)
+
+piege_photos_syst_both_2019 <-  piege_photos_syst_2019 %>%
+  filter(dist < seuil) %>%
+  mutate("site" = "both") %>% # Site possède un piège photo et un piège à poils
+  dplyr::select(NOM, site)
+
+piege_photos_syst_cam_2019 <-  piege_photos_syst_2019 %>%
+  filter(dist >= seuil) %>%
+  mutate("site" = "camera") %>% # Site possède un piège photo seulement
+  dplyr::select(NOM, site)
+piege_photos_syst_cam_2019$NOM[6] <- "Lassas"
+piege_photos_syst_2019 <- rbind(piege_photos_syst_both_2019,
+                                piege_photos_syst_cam_2019)
+
+piege_poils_it_2019 <- piege_poils_it_2019 %>%
+  mutate("site" = "hair") # Site possède au moins un piège à poils seul
+
+# Si les pièges à poils des itinéraires sont associés à un piège photos alors on modifie la covarible site
+for (i in 1 : length(piege_photos_it_2019$trap)){
+  piege_poils_it_2019$site[piege_photos_it_2019$trap[i]] <- "both"
+}
+
+# On vérifie que les différents tableaux ont les mêmes variables
+piege_poils_it_2019 <- piege_poils_it_2019 %>%
+  dplyr::select(NOM, site)
+
+sites_2019 <- rbind(piege_poils_it_2019, piege_photos_syst_2019, bouquemont)
+effort <- c(rep("it",length(piege_poils_it_2019$NOM)),
+            rep("hors it",length(piege_photos_syst_2019$NOM)),
+            "it")
+sites_2019 <- cbind(sites_2019, effort)
+
+# Camera hors it avec un piège photo 
+sites_2019[which(sites_2019$NOM == "Fos"), "site"] <- "both"
+sites_2019[which(sites_2019$NOM == "Bouquemont"), "site"] <- "both"
+sites_2019[which(sites_2019$NOM == "Seridere"), "site"] <- "both"
+sites_2019[which(sites_2019$NOM == "Lassas"), "site"] <- "both"
+
+# On enlève les sites avec uniquement des cameras car il ne permettent pas l'identification des individus 
+sites_2019 <- sites_2019 %>%
+  filter(site != "camera")
+
+# On les range par type de site et on leur attribue un numéro
+sites_2019 <- sites_2019 %>%
+  arrange(site) %>% 
+  mutate(trap_id = paste(row_number(),"f"))
+```
+
+### C - Detections  
+
+In the systematic monitoring we can differentiate 3 methods 
+- 1) Itinerary : hair (spontaneous), print, scat, claw tree
+- 2) Camera trap : photo or video
+- 3) Hair trap : hair, smola, terebenthine
+
+In this study, we just consider camera trap and hair trap because they have a GPS location and can then recapture inds. 
+Ainsi dans le suivi systématique on peut différencier différentes
+méthodes de détection que l'on peu regrouper en 3 catégories :
+
+```{r}
+
+## ASP check:
+unique(dat2$libelle_type_indice)
+
+# We distinguish the 3 methods 
+dat2 <- dat2 %>%
+  mutate(method = "itineraire") # Itinerary 
+##ASP -> There are 28 out of 279 that are on a transect but not associated to photo trap or hair trap
+
+dat2[which(dat2$libelle_type_indice == "vidéo automatique" | dat2$libelle_type_indice == "photographie automatique"),"method"] <- "piege photos" # Camera trap
+
+dat2[which(dat2$libelle_type_indice == "Poils,appât smola" | dat2$libelle_type_indice == "Poils,appât térébenthine"),"method"] <- "piege poils" # Hair trap
+```
+
+We transform dat2 (systematic monitoring) into a spatial object
+
+```{r}
+df <- data.frame(x = dat2$x,
+                 y = dat2$y,
+                 an = as_factor(dat2$an),
+                 id = as_factor(dat2$id),
+                 month = as_factor(dat2$month),
+                 sex = as_factor(dat2$sexe),
+                 method = as_factor(dat2$method),
+                 type_indice = as_factor(dat2$libelle_type_indice),
+                 type_operation = as_factor(dat2$libelle_type_operation_terrain),
+                 itineraire = as_factor(dat2$libelle_itineraire),
+                 ap_photo = as_factor(dat2$libelle_ap_photo))
+
+# On modifie les détections pour mettre les bonnes coordonées GPS
+df[which(df$an == 2017 & df$id == "Gaïa" & df$month == 9 & df$method == "piege poils" ), "x"] <- 481324 
+df[which(df$an == 2018 & df$id == "Bonabé" & df$month == 7 & df$method == "piege poils" & df$itineraire == "SERIDERE"), "y"] <- 1764171
+df[which(df$an == 2019 & df$id == "Cannellito" & df$month == 6 & df$method == "piege photos"& df$x == 456512), "y"] <- 1749685
+df[which(df$an == 2019 & df$id == "Boet" & df$month == 7 & df$method == "piege poils" & df$itineraire == "COL DE NEDE"), "y"] <- 1765913
+df[which(df$an == 2019 & df$id == "Chataigne" & df$month == 9 & df$method == "piege poils" & df$itineraire == "AUERAN"), "x"] <- 474788
+df[which(df$an == 2019 & df$id == "Chataigne" & df$month == 9 & df$method == "piege poils" & df$itineraire == "AUERAN"), "y"] <- 1761916
+df[which(df$id == "New18_06"), "x"] <- 512950
+
+
+pts <- df %>%
+  st_as_sf(coords = c("x", "y"),
+           crs = 27572)
+
+# Détections issues de pièges photos (photographie automatiques, vidéo automatique)
+pts_photo <- df %>%
+  filter(method =="piege photos") %>%
+  st_as_sf(coords = c("x", "y"),
+           crs = 27572)
+
+pts_photo_2017 <- pts_photo %>%
+  filter(an == 2017) 
+
+pts_photo_2018 <- pts_photo %>%
+  filter(an == 2018) 
+
+pts_photo_2019 <- pts_photo %>%
+  filter(an == 2019)
+
+# Détections issues de pièges à poils 
+pts_poils <- df %>%
+  filter(method =="piege poils") %>%
+  st_as_sf(coords = c("x", "y"),
+           crs = 27572)
+
+pts_poils_2017 <-  pts_poils %>%
+  filter(an == 2017)
+
+pts_poils_2018 <-  pts_poils %>%
+  filter(an == 2018)
+
+pts_poils_2019 <-  pts_poils %>%
+  filter(an == 2019) 
+```
+
+# ASP: Exportar para comprobar con base de datos española
+#setwd("D:/MargSalas/Oso/Datos/Data_raw")
+#openxlsx::write.xlsx(df, 'Data_Maelis_1719_Syst.xlsx')
+
+We match detection indices with traps
+
+```{r}
+# Association entre la détection et le piège à poil le plus proche en tenant compte des pièges actifs selon les années
+
+# Photo
+pts_photo_2017 <- dist_nearest(pts_photo_2017, 
+                               sites_2017 %>% 
+                                 filter(site != "hair") %>%
+                                 mutate("trap" = row_number())) %>%
+  ## ASP: Distance from detection (photo) to the closest camera trap, and asigns row number of
+  # the sites file (which is the same as the id of the camera)
+  st_drop_geometry() %>%
+  left_join(sites_2017 %>% 
+              filter(site != "hair") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  ## ASP: Joins the detections to the camera trap id (whch is the row number)
+  dplyr::select(an, month, id, sex, type_indice, trap_id, dist)
+
+pts_photo_2018 <- dist_nearest(pts_photo_2018, 
+                               sites_2018 %>% 
+                                 filter(site != "hair") %>%
+                                 mutate("trap" = row_number())) %>%
+  st_drop_geometry() %>%
+  left_join(sites_2018 %>% 
+              filter(site != "hair") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sex, type_indice, trap_id, dist)
+
+pts_photo_2019 <- dist_nearest(pts_photo_2019, 
+                               sites_2019 %>% 
+                                 filter(site != "hair") %>%
+                                 mutate("trap" = row_number())) %>%
+  st_drop_geometry() %>%
+  left_join(sites_2019 %>% 
+              filter(site != "hair") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sex, type_indice, trap_id, dist)
+
+#Poils 
+pts_poils_2017 <- dist_nearest(pts_poils_2017, 
+                               sites_2017 %>% 
+                                 filter(site != "camera") %>%
+                                 mutate("trap" = row_number())) %>%
+  st_drop_geometry() %>%
+  left_join(sites_2017 %>% 
+              filter(site != "camera") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sex, type_indice, trap_id, dist)
+
+pts_poils_2018 <- dist_nearest(pts_poils_2018, 
+                               sites_2018 %>% 
+                                 filter(site != "camera") %>%
+                                 mutate("trap" = row_number())) %>%
+  st_drop_geometry() %>%
+  left_join(sites_2018 %>% 
+              filter(site != "camera") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sex, type_indice, trap_id, dist)
+
+pts_poils_2019 <- dist_nearest(pts_poils_2019, 
+                               sites_2019 %>% 
+                                 filter(site != "camera") %>%
+                                 mutate("trap" = row_number())) %>%
+  st_drop_geometry() %>%
+  left_join(sites_2019 %>% 
+              filter(site != "camera") %>%
+              mutate("trap" = row_number()) %>% 
+              st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sex, type_indice, trap_id, dist)
+```
+
+
+We remove detection that are to far away a trap, because they must be errors 
+
+```{r}
+pts_2017 <- rbind(pts_photo_2017,pts_poils_2017) %>%
+  filter(dist < seuil) 
+pts_2018 <- rbind(pts_photo_2018,pts_poils_2018) %>%
+  filter(dist < seuil)
+pts_2019 <- rbind(pts_photo_2019,pts_poils_2019) %>%
+  filter(dist < seuil)
+```
+
+# II - Catalunya
+
+## 1) Load and tidy data
+
+```{r}
+dat_cat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Seguiment_2017_2019_Catalunya.xlsx") %>%
+  janitor::clean_names() %>%
+  dplyr::select(annee_indice,num_departement, 
+                libelle_type_indice, 
+                x_lamb_ii_etendu, 
+                y_lamb_ii_etendu, 
+                libelle_validation_indice, 
+                libelle_type_operation_terrain, 
+                date_temoin, 
+                libelle_nom_individu) %>% # select useful variables
+  dplyr::mutate(date_temoin = openxlsx::convertToDate(date_temoin)) %>% # convert date in excel into date in R 
+  dplyr:: mutate(an = year(date_temoin),
+                 month = month(date_temoin)) %>%
+  dplyr::slice(-1) %>% # remove first line with names
+  dplyr::rename(x = x_lamb_ii_etendu,
+                y = y_lamb_ii_etendu) %>% # tidy names of coordinates 
+  dplyr::filter(!is.na(x) | !is.na(y)) # Remove detection without coordinates 
+
+```
+
+Remove det without inidvidual identification
+```{r}
+# Keep only indentify ind 
+dat_cat<- dat_cat %>%
+  filter(str_detect(dat_cat$libelle_nom_individu,"ID|New|Cachou|Boavi|Goiat|Beret|Esmolet|Fifonet|Hvala|Isil|Nere|Pelut|Plume|Sardo|Bambou|Blizzard|Bulle|Caramellita|Floc|Pepito|Nheu|Pyros")) 
+
+# Remove detection where we are not sure
+dat_cat <- dat_cat %>%
+  filter(!str_detect(dat_cat$libelle_nom_individu,"Posible|1 mascle Cachou|/ Pelut")) %>%
+  slice(-1) # remove "Pepito?"
+
+# On visualise les détections 
+dat_cat_sp <- st_as_sf(dat_cat, coords = c("x","y"), crs = CRS("+proj=utm +zone=31 +datum=WGS84"))
+#mapview(dat_cat_sp)
+```
+
+Make match between french and spanish names 
+16ID07 is New18_17 
+18ID01, 18ID03, 18ID04, 18ID05, 19ID03 are mixed hair samples -> remove them from the study
+
+```{r}
+dat_cat <- dat_cat %>%
+  mutate(id = NA)
+
+dat_cat <- dat_cat %>%
+  mutate(id = case_when(
+    str_detect(libelle_nom_individu, "Aran") ~ "Aran",
+    str_detect(libelle_nom_individu, "Boavi") ~ "Boavi",
+    str_detect(libelle_nom_individu, "Cachou") ~ "Cachou",
+    str_detect(libelle_nom_individu, "Esmolet") ~ "Esmolet",
+    str_detect(libelle_nom_individu, "19ID01") ~ "New19_01",
+    str_detect(libelle_nom_individu, "Fifonet") ~ "Fifonet",
+    str_detect(libelle_nom_individu, "Goiat") ~ "Goiat",
+    str_detect(libelle_nom_individu, "Hvala") ~ "Hvala",
+    str_detect(libelle_nom_individu, "Isil") ~ "Isil",
+    str_detect(libelle_nom_individu, "18ID01") ~ "18ID01",
+    str_detect(libelle_nom_individu, "19ID03") ~ "19ID03",
+    str_detect(libelle_nom_individu, "Nere") ~ "Néré",
+    str_detect(libelle_nom_individu, "Pelut") ~ "Pelut",
+    str_detect(libelle_nom_individu, "Plume") ~ "Plume",
+    str_detect(libelle_nom_individu, "Sardo") ~ "Sardo",
+    str_detect(libelle_nom_individu, "Bambou") ~ "Bambou",
+    str_detect(libelle_nom_individu, "Blizzard") ~ "Blizzard",
+    str_detect(libelle_nom_individu, "Bulle") ~ "Bulle",
+    str_detect(libelle_nom_individu, "18.18") ~ "New18_18",
+    str_detect(libelle_nom_individu, "Floc") ~ "Flocon",
+    str_detect(libelle_nom_individu, "18ID03") ~ "18ID03",
+    str_detect(libelle_nom_individu, "Nheu") ~ "Nheu",
+    str_detect(libelle_nom_individu, "Pepito") ~ "Pépite",
+    str_detect(libelle_nom_individu, "Caramellita") ~ "Caramellita",
+    str_detect(libelle_nom_individu, "18ID05") ~ "18ID05",
+    str_detect(libelle_nom_individu, "19.01") ~ "New19_01",
+    str_detect(libelle_nom_individu, "16ID07") ~ "New18_17",
+    str_detect(libelle_nom_individu, "18ID04") ~ "18ID04",
+    str_detect(libelle_nom_individu, "18.17") ~ "New18_17",
+    str_detect(libelle_nom_individu, "Pyros") ~ "Pyros",
+    str_detect(libelle_nom_individu, "Beret") ~ "Beret"))
+
+
+# Jointure des 2 tableaux par leur nom
+dat_cat <- dat_cat %>% 
+  left_join(sex, by = c("id" = "nom_connu_remarques")) %>%
+  dplyr::select(-genotype, -x4, -mere, -pere, -pere2_compatible, -annee_naissance, -age) %>%
+  mutate(sexe = replace_na(sexe, "U")) 
+
+# On ajoute le sexe à la main pour les individus qui n'ont pas de correspondance avec le tableau français 
+# On enlève les individus issu de mélange de poils 
+
+dat_cat <- dat_cat %>%
+  filter(!str_detect(dat_cat$id,"18ID01|18ID03|18ID04|18ID05|19ID03"))
+```
+
+
+On sépare les données systématiques des données opportunistes 
+Puis pour la suite nous nous intéresserons dans un premier temps aux données systématiques 
+```{r}
+dat_cat_syst <- dat_cat %>%
+  filter(libelle_type_operation_terrain == "Itineraris" | libelle_type_operation_terrain == "Itinerari" |  libelle_type_operation_terrain == "Itinerario" | 
+           libelle_type_operation_terrain == "Sistemes automàtics" | libelle_type_operation_terrain == "Sistemes Automàtics" |
+           libelle_type_operation_terrain == "Paranys pèls" | libelle_type_operation_terrain == "Paranys Pèls" |  libelle_type_operation_terrain == "Oportunista")
+
+dat_cat_op <- dat_cat_syst%>%
+  filter(libelle_type_indice == "Depredació")
+
+dat_cat_syst <- dat_cat_syst %>%
+  filter(libelle_type_indice == "Pèls" | libelle_type_indice == "Pels"| libelle_type_indice == "Pèls " |
+           libelle_type_indice == "Fotografia" | libelle_type_indice == "Fotografia/Video"| libelle_type_indice == "Video " |
+           libelle_type_indice == "Fotos" | libelle_type_indice == "fotografia")
+```
+
+
+## 2) Systematic monitoring
+### A - Traps 
+#### a) Hair traps 
+
+```{r}
+# Importer les pièges de Catalogne 
+trap_cat <- readxl::read_xlsx("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/UTM trampas pelos y camaras.xlsx") %>% 
+  janitor::clean_names() %>%
+  filter(!is.na(xutm)) %>%
+  st_as_sf(coords = c("xutm","yutm"), 
+           crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  mutate(trap_id = paste(row_number(), "c")) %>% 
+  rename("NOM" = "itinerari") %>%
+  mutate(effort = "it") %>%
+  mutate(site = "hair") # poils seul
+## ASP: Names all "hair" and then according to foto_video or pels columns assings to camera or both
+trap_cat[which(!is.na(trap_cat$foto_video)),"site"] <- "both" # poils et photo
+trap_cat[which(is.na(trap_cat$pels)),"site"] <- "camera" # photo seul
+
+
+# On enlève les pièges photos seul car ils ne permettent pas l'identification des ours 
+trap_cat <- trap_cat %>%
+  filter(site != "camera")
+
+# On fait un sous tableau pour les pièges à poils 
+trap_cat_pels <- trap_cat %>%
+  filter(pels != is.na(pels)) %>% 
+  mutate(trap = row_number())
+```
+
+
+#### b) Camera traps
+```{r}
+trap_cat_foto <- trap_cat %>%
+  filter(foto_video != is.na(foto_video)) %>% 
+  mutate(trap = row_number()) 
+```
+
+
+### B - Detections 
+
+On commence par séparer les indices selon leur type (poils ou photo) et selon l'année afin de les rapprocher du piège du même type le plus proche
+```{r}
+# Les détections issues de pièges photos ou vidéos
+pts_foto <- dat_cat_syst %>% 
+  st_as_sf(coords = c("x","y"), 
+           crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  filter(libelle_type_indice == "Fotografia")
+
+pts_foto_2017 <- pts_foto %>%
+  filter(an == 2017) 
+
+pts_foto_2018 <- pts_foto %>%
+  filter(an == 2018) 
+
+pts_foto_2019 <- pts_foto %>%
+  filter(an == 2019)  
+
+# Les détections issues de pièges à poils 
+pts_pels <- dat_cat_syst %>% 
+  st_as_sf(coords = c("x","y"), 
+           crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  filter(libelle_type_indice == "Pèls")
+
+pts_pels_2017 <- pts_pels %>% 
+  filter(an == 2017) 
+
+pts_pels_2018 <- pts_pels %>% 
+  filter(an == 2018)
+
+pts_pels_2019 <- pts_pels %>% 
+  filter(an == 2019)
+```
+
+On associe chaque détection au piège le plus proche puis on calcule la distance euclidienne les séparants
+```{r}
+# Association entre la détection et le piège photo le plus proche, les mêmes pièges seraient actifs les 3 années (à vérifier)
+pts_foto_2017 <- dist_nearest(pts_foto_2017, trap_cat_foto) %>% ## ASP: It assings to the nearest trap. The name of the trap is the variable "trap" (which is created as the row number of trap_cat_foto)
+  st_drop_geometry() %>%
+  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>% # To get the trapID of the whole trap dataset, it joins it by the variable trap
+  dplyr::select(an, month, id, sexe, libelle_type_indice, trap_id, dist)
+
+pts_foto_2018 <- dist_nearest(pts_foto_2018, trap_cat_foto) %>%
+  st_drop_geometry() %>%
+  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sexe, libelle_type_indice, trap_id, dist)
+
+pts_foto_2019 <- dist_nearest(pts_foto_2019, trap_cat_foto) %>%
+  st_drop_geometry() %>%
+  left_join(trap_cat_foto %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sexe, libelle_type_indice, trap_id, dist)
+```
+
+On fait de même pour les pièges à poils 
+```{r}
+# Association entre la détection et le piège à poils le plus proche, les mêmes pièges seraient actifs les 3 années (à vérifier)
+pts_pels_2017 <- dist_nearest(pts_pels_2017, trap_cat_pels) %>%
+  st_drop_geometry() %>%
+  left_join(trap_cat_pels %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sexe, libelle_type_indice, trap_id, dist)
+
+pts_pels_2018 <- dist_nearest(pts_pels_2018, trap_cat_pels) %>%
+  st_drop_geometry() %>%
+  left_join(trap_cat_pels %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sexe, libelle_type_indice, trap_id, dist)
+
+pts_pels_2019 <- dist_nearest(pts_pels_2019, trap_cat_pels) %>%
+  st_drop_geometry() %>%
+  left_join(trap_cat_pels %>% st_drop_geometry(), by = "trap") %>%
+  dplyr::select(an, month, id, sexe, libelle_type_indice, trap_id, dist)
+```
+
+Voir si on enlève les détections qui sont trop éloignée du piège le plus proche 
+
+```{r}
+#On combine toutes les détections de la catalogne dans un même tableau par année
+pts_cat_2017 <- rbind(pts_foto_2017,pts_pels_2017) %>% 
+  filter(dist < seuil) %>%
+  rename("sex"="sexe") %>%
+  rename("type_indice"="libelle_type_indice")
+
+pts_cat_2018 <- rbind(pts_foto_2018,pts_pels_2018) %>% 
+  filter(dist < seuil)  %>%
+  rename("sex"="sexe") %>%
+  rename("type_indice"="libelle_type_indice")
+
+pts_cat_2019 <- rbind(pts_foto_2019,pts_pels_2019) %>% 
+  filter(dist < seuil)  %>%
+  rename("sex"="sexe") %>%
+  rename("type_indice"="libelle_type_indice")
+```
+
+# III - Combine France and Catalunya
+## 1) Sites 
+```{r}
+sites_2017_t <- sites_2017 %>%
+  mutate(pays = "France") %>%
+  st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  rbind(trap_cat %>%
+          mutate(pays = "Espagne") %>%
+          dplyr::select(NOM, site, effort, geometry, trap_id, pays)) %>%
+  mutate(trap = row_number()) 
+
+sites_2018_t <- sites_2018 %>%
+  mutate(pays = "France") %>%
+  st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  rbind(trap_cat %>%
+          mutate(pays = "Espagne") %>%
+          dplyr::select(NOM, site, effort, geometry, trap_id, pays)) %>%
+  mutate(trap = row_number()) 
+
+sites_2019_t <- sites_2019 %>%
+  mutate(pays = "France") %>%
+  st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  rbind(trap_cat %>%
+          mutate(pays = "Espagne") %>%
+          dplyr::select(NOM, site, effort, geometry, trap_id, pays)) %>%
+  mutate(trap = row_number()) 
+```
+
+## 2) Detections  
+```{r}
+pts_2017_t <- pts_2017 %>%
+  mutate(id  = as.character(id)) %>%
+  mutate(month = month %>%
+           as.character() %>%
+           as.numeric()) %>%
+  mutate(sex  = as.character(sex)) %>%
+  mutate(trap_id  = as.character(trap_id)) %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  rbind(pts_cat_2017 %>%
+          dplyr::select(id, month, sex, trap_id)) %>%
+  left_join(sites_2017_t, by = "trap_id") %>%
+  dplyr::select(id, month, sex, trap, trap_id) %>%
+  mutate(sex = as.factor(sex)) %>%
+  filter(month > 4) # detections between may and november 
+
+
+
+pts_2018_t <- pts_2018 %>%
+  mutate(id  = as.character(id)) %>%
+  mutate(month = month %>%
+           as.character() %>%
+           as.numeric()) %>%
+  mutate(sex  = as.character(sex)) %>%
+  mutate(trap_id  = as.character(trap_id)) %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  rbind(pts_cat_2018 %>%
+          dplyr::select(id, month, sex, trap_id)) %>%
+  left_join(sites_2018_t, by = "trap_id") %>%
+  dplyr::select(id, month, sex, trap, trap_id) %>%
+  mutate(sex = as.factor(sex)) %>%
+  filter(month > 4) # detections between may and november 
+
+
+pts_2019_t <- pts_2019 %>%
+  mutate(id  = as.character(id)) %>%
+  mutate(month = month %>%
+           as.character() %>%
+           as.numeric()) %>%
+  mutate(sex  = as.character(sex)) %>%
+  mutate(trap_id  = as.character(trap_id)) %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  rbind(pts_cat_2019 %>%
+          dplyr::select(id, month, sex, trap_id)) %>%
+  left_join(sites_2019_t, by = "trap_id") %>%
+ dplyr:: select(id, month, sex, trap, trap_id) %>%
+  mutate(sex = as.factor(sex)) %>%
+  filter(month > 4) # detections between may and november 
+```
+
+# *OPORTUNISTIC MONITORING*
+
+# I - Detections
+
+## 1) Tidy data and join them (France and Spain)
+import raw data
+```{r}
+# Navarre 
+# Navarre 2017 = pas de déprédation 
+Navarre2018 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/2018/Navarre2018.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
+  st_as_sf() %>%
+  st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) 
+
+dat_nav_op <- Navarre2018 %>%
+  filter(OP == 10) %>% # depredations
+  mutate(date = ymd(F_OBS), 
+         an = year(date),
+         month = month(date),
+         id = N_OSO,
+         sexe = "F",
+         pays = "Navarre") %>%
+  dplyr::select(id, an, month, sexe, pays)
+
+# Aragon 
+#Aragon2017 <- readxl::read_xls("Raw/Donnees_Espagne_2017_2019/2017/IndicesVrai2017_LbtII_Aragon.xls") # pas de déprédation où l'individu a pu être identifié
+
+Aragon2018 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/2018/Aragon2018.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
+  st_as_sf() %>%
+  st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>% 
+  dplyr::select(FECHA, INDIVIDUO, TIPO.INDIC)
+
+Aragon2019 <- rgdal::readOGR("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/2019/Tabla OSO AragÓ©én 2019.shp", use_iconv=TRUE, encoding = "UTF-8") %>%
+  st_as_sf() %>%
+  st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>% 
+  dplyr::select(FECHA, INDIVIDUO, TIPO.INDIC)
+
+dat_ar_op <- Aragon2018 %>%
+  rbind(Aragon2019) %>%
+  rename("date" = FECHA,
+         "id" = INDIVIDUO,
+         "libelle_type_operation_terrain" = TIPO.INDIC) %>%
+  mutate(id = str_to_title(id),
+         libelle_type_operation_terrain = tolower(libelle_type_operation_terrain)) %>%
+  filter(libelle_type_operation_terrain == "ataque") %>%
+  mutate(date = dmy(date),
+         month = month(date),
+         an = year(date), 
+         pays = "Aragon") %>%
+  left_join(sex, by = c("id" = "nom_connu_remarques")) %>%
+  dplyr::select(id, an, month, sexe, pays)
+
+# Catalogne
+dat_cat_op <- dat_cat_op %>%
+  mutate(pays = "Catalogne") %>%
+  st_as_sf(coords = c("x", "y"), crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  dplyr::select(id, an, month, sexe, pays)
+
+# France 
+dat2_op <- dat2_op %>%
+  mutate(pays = "France") %>%
+  st_as_sf(coords= c("x","y"), crs = 27572) %>%
+  st_transform(crs = CRS("+proj=utm +zone=31 +datum=WGS84")) %>%
+  filter(sexe != "U") %>%
+  dplyr::select(id, an, month, sexe, pays)
+
+# Join data 
+df_op <- dat2_op %>%
+  rbind(dat_nav_op) %>%
+  rbind(dat_ar_op) %>%
+  rbind(dat_cat_op) %>%
+  filter(month < 12, month > 4) # Seulement entre mai et novembre
+
+# Take a look at it 
+# mapview(df_op,zcol = "id")
+summary(df_op)
+table(df_op$id) # Goiat est beaucoup plus détecté -> nécessité d'en tenir compte ? 
+```
+
+# II - Sites opportuniste
+## 1) Constats dommages totaux 
+### A - Les dépredations en France
+On commence par identifier les sites qui sont potentiellement échantilloné car il y a déjà eu depuis 2010 des constats de dommages qui on été faits dans ces zones 
+On défini donc une zone grille associé à ces constats de dommages. 
+
+SP: Comenzamos por identificar los sitios que son potencialmente muestreados porque desde 2010 ya hay informes de daños que se han producido en estas áreas.
+Por lo tanto, definimos una zona de cuadrícula asociada con estos informes de daños.
+
+```{r}
+# Chargements des données de dommages entre 1996 et 2019 i.e. les zones où il y a eu des dommages et une intervention pour. Ainsi il y a des personnes et des troupeaux dans cette zonne où potentiellement s'il y avait des ours ils auraient été détecté 
+
+# Cargar datos de daños entre 1996 y 2019 (áreas donde hubo daños e intervención). En estas zonas hay personas y tropas por lo que, potencialmente, si hubiera osos, habrían sido detectados.
+
+Constats_dommages_Total <- read.table("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Constats_dommages_Total.csv", dec=",", header=T, sep=";", fill=TRUE, encoding = "UTF-8") %>%
+  janitor::clean_names() %>%
+  rename(x = x_lamb_ii_etendu,
+         y = y_lamb_ii_etendu,
+         an = annee_indice,
+         date = date_temoin) %>%
+  dplyr::select(x,y,an,date,) %>%
+  mutate(x = as.character(x) %>% as.numeric(),
+         y = as.character(y) %>% as.numeric()) %>%
+  filter(y > 1700000 & y < 1900000)
+
+Constats_dommages_Total[Constats_dommages_Total == ""] <- NA 
+Constats_dommages_Total <- Constats_dommages_Total %>%
+  drop_na() %>%
+  st_as_sf(coords = c("x","y"),
+           crs = 27572)
+
+# Afficher les dégâts depuis 1996
+ggplot() + 
+  #geom_sf(data = sousmassif.rg, colour = "grey50", fill = "white", lwd = 0.1) +
+  #geom_sf(data = france %>% st_boundary(), lwd = 0.1)+
+  geom_sf(data = Constats_dommages_Total, pch = 4)+ 
+  coord_sf(xlim = c(200000, 700000), 
+           ylim = c(1700000, 1900000)) +
+  labs(title = "Détections des ours bruns dans les Pyrénées en 2017")
+
+# Histogramme du nombre d'indice de déprédation récolté par année en France
+hist(Constats_dommages_Total$an %>% as.numeric)
+# Si on coupe en 2010
+Constats_dommages_2010 <- Constats_dommages_Total %>% 
+  mutate(an = as.numeric(an)) %>%
+  filter(an > 2009 & an < 2020)
+```
+
+### B - Les dépredations en Espagne
+```{r}
+library(readxl)    
+read_excel_allsheets <- function(filename, tibble = F ){
+  # I prefer straight data.frames
+  # but if you like tidyverse tibbles (the default with read_excel)
+  # then just pass tibble = TRUE
+  sheets <- readxl::excel_sheets(filename)
+  x <- lapply(sheets, function(X) readxl::read_excel(filename, sheet = X))
+  if(!tibble) x <- lapply(x, as.data.frame)
+  names(x) <- sheets
+  x
+}
+
+# Read the Spanish table with all depredations from 2010
+Depred <- read_excel_allsheets("D:/MargSalas/Oso/Datos/Effort_raw/France/Raw/Raw/Donnees_Espagne_2017_2019/Predation_Espagne.xlsx")
+
+# Make a function to spacialize the table with the right EPSG
+Depredation <- function(region){
+  Data <- Depred[[region]] %>% 
+    filter(!is.na(X)) %>%
+    mutate(X = as.numeric(X),
+           Y = as.numeric(Y)) 
+  
+  epsg <- Depred[[region]]$EPSG %>%
+    unique() %>%
+    na.omit()
+  
+  Retour <- Data %>%
+    filter(EPSG == epsg[1]) %>%
+    st_as_sf(coords = c("X","Y"), crs = epsg[1]) %>%
+    st_transform(crs= CRS("+proj=utm +zone=31 +datum=WGS84"))
+  
+  for(i in 2:length(epsg)){
+    A <- Data %>%
+      filter(EPSG == epsg[i]) %>%
+      st_as_sf(coords = c("X","Y"), crs = epsg[i]) %>%
+      st_transform(crs= CRS("+proj=utm +zone=31 +datum=WGS84"))
+    Retour <- rbind(Retour,A)
+  }
+  return(Retour)}
+
+Depredation_esp <- Depredation("Catalogne") %>%
+  rbind(Depred[["Navarre"]]%>%
+          st_as_sf(coords = c("X","Y"), crs = 32630) %>%
+          st_transform(crs= CRS("+proj=utm +zone=31 +datum=WGS84"))) %>%
+  rbind(Depredation("Aragon")) %>%
+  filter(year > 2009 & year < 2020)
+```
+
+Join the two tables Constats_dommages_2010 and Depredation_esp
+```{r}
+Depredation_fr <- Constats_dommages_2010 %>%
+  rename("year" = "an") %>%
+  dplyr::select(year) %>%
+  mutate(pays = "France") %>%
+  st_transform(crs= CRS("+proj=utm +zone=31 +datum=WGS84"))
+
+Depredation_effort <- Depredation_esp %>%
+  dplyr::select(year) %>%
+  mutate(pays = "Espagne") %>%
+  rbind(Depredation_fr) %>%
+  rbind(df_op %>%
+          rename("year"= "an") %>%
+          dplyr::select(year) %>%
+          mutate(pays = "det17a19"))
+```
+
+
+## 2) Grid 
+Faisons une grille sur notre aire d'étude
+```{r}
+grid_op <- AireEtude %>%
+  st_transform(crs= CRS("+proj=utm +zone=31 +datum=WGS84"))%>%
+  st_make_grid(cellsize = 5000)  %>% # Choisir la bonne résolution
+  st_sf() %>% 
+  mutate(id = 1:n()) %>% 
+  dplyr::select(id, geometry)
+
+# On recoupe avec les dégâts depuis 2010 pour sélectionner seulement les cellules actives 
+cells_active_op <- st_intersection(grid_op,Depredation_effort) %>%
+  st_drop_geometry() %>%
+  dplyr::select(id) %>%
+  unique() 
+## ASP: Indicates the cells of grid_op that intersect with the depredation events
+
+# On distingue les sites français des sites espagnols
+cells_france_op <- st_intersection(grid_op %>% st_centroid,
+                                   dpts %>% 
+                                     st_transform(st_crs(grid_op))) %>%
+  st_drop_geometry() %>%
+  dplyr::select(id) %>%
+  unique() 
+
+
+# On met active = O si la cellule n'a jamais été échantilloné et active 1 si elle l'a déjà été
+grid_op <- grid_op %>%
+  mutate(active = "0") %>%
+  mutate(pays = "Espagne")
+grid_op[cells_active_op$id, "active"] <- "1"
+grid_op[cells_france_op$id, "pays"] <- "France"
+
+# On conserve que les cellules actives 
+trap_active_op <- grid_op %>%
+  filter(active == "1") %>%
+  rename("trap" = id) %>%
+  mutate(trap_id = paste(row_number(),"op", sep = " "))
+# Au vu que les données systématiques comprennent environ 500 sites on ajoute 500 à tous les numéro des pièges. Ainsi tous les détections s'effectuants après 500 correspondent à des sites opportunistes. 
+
+ggplot() + 
+  geom_sf(data = dpts, colour = "grey50", fill = "white", lwd = 0.1) +
+  geom_sf(data = trap_active_op, lwd = 0.1, aes(fill = pays))+
+  #geom_sf(data = ssDF_syst[[3]] %>% st_as_sf(coords = c("X","Y"), crs=27572), pch = 1)+ 
+  coord_sf(xlim = c(200000, 700000), 
+           ylim = c(1700000, 1900000))
+```
+
+# III - Join detections and sites   
+On recoupe la liste des cellules actives avec les constats de dommages faits entre 2017 et 2019
+```{r}
+pts_op <- st_intersection(df_op, trap_active_op) 
+## ASP: To which traps (cells) the opportunistic observations belong
+pts_op <- pts_op %>%
+  rename("sex" = "sexe") %>%
+  dplyr::select(id,month, trap_id,sex,an)
+
+# On crée un fichier de détection par année
+pts_op_2017 <- pts_op %>%
+  filter(an == 2017) 
+pts_op_2018 <- pts_op %>%
+  filter(an == 2018)
+pts_op_2019 <- pts_op %>%
+  filter(an == 2019)
+```
+
+```{r}
+# join trap files 
+sites_op <- trap_active_op %>%
+  st_centroid() %>%
+  dplyr::select(trap_id,pays) %>%
+  mutate(NOM = "centroid",
+         site = "opportunist",
+         effort = "opportunist",
+         trap = NA,
+         suivi = "opportunist")
+
+sites_2017 <- sites_2017_t %>%
+  mutate(suivi = "systematic") %>%
+  rbind(sites_op) %>%
+  mutate(trap = row_number())
+
+sites_2018 <- sites_2018_t %>%
+  mutate(suivi = "systematic") %>%
+  rbind(sites_op) %>%
+  mutate(trap = row_number())
+
+sites_2019 <- sites_2019_t %>%
+  mutate(suivi = "systematic") %>%
+  rbind(sites_op) %>%
+  mutate(trap = row_number())
+```
+
+
+```{r}
+# On regroupe les detections systematiques et opportunistes et on met le bon numéro de piège  
+pts_2017 <- pts_2017_t %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  mutate(suivi = "systematic") %>%
+  rbind(pts_op_2017 %>%
+          dplyr::select(id, month, sex, trap_id) %>%
+          mutate(suivi = "opportunist") %>%
+          st_drop_geometry()) %>%
+  left_join(sites_2017 %>% st_as_sf() %>% st_drop_geometry() %>% dplyr::select(-suivi), by = "trap_id") %>%
+  dplyr::select(id, month, sex, trap_id, trap, suivi)
+
+pts_2018 <- pts_2018_t %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  mutate(suivi = "systematic") %>%
+  rbind(pts_op_2018 %>%
+          dplyr::select(id, month, sex, trap_id) %>%
+          mutate(suivi = "opportunist") %>%
+          st_drop_geometry()) %>%
+  left_join(sites_2018 %>% st_as_sf() %>% st_drop_geometry() %>% dplyr::select(-suivi), by = "trap_id") %>%
+  dplyr::select(id, month, sex, trap_id, trap, suivi)
+
+pts_2019 <- pts_2019_t %>%
+  dplyr::select(id, month, sex, trap_id) %>%
+  mutate(suivi = "systematic") %>%
+  rbind(pts_op_2019 %>%
+          dplyr::select(id, month, sex, trap_id) %>%
+          mutate(suivi = "opportunist") %>%
+          st_drop_geometry()) %>%
+  left_join(sites_2019 %>% st_as_sf() %>% st_drop_geometry() %>% dplyr::select(-suivi), by = "trap_id") %>%
+  dplyr::select(id, month, sex, trap_id, trap, suivi)
+```
+
+*SAVE DATA*
+```{r}
+data <- list(det = list("2017" = pts_2017,
+                        "2018" = pts_2018,
+                        "2019" = pts_2019),
+             traps = list("2017" = sites_2017,
+                          "2018" = sites_2018,
+                          "2019" = sites_2019))
+
+# save(data, file = "Tidy/data.RData")
+```
+

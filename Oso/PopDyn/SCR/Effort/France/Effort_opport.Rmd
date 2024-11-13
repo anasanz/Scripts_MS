@@ -1,0 +1,246 @@
+---
+title: "Effort_opport"
+output: html_document
+date: '2022-05-09'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+title: "Effort"
+output: html_document
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      cache = FALSE)
+
+library(tidyverse)
+library(lubridate)
+library(rgdal)
+library(sf)
+library(oSCR)
+library(mapview) 
+library(raster)
+
+theme_set(theme_light())
+``` 
+
+# Load data
+In the data list you can find the detection data ("det") and traps ("traps") for each year between 2016 and 2019.   
+For each detection there is :   
+ - id: name of the bear which were detected  
+ - month: the month of the detection (for us is the occasion). Here the month considered are between may and november
+ - sex: the sex of the individual captured  
+ - trap_id: the id I gave to the trap (f: match to traps in France, c: match to traps in Catalunya and op: match to the opportunistic grid at 5km)  
+ - trap: id number of the trap to match with the trap file  
+ - suivi: monitoring (systematic = structured sampling (hair snag, camera trap or both) and opportunsitic = indices samples after a depredation)  
+      
+For each trap:   
+ - NOM: name of the itinerary where the trap is  
+ - site: tells if the trap is composed of a hair snag alone (hair), a camera trap combine with hair snag (both), or an opportunistic trap define as centers of a 5km grid where at least one depredation event occurs since 2010.   
+ - trap_id: the id I gave to the trap  
+ - pays: country   
+ - trap: id number of the trap  
+ - suivi: monitoring (systematic = structured sampling (hair snag, camera trap or both) and opportunsitic = indices samples after a depredation)  
+ - geometry: GPS location of the trap in UTM (crs= CRS("+proj=utm +zone=31 +datum=WGS84"))  
+    
+```{r}
+load("data.RData")
+```
+   
+In this case, stystematic/ structured monitoring and opportunistic
+```{r}
+# Encounters 
+det_2017 <- data[["det"]][["2017"]] 
+
+det_2018 <- data[["det"]][["2018"]]
+
+det_2019 <- data[["det"]][["2019"]] 
+
+# Traps positions
+traps_2017 <- data[["traps"]][["2017"]] 
+
+traps_2018 <- data[["traps"]][["2018"]] 
+
+traps_2019 <- data[["traps"]][["2019"]] 
+```
+    
+# I - Define edf and tdf
+## 1) EDF : encounter data frame   
+```{r}
+edf <- data.frame(session = c(rep(1, nrow(det_2017)),
+                              rep(2, nrow(det_2018)),
+                              rep(3, nrow(det_2019))), # add the session column
+                  ind = c(det_2017$id,
+                          det_2018$id,
+                          det_2019$id), # row names are individual IDs
+                  occ = c(det_2017$month,
+                          det_2018$month,
+                          det_2019$month) %>% as.factor() %>% as.numeric, # occasions are month may = 1
+                  trap = c(det_2017$trap,
+                           det_2018$trap,
+                           det_2019$trap), # col names are trap IDs
+                  sex = fct_c(det_2017$sex, # note the use of fct_c !!
+                              det_2018$sex,
+                              det_2019$sex))
+
+nocc <- 7 # number of occasion (month) per session (year) : may to november
+```
+
+## 2) TDF : trap data frame
+The covariate "effort" indicate the number of visits per month in France. In may, june and september traps which are on itineraries are visited twice. 
+
+###  A - TDF 2017 
+```{r}
+tdf2017 <- data.frame(trap = as.numeric(traps_2017$trap), # trap id number
+                      X = st_coordinates(traps_2017)[,1], # longitude
+                    Y = st_coordinates(traps_2017)[,2],# latitude
+                      sep = rep("/",length(traps_2017$trap)), # separator
+                      site = as.factor(traps_2017$site), # type of trap
+                      pays = as.factor(traps_2017$pays), # country
+                      suivi = as.factor(traps_2017$suivi)) # type of monitoring
+
+
+# effort covariate : factor which account for the country and the number of visits per occasion in France
+# 1 = one visit per month in France 
+# 2 = two visits per month in France
+# 3 = trap is in Spain
+for (j in 1 : nocc) {
+  eff <- rep(0, length(traps_2017$trap))
+  for (i in 1:length(traps_2017$trap)){
+    if (traps_2017$pays[i] == "Espagne"){ # if the trap is in Spain
+      if(traps_2017$suivi[i] == "systematic"){
+        eff[i] <- 3} # site systematic in Spain
+      else {
+        eff[i] <- 3} # site opportunist in Spain 
+    }
+    else {
+      if (traps_2017$suivi[i] == "systematic"){
+        if (traps_2017$effort[i] == "it" ){ # if the trap is on an transect/itinerary
+          if (j == 1 | j == 2 | j == 5){ # and if we are in may, june or september
+            eff[i] <- 2}  # the site is visited 2 times at this occasion
+          else {
+            eff[i] <- 1}} # the site is visited once
+        else {
+          eff[i] <- 1} # the site is visited once
+      }
+      else{
+        eff[i] <- 1} # site opportunist in France 
+    }
+  } 
+  name <- paste("effort", j, sep = ".")
+  tdf2017[name] <- as.factor(eff)
+}
+```
+
+###  B - TDF 2018  
+```{r}
+# Activity matrix
+# Some itineraries begin in june : St Collombe, Escouloubre et Mijanes
+notactiv <- traps_2018 %>% # identify traps which are on those itineraries 
+  filter(NOM == "Mijanes1" | NOM == "Majanes2" | NOM == "Escouloubre" |NOM == "St Collombe")%>%
+  st_drop_geometry()%>%
+  dplyr::select(trap)%>%
+  unlist()
+
+trapactiv <- matrix(rep(1, length(traps_2018$trap)*7), ncol= 7) # initialisation of the activity matrix
+trapactiv[notactiv,1] <- 0 # replace not active traps in june by 0
+
+tdf2018 <- data.frame(trap = as.numeric(traps_2018$trap),
+                      X = st_coordinates(traps_2018)[,1],
+                      Y = st_coordinates(traps_2018)[,2],
+                      TrapActiv = trapactiv,
+                      sep = rep("/",length(traps_2018$trap)),
+                      site = as.factor(traps_2018$site),
+                      pays = as.factor(traps_2018$pays),
+                      suivi = as.factor(traps_2018$suivi))
+
+# effort covariate : factor which account for the country and the number of visits per occasion in France
+for (j in 1 : nocc) {
+  eff <- rep(0, length(traps_2018$trap))
+  for (i in 1:length(traps_2018$trap)){
+    if (traps_2018$pays[i] == "Espagne"){ # if the trap is in Spain
+      if(traps_2018$suivi[i] == "systematic"){
+        eff[i] <- 3} # site systematic in Spain
+      else {
+        eff[i] <- 3} # site opportunist in Spain
+    }
+    else {
+      if (traps_2018$suivi[i] == "systematic"){
+        if (traps_2018$effort[i] == "it" ){ # if the trap is on an transect
+          if (j == 1 | j == 2 | j == 5){ # and if we are in may, june or september
+            eff[i] <- 2}  # the site is visited 2 times at this occasion
+          else {
+            eff[i] <- 1}} # the site is visited once
+        else {
+          eff[i] <- 1} # the site is visited once
+      }
+      else{
+        eff[i] <- 1} # site opportunist in France
+    }
+  } 
+  name <- paste("effort", j, sep = ".")
+  tdf2018[name] <- as.factor(eff)
+}
+```
+
+###  C - TDF 2019  
+```{r}
+tdf2019 <- data.frame(trap = as.numeric(traps_2019$trap),
+                      X = st_coordinates(traps_2019)[,1],
+                      Y = st_coordinates(traps_2019)[,2],
+                      sep = rep("/",length(traps_2019$trap)),
+                      site = as.factor(traps_2019$site),
+                      pays = as.factor(traps_2019$pays),
+                      suivi = as.factor(traps_2019$suivi)) 
+
+# effort covariate : factor which account for the country and the number of visits per occasion in France
+for (j in 1 : nocc) {
+  eff <- rep(0, length(traps_2019$trap))
+  for (i in 1:length(traps_2019$trap)){
+    if (traps_2019$pays[i] == "Espagne"){ # if the trap is in Spain
+      if(traps_2019$suivi[i] == "systematic"){
+        eff[i] <- 3} # site systematic in Spain
+      else {
+        eff[i] <- 3} # site opportunist in Spain
+    }
+    else {
+      if (traps_2019$suivi[i] == "systematic"){
+        if (traps_2019$effort[i] == "it" ){ # if the trap is on an transect
+          if (j == 1 | j == 2 | j == 5){ # and if we are in may, june or september
+            eff[i] <- 2}  # the site is visited 2 times at this occasion
+          else {
+            eff[i] <- 1}} # the site is visited once
+        else {
+          eff[i] <- 1} # the site is visited once
+      }
+      else{
+        eff[i] <- 1} # site opportunist in France
+    }
+  } 
+  name <- paste("effort", j, sep = ".")
+  tdf2019[name] <- as.factor(eff)
+}
+```
+
+# Save edf and tdf to run in oSCR (Ana)
+```{r}
+setwd("D:/MargSalas/Oso/Datos/Effort/France/Syst_Opport")
+save(edf, file = "edf2017_2019_fr.RData")
+save(tdf2017, file = "tdf2017_fr.RData")
+save(tdf2018, file = "tdf2018_fr.RData")
+save(tdf2019, file = "tdf2019_fr.RData")
+
+```
+
+# Vizualisation of traps 
+```{r}
+tdf2019 <- tdf2019 %>%
+  st_as_sf(coords = c("X", "Y"), crs = CRS("+proj=utm +zone=31 +datum=WGS84"))
+mapview(tdf2019, zcol = "effort.1")
+```
+
