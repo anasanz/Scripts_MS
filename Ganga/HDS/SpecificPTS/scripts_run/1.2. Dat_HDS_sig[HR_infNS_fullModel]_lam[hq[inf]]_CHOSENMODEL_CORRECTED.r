@@ -1,8 +1,7 @@
 ## -------------------------------------------------
 ##           Run HDS model for PTS with Data from Specific transects
 ##           Abundance estimation in 2022
-##          Informative prior in detection
-##          Informative prior in habitat quality
+##     Corrected version! VEbro included in intercept
 ## ------------------------------------------------- 
 
 
@@ -66,8 +65,8 @@ hSquare_sc <- h_sc^2 # 3. Squared
 summary(h_sc) # Range compared with pepe's range: -1.155147, 2.145494
 
 # Save variable hour to get the range for simulation:
-setwd("D:/MargSalas/Ganga/Data/SpecificPTS")
-save(h,file = "hour.RData")
+# setwd("D:/MargSalas/Ganga/Data/SpecificPTS")
+# save(h,file = "hour.RData")
 
 # JULIAN DAY
 # Mean and sd from NS model to center our variable
@@ -80,8 +79,8 @@ jdSquare_sc <- jd_sc^2
 summary(jd_sc) # Value range from NS model is (-3.606462, 4.787403)
 
 # Save jd to get the range for simulation:
-setwd("D:/MargSalas/Ganga/Data/SpecificPTS")
-save(jd, file = "jd.RData")
+# setwd("D:/MargSalas/Ganga/Data/SpecificPTS")
+# save(jd, file = "jd.RData")
 
 ## ---- 3.2. Data for informative prior ----
 
@@ -106,6 +105,11 @@ sig.jdSquare <- 0.0100
 mu.Vebro <- 0.26297
 sig.Vebro <- 0.0690
 
+# CORRECTED: intercept includes the VEbro effect now
+mu.alpha.new <- mu.alpha+mu.Vebro ##new alpha.sig
+sig.alpha.new <- sqrt(sig.alpha^2 + sig.Vebro^2)
+alpha.sig <- mu.alpha.new
+
 
 # ---- 3. Abundance component: lam = alpha + b*HQ ----
 ## ---- 3.1. HQ covariate ----
@@ -125,8 +129,8 @@ hq_sd <- sd(hq)
 hq_sc <- (hq - hq_mean) / hq_sd
 
 # Save hq for simulation:
-setwd("D:/MargSalas/Ganga/Data/SpecificPTS")
-save(hq,file = "hq.RData")
+# setwd("D:/MargSalas/Ganga/Data/SpecificPTS")
+# save(hq,file = "hq.RData")
 
 ## ---- 3.2. HQ prior ----
 
@@ -151,41 +155,40 @@ m <- as.vector(m)
 
 # Fixed index to map dclass onto site and year 
 
- site.dclass <- NULL
- 
- for (j in 1:nSites){
-     site.dclass <- c(site.dclass, rep(j, m[j]))}
+site.dclass <- NULL
+
+for (j in 1:nSites){
+  site.dclass <- c(site.dclass, rep(j, m[j]))}
 
 # ---- 5. Compile data for JAGS model ----
+####RS: changed input to mu.alpha.new, sig.alpha.new; removed Vebro
 
-data1 <- list(nSites = nSites, mu.sig = mu.sig, sig.sig = sig.sig, mu.b = mu.b, sig.b = sig.b,
-              mu.bHQ = mu.bHQ, sig.bHQ = sig.bHQ, hq = hq_sc,
+data1 <- list(nSites = nSites, 
+              mu.bHQ = mu.bHQ, sig.bHQ = sig.bHQ, # Informative prior for habitat quality
+              mu.alpha = mu.alpha.new, sig.alpha = sig.alpha.new, # Informative priors for sigma
+              mu.hSquare = mu.hSquare, sig.hSquare = sig.hSquare, 
+              mu.jd = mu.jd, sig.jd = sig.jd, 
+              mu.jdSquare = mu.jdSquare, sig.jdSquare = sig.jdSquare, 
+              mu.b = mu.b, sig.b = sig.b, # Informative prior for shape parameter
               nG=nG, int.w=int.w, strip.width = strip.width, midpt = midpt, db = dist.breaks, 
-              y = m, nind=nind, dclass=dclass
-              #, site.dclass = site.dclass
+              y = m, nind=nind, dclass=dclass, site.dclass = site.dclass,
+              hq = hq_sc, # Variables
+              hSquare = hSquare_sc,
+              jd = jd_sc,
+              jdSquare = jdSquare_sc
 )
-
- data1 <- list(nSites = nSites, 
-               mu.bHQ = mu.bHQ, sig.bHQ = sig.bHQ, # Informative prior for habitat quality
-               mu.alpha = mu.alpha, sig.alpha = sig.alpha, # Informative priors for sigma
-               mu.hSquare = mu.hSquare, sig.hSquare = sig.hSquare, 
-               mu.jd = mu.jd, sig.jd = sig.jd, 
-               mu.jdSquare = mu.jdSquare, sig.jdSquare = sig.jdSquare, 
-               mu.Vebro = mu.Vebro, sig.Vebro = sig.Vebro, 
-               mu.b = mu.b, sig.b = sig.b, # Informative prior for shape parameter
-               nG=nG, int.w=int.w, strip.width = strip.width, midpt = midpt, db = dist.breaks, 
-               y = m, nind=nind, dclass=dclass, site.dclass = site.dclass,
-               hq = hq_sc, # Variables
-               hSquare = hSquare_sc,
-               jd = jd_sc,
-               jdSquare = jdSquare_sc
- )
 ## ---- Inits ----
 
 Nst <- m + 1
+
 inits <- function(){list(alpha = runif(1),
-                         N = Nst
-)}
+                         N = Nst,
+                         alpha.sig = mu.alpha.new,
+                         b.hSquare = mu.hSquare,
+                         b.jd = mu.jd,
+                         b.jdSquare = mu.jdSquare,
+                         log.b = mu.b,
+                         bHQ = mu.bHQ)}
 
 ## ---- Params ----
 
@@ -193,7 +196,7 @@ params <- c("Ntotal",
             "alpha", "bHQ", 
             #"sigma", 
             "log.b",
-            "alpha.sig", "b.hSquare", "b.jd", "b.jdSquare", "log.Vebro")
+            "alpha.sig", "b.hSquare", "b.jd", "b.jdSquare")
 
 ## ---- MCMC settings ----
 
@@ -202,14 +205,14 @@ nc <- 3 ; ni <- 150000 ; nb <- 28000 ; nt <- 2
 ## ---- Run model ----
 
 setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/SpecificPTS/Model")
-source("1.2.HDS_sig[HR_inf_fullModel]_lam[hq[inf]].r")
+source("1.2.HDS_sig[HR_inf_fullModel]_lam[hq[inf]]_corrected.r")
 
 # With jagsUI 
-out <- jags(data1, inits, params, "1.2.HDS_sig[HR_inf_fullModel]_lam[hq[inf]].txt", n.chain = nc,
+out <- jags(data1, inits, params, "1.2.HDS_sig[HR_inf_fullModel]_lam[hq[inf]]_corrected.txt", n.chain = nc,
             n.thin = nt, n.iter = ni, n.burnin = nb, parallel = TRUE)
 
 setwd("D:/MargSalas/Ganga/Results/HDS/SpecificPTS/Model")
-save(out,file = "out_1.2_5.RData")
+save(out,file = "out_1.2_5_corrected.RData")
 
 sum <- out$summary
 

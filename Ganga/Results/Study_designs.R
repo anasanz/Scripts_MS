@@ -94,10 +94,29 @@ dev.off()
 
 z <- st_read("D:/MargSalas/Ganga/Data/GIS/Zoom_study_design.shp")
 
-mapview(cr2, map.types = c("Esri.WorldImagery"), col.regions = adjustcolor("#35978f", alpha = 1), col = adjustcolor("black", alpha = 1), lwd = 2, cex = 4) +
+mapview(cr2, map.types = c("Esri.WorldImagery"), col.regions = adjustcolor("#35978f", alpha = 1)) +
   mapview(z, col.regions = "white", alpha.regions = 0, col = adjustcolor("black", alpha = 1), lwd = 2) +
   mapview(tr_farm2, color = "#253494", lwd = 4.5) +
   mapview(tr_spec, color = "#d73027", lwd = 4.5) 
+
+## ---- Plot methods ----
+distrib <- st_read("D:/MargSalas/Ganga/Data/GIS/Area_distr_ganga_1x1.shp")
+
+mapview(spa_2, map.types = c("Esri.WorldImagery"), col.regions = adjustcolor("khaki", alpha = 0.5), col = adjustcolor("khaki", alpha = 1)) +
+  mapview(sa, col.regions = "white", alpha.regions = 0.2, col = adjustcolor("black", alpha = 1), lwd = 2) +
+  mapview(zones, zcol = "X1", col = c("blue4","dodgerblue3", "cyan1"), color = NULL) + 
+  mapview(distrib, col.regions = "white", alpha.regions = 0, col = adjustcolor("black", alpha = 1), lwd = 1) 
+  
+
+# En la capa "zones": 1 es la mas alta, 3 es la más baja
+# Pero en nuestro analisis, 1 es la mas baja y 3 es la más alta
+
+plot(1)
+plot.new()
+legend("center", legend = c("High", "Medium", "Low", "SPA"), 
+       fill = c("blue4","dodgerblue3", "cyan1", "khaki"), border = NA, bty = "n", horiz = FALSE, cex = 1.5)
+
+ 
 
 ## ---- For GIAE ----
 
