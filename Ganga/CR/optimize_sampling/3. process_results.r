@@ -23,7 +23,7 @@ cv_original <- (out_sim_M0_psex$sd$N/out_sim_M0_psex$mean$N)*100
 
 ## ---- 1.1. Subsampling a % ----
 
-setwd("D:/MargSalas/Scripts_MS/Ganga/CR/optimize_sampling/results")
+setwd("D:/MargSalas/Ganga/Results/CR/optimize_sampling/results")
 load("results_per2.RData")
 
 ab_sub <- as.data.frame(matrix(NA, nrow = 100, ncol = 6))

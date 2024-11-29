@@ -63,10 +63,16 @@ nrow(dat_notmade) == length(m[is.na(m)])
 # Only to check: Count of individuals per year
 count.year <- colSums(m,na.rm = TRUE)
 
+## ---- Check cluster size ----
 # Average and median cluster size
 
 average_clus <- mean(dat_det$Count) # TO INCLUDE IN THE MODEL
 median_clust <- median(dat_det$Count)
+
+#Remove outliers
+clus_no_out <- dat_det$Count[-which(dat_det$Count >= 10)]
+hist(dat_det$Count)
+average_clus_no_out <- mean(clus_no_out)
 
 #hist(dat_det$Count)
 #abline(v = average_clus, col = "red")
@@ -75,6 +81,13 @@ median_clust <- median(dat_det$Count)
 # Just to check: Average cluster size in 2022
 dat_det2022 <- dat_det[which(dat_det$Year %in% 2022), ]
 average_clus2022 <- mean(dat_det2022$Count) # TO INCLUDE IN THE MODEL
+
+# Finally, I will extrapolate to the median
+medgroup <- aggregate(Count ~ Year, data = dat_det, median)
+median(medgroup$Count)
+?aggregate
+
+
 
 # Count of individuals per year corrected by cluster size
 

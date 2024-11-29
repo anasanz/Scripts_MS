@@ -101,7 +101,7 @@ all_pol2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "BufferImproved_
 ##   Extract habitat quality of transects 2010-2015
 ## ------------------------------------------------- 
 
-pa1 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "zonesGanga2011")
+pa1 <- readOGR("D:/MargSalas/Ganga/Data/GIS", "zonesGanga2011")
 pa1$ZONA <- as.numeric(pa1$ZONA)
 
 ## ---- 1 Rasterize and extract % habitat quality in buffers ----
@@ -314,7 +314,7 @@ write.csv(df_habBuf2, file = "HQvariable2021_Farmdindis.csv")
 
 ## ---- 4. Area of each habitat quality ----
 
-pa2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "zonesGanga2021") 
+pa2 <- readOGR("D:/MargSalas/Ganga/Data/GIS", "zonesGanga2021") 
 
 library(rgeos)
 
@@ -332,3 +332,18 @@ area_zona_HA2$Group.1[3] <- 1
 area_zona_HA2 <- arrange(area_zona_HA2, Group.1)
 write.csv(area_zona_HA2, file = "HQ_area.csv")
 
+## ---- 5. Add column "HQ" to categorical ----
+
+setwd("D:/MargSalas/Ganga/Data/FarmdindisDS")
+
+hq_dat2011 <- read.csv(file = "HQvariable2011_Farmdindis.csv") 
+hq_dat2021 <- read.csv(file = "HQvariable2021_Farmdindis.csv") 
+
+hq_dat2011$hq2011 <- apply(hq_dat2011[,3:6], 1, which.max)-1 
+hq_dat2021$hq2012 <- apply(hq_dat2021[,3:6], 1, which.max)-1
+
+write.csv(hq_dat2011, file = "HQvariable2011_Farmdindis.csv")
+write.csv(hq_dat2021, file = "HQvariable2021_Farmdindis.csv")
+
+
+      
