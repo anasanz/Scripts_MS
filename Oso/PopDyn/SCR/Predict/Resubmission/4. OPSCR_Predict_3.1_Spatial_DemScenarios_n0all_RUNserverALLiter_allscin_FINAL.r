@@ -11,6 +11,7 @@
 #   2. Load estimated pcr from individuals: WE CHOSE THE ONE IN WHOLE STATE SPACE, as we use ind in all state space and then subset
 #   3. Subset afterwards to the individuals located in the core in all study years
 
+# RESUBMISSION: MODEL run_data script 3.4 (DOSexAge)
 
 rm(list = ls())
 
@@ -37,23 +38,20 @@ detachAllPackages <- function() {
   
 }
 
-#source("D:/MargSalas/Scripts_MS/Functions/ProcessCodaOutput.R")
-#source("D:/MargSalas/Scripts_MS/Functions/plot.violins2.r")
-#source("D:/MargSalas/Scripts_MS/Functions/DoScale.r")
 
 setwd("D:/MargSalas/Scripts_MS/Functions/Nimble")
-#setwd("~/Scripts_MS/Functions/Nimble")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 source('dbinomLocal_normalBear_rbinom2.R')
 
 # Load buffer core area
 
 setwd("D:/MargSalas/Oso/Datos/GIS/Countries")
-#setwd("~/Data_server/Oso/Data_for_Prediction")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 Xbuf2 <- readOGR("Buffer_8500_traps.shp")
 Xbuf3 <- gBuffer(Xbuf2, width = -8000) # To ensure that females that I add are simulated in and don't go out so that they get inside the pop.estimates
 
 
-#setwd("~/Data_server/Oso/Data_for_Prediction")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Data/Systematic_FINAL_1721")
 load("habcoord.RData")
 
@@ -61,25 +59,25 @@ load("habcoord.RData")
 # Load data and model results
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
-#setwd("~/Data_server/Oso/Data_for_Prediction")
-load("Data_Model3-3.1_CYRIL_allparams.RData")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
+load("Data_Model3-3.4_CYRIL_allparams.RData")
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-#setwd("~/Data_server/Oso/Data_for_Prediction")
-load("myResults_3-3.1_param.RData")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
+load("myResults_RESUB_3-3.4_param.RData")
 sampmat1 <- do.call(rbind, nimOutput)
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-#setwd("~/Data_server/Oso/Data_for_Prediction")
-load("myResults_3-3.1_sxy.RData")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
+load("myResults_RESUB_3-3.4_sxy.RData")
 sampmat2 <- do.call(rbind, nimOutputSXY)
 
 sampmat <- cbind(sampmat1, sampmat2)
 
-#save(sampmat, file = "sampmat_3.1.RData")
+#save(sampmat, file = "sampmat_3.4.RData")
 
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-#load("sampmat_3.1.RData")
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams")
+#load("sampmat_3.4.RData")
 
 M.aug <- nimConstants$M
 Tt <- nimConstants$Nyr
@@ -141,14 +139,14 @@ sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: St
 sex.start <- rep(NA, M.new)
 sex.which <- grep('sex', colnames(sampmat))
 sex.start[1:M.aug] <- sampmat[1,sex.which] 
-
+sex.start[(M.aug+1):M.new] <- rbinom(400, 1, 0.5) # To avoid warning in dynamic index (resubmission)
 
 ## ---- 1.2. Per capita recruitment ----
 
 # Load results from function in script 0.PCR_all_core.r
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-#setwd("~/Data_server/Oso/Data_for_Prediction")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 load("pcr_all_fem.RData")
 
 pcr2_all <- apply(pcr_all_fem[[3]],1,mean) # ASP: Mean per capita recruitment per iteration
@@ -162,7 +160,8 @@ pcr <- pcr2_all[1]
 phi.ad <- sampmat[1,'phi.ad']
 phi.cub <- sampmat[1,'phi.cub']
 phi.sub <- sampmat[1,'phi.sub']
-beta.dens <- sampmat[1,'beta.dens']
+beta.dens1 <- sampmat[1,'beta.dens[1]']
+beta.dens2 <- sampmat[1,'beta.dens[2]']
 omega <- sampmat[1,'omega']
 sigD <- sampmat[1,'sigD']
 
@@ -205,7 +204,8 @@ nimData<-list(habDens = nimData$habDens,
               phi.ad = phi.ad,
               phi.cub = phi.cub,
               phi.sub = phi.sub,
-              beta.dens = beta.dens,
+              beta.dens1 = beta.dens1,
+              beta.dens2 = beta.dens2,
               sigD = sigD,
               psi = psi,
               pi.uncond = pi.uncond,
@@ -214,23 +214,59 @@ nimData<-list(habDens = nimData$habDens,
               
 )
 
+
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-#setwd("~/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('3.7.SCRopen_PREDICT in Nimble RS.r')
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
+source('3.7.3.SCRopen_PREDICT_resub in Nimble.r')
 
 # Create model using projection code (per capita recruitment, no observations)
-model <- nimbleModel( code = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR.pcr.fem,
+model <- nimbleModel( code = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.DOsexage.PR.pcr.fem,
                       constants = nimConstants,
                       data = nimData,
                       #inits = nimInits,
                       check = F,       
-                      calculate = T)  
+                      calculate = F)  # Changed to false. It was true and there were NA so the model couldn't calculate
+# model$calculate()
+# nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
+#                                       "pcr", "beta.dens1","beta.dens2",
+#                                       'pi.uncond', 'psi', 'omega'),
+#                                     self = F,
+#                                     downstream = T,
+#                                     returnScalarComponents = TRUE)
+nde <- c("R", #per capita recruitment times number adults in previous year=expected recruits
+         "gamma", #individual recruitment probability: expected recruits/number available for recruitment
+         "phi",  #not recruited yet, placeholder to make indexing work
+         "mu1",
+         "sumHabIntensity",
+         "logHabIntensity",
+         "logSumHabIntensity",
+         "sxy",
+         # State process
+         "u", #
+         "z", 
+         # Age process
+         "age",
+         "age.cat",
+         "sex.age",
+         # derived stuff
+         "avail",    
+         "recruit",
+         "N",               # Annual abundance
+         "B",
+         "N.age",
+         "N.age.fem",
+         "N.cub",
+         "N.sub",
+         "N.ad",
+         "N.ad.fem",
+         "sex")
 
-nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
-                                      "pcr", "beta.dens", 'pi.uncond', 'psi', 'omega'),
-                                    self = F,
-                                    downstream = T,
-                                    returnScalarComponents = TRUE)
+nodesToSim <-model$getDependencies(nde,
+                      self = T,
+                      downstream = F,
+                      returnScalarComponents = TRUE)
+
+
 model$simulate(nodesToSim, includeData = FALSE)
 
 # Are there individuals available for recruitment?
@@ -260,10 +296,10 @@ sxy.start[1:M.aug,,1] == model$sxy[1:M.aug,,1]
 values(cmodelSims, sNodes)[1:600] == c(t(sxy.start[1:M.aug,,1]))
 
 ##get some random iterations from posterior
-itera <- sample(1:nrow(sampmat), 5000)
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/ALLiter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
-save(itera, file = "itera.RData")
+#itera <- sample(1:nrow(sampmat), 1000)
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
+#save(itera, file = "itera.RData")
 load("itera.RData")
 
 ## ---- 2.0. Scenario 0: Normal projection ----
@@ -327,6 +363,10 @@ for(ite in 1:length(itera)){
   
   ## Also replace sex, because for the augmented individuals it changes each iteration
   
+  # Here: I don't know what to do: NA del 400 al 700 o no? 
+  # SI lo dejo en NA como antes, sigue dando el warning.
+  #sex.start <- rep(NA, M.new)
+  # Si lo substituyo en el mismo sxy start (donde no hay NA, no hay warning pero esta bien hacer update de todos los augmented individuals en cada iteracion?)
   sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
   nimData1$sex <- sex.start
   values(cmodelSims, sexNodes) <- sex.start
@@ -347,8 +387,12 @@ for(ite in 1:length(itera)){
   nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  values(cmodelSims,"beta.dens") <- nimData1$beta.dens
+  nimData1$beta.dens1<-sampmat[itera[ite],'beta.dens[1]']
+  values(cmodelSims,"beta.dens1") <- nimData1$beta.dens1
+  
+  nimData1$beta.dens2<-sampmat[itera[ite],'beta.dens[2]']
+  values(cmodelSims,"beta.dens2") <- nimData1$beta.dens2
+  
   
   #now we simulate 
   cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
@@ -363,11 +407,10 @@ for(ite in 1:length(itera)){
   z.proj.all.sc0[ite,,] <- cmodelSims$z
   age.cat.proj.all.sc0[ite,,] <- cmodelSims$age.cat
   sex.proj.all.sc0[ite,] <- cmodelSims$sex
-  
 }
 
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 save(sxy.proj.all.sc0, z.proj.all.sc0, age.cat.proj.all.sc0,sex.proj.all.sc0, file = "proj_pcr.all.fem.sc0.RData")
 
 
@@ -489,8 +532,11 @@ for(ite in 1:length(itera)){
   nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  values(cmodelSims,"beta.dens") <- nimData1$beta.dens
+  nimData1$beta.dens1<-sampmat[itera[ite],'beta.dens[1]']
+  values(cmodelSims,"beta.dens1") <- nimData1$beta.dens1
+  
+  nimData1$beta.dens2<-sampmat[itera[ite],'beta.dens[2]']
+  values(cmodelSims,"beta.dens2") <- nimData1$beta.dens2
   
   #now we simulate 
   cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
@@ -508,8 +554,8 @@ for(ite in 1:length(itera)){
   
 }
 
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 save(sxy.proj.all.sc1, z.proj.all.sc1, age.cat.proj.all.sc1,sex.proj.all.sc1, file = "proj_pcr.all.fem.sc1.RData")
 
 ## ---- 2.2. Scenario 2: Death of 10% of the females in year 2021 INSIDE buffer ----
@@ -630,8 +676,11 @@ for(ite in 1:length(itera)){
   nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  values(cmodelSims,"beta.dens") <- nimData1$beta.dens
+  nimData1$beta.dens1<-sampmat[itera[ite],'beta.dens[1]']
+  values(cmodelSims,"beta.dens1") <- nimData1$beta.dens1
+  
+  nimData1$beta.dens2<-sampmat[itera[ite],'beta.dens[2]']
+  values(cmodelSims,"beta.dens2") <- nimData1$beta.dens2
   
   #now we simulate 
   cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
@@ -649,8 +698,8 @@ for(ite in 1:length(itera)){
   
 }
 
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 save(sxy.proj.all.sc2, z.proj.all.sc2, age.cat.proj.all.sc2,sex.proj.all.sc2, file = "proj_pcr.all.fem.sc2.RData")
 
 
@@ -772,8 +821,11 @@ for(ite in 1:length(itera)){
   nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  values(cmodelSims,"beta.dens") <- nimData1$beta.dens
+  nimData1$beta.dens1<-sampmat[itera[ite],'beta.dens[1]']
+  values(cmodelSims,"beta.dens1") <- nimData1$beta.dens1
+  
+  nimData1$beta.dens2<-sampmat[itera[ite],'beta.dens[2]']
+  values(cmodelSims,"beta.dens2") <- nimData1$beta.dens2
   
   #now we simulate 
   cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
@@ -791,442 +843,8 @@ for(ite in 1:length(itera)){
   
 }
 
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
+#setwd("/home/csic/dde/jol/Documentos/OPSCR/3.4/")
 save(sxy.proj.all.sc3, z.proj.all.sc3, age.cat.proj.all.sc3,sex.proj.all.sc3, file = "proj_pcr.all.fem.sc3.RData")
 
-## ---- 2.4. Scenario 4: Mortality event in 2021 followed by reintroduction of 5 females in 2024 (all INSIDE BUFFER) ----
-#       Two scenarios: for a mortality event of 10% in 2021 (sc2) + reintroduction of 5 females in 2024
-#                     for a mortality event of 20% in 2021 (sc3) + reintroduction of 5 females in 2024
 
-## ---- 2.4.1. Scenario 4.1: Death of 10% of the females in year 2021 (sc2) + reintroduction of 5 females in 2024 ----
-
-# I need to include extra augmented individuals and start the model in 2024, having only 2 extra years
-# Dimensions of this model change, so I need to set up the model again
-
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
-load("proj_pcr.all.fem.sc2.RData")
-
-## -------- Create starting z's, age's and sxy's AGAIN ----
-# In this projection the starting point is year 2024, so I need to set model structure again with new augmented individuals
-
-t.new2 <- 2 # Only project for 2 years extra (2025, 2026)
-M.aug2 <- 700 # Augmented individuals from previous model
-M.new2 <- 1000 # All augmented individuals (700 previous + 300 new)
-
-# Z
-
-z.start2 <- matrix(NA, M.new2, 1+t.new2)
-z.start2[1:M.aug2, 1] <- z.proj.all.sc2[1,,4] # Year 2024 as starting point, which is the 4th time point of scenario 2
-z.start2[(M.aug2+1):M.new2, 1] <- 0 # ASP: Augmented as not yet recruited
-
-# AGE
-## I need to join all z from previous years to know the ind that have never been alive 
-# from 2017 - 2024, to modify the age variable
-
-zAUGM <- matrix(0,nrow = 400, ncol = Tt)
-z.est2.0 <- matrix(sampmat[1, z.which], M.aug, Tt) # Years 2017 - 2021 from data
-z.est2.0 <- rbind(z.est2.0, zAUGM)
-
-z.est2.1 <- matrix(z.proj.all.sc2[1,,c(2:4)], M.aug2,3) # Take years 2022, 2023 and 2024 for predictions
-z.est2 <- cbind(z.est2.0, z.est2.1)
-
-age.start2 <- matrix(NA, M.new2, 1+t.new2)
-
-age.est2 <- age.cat.proj.all.sc2[1,,4] # ASP: Ages last year (year 2024)
-
-##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
-##model (they were never part of the superpopulation -> ASP: because of how the model is formulated z=u*w)
-z.nosuper2 <- which(apply(z.est2,1,sum)==0)
-age.est2[z.nosuper2] <- 0
-
-age.start2[1:M.aug2, 1] <- age.est2 # ASP: Starting AGE for projection: AGE of year 5 
-age.start2[(M.aug2+1):M.new2, 1] <- 0 # ASP: Augmented as not yet recruited
-
-# SXY
-
-sxy.start2 <- array(NA, c(M.new2, 2, 1+t.new2))
-sxy.start2[1:M.aug2,,1] <- sxy.proj.all.sc2[1,,,4] # ASP: Starting SXY for projection: SXY of year 2024
-
-# SEX
-sex.start2 <- rep(NA, M.new2)
-sex.start2[1:M.aug2] <- sex.proj.all.sc2[1,]
-
-
-## -------- Per capita recruitment ----
-# Pcr is estimated for each iteration, and constitute the mean of PCR in all years. So in this
-# new prediction model, I take the same pcr of each iteration (pcr.all)
-
-pcr.all <- pcr2_all # We have decided to run the projection with the PCR in the whole state space
-pcr # To build model, we only take value of one iteration
-
-## -------- Other parameters ----
-# Remain the same as for previous model
-
-## -------- Set un constants and build model ----
-
-##set up constants
-nimConstants2 <- list(
-  M=(M.new2), numHabWindows = nimConstants$numHabWindows, 
-  numGridRows = nimConstants$numGridRows, numGridCols = nimConstants$numGridCols, 
-  Nyr=(1+t.new2),
-  max.age = nimConstants$max.age
-)
-
-##set up data
-nimData2 <- list(habDens = nimData$habDens, 
-                 lowerHabCoords = nimData$lowerHabCoords, upperHabCoords = nimData$upperHabCoords,
-                 habitatGrid = nimData$habitatGrid,
-                 z = z.start2,
-                 sxy = sxy.start2,
-                 agePlusOne=age.start2[,1]+1,
-                 age = age.start2,
-                 age.cat = age.start2,
-                 u = z.start2,
-                 pcr = pcr, ##transformed per capita recruitment
-                 phi.ad = phi.ad,
-                 phi.cub = phi.cub,
-                 phi.sub = phi.sub,
-                 beta.dens = beta.dens,
-                 sigD = sigD,
-                 psi = psi,
-                 pi.uncond = pi.uncond,
-                 sex = sex.start2,
-                 omega = omega
-                 
-)
-
-#setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
-setwd("~/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('3.7.SCRopen_PREDICT in Nimble RS.r')
-
-# Create model using projection code (per capita recruitment, no observations)
-model2 <- nimbleModel( code = SCRhab.Open.diftraps.age.effortTrapBhCov.sigsexage.PR.pcr.fem,
-                       constants = nimConstants2,
-                       data = nimData2,
-                       #inits = nimInits,
-                       check = F,       
-                       calculate = T)  
-
-nodesToSim2 <- model2$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
-                                        "pcr", "beta.dens", 'pi.uncond', 'psi', 'omega'),
-                                      self = F,
-                                      downstream = T,
-                                      returnScalarComponents = TRUE)
-model2$simulate(nodesToSim2, includeData = FALSE)
-
-##compile for faster simulation
-cmodelSims2 <- compileNimble(model2)
-
-## -------- WE FIND THE S AND Z NODES THAT SHOULDNT BE PREDICTED FOR ----
-
-samplerConfList2 <- model2$getNodeNames()
-zNodes2 <- samplerConfList2[grep("z\\[",samplerConfList2)]
-sNodes2 <- samplerConfList2[grep("sxy",samplerConfList2)]
-uNodes2 <- samplerConfList2[grep("u\\[",samplerConfList2)]
-ageNodes2 <- samplerConfList2[grep("age\\[",samplerConfList2)]
-age.cat.Nodes2 <- samplerConfList2[grep("age.cat\\[",samplerConfList2)]
-agePO.Nodes2 <-samplerConfList2[grep("agePlusOne",samplerConfList2)]
-sexNodes2 <- samplerConfList2[grep("sex\\[",samplerConfList2)]
-
-## -------- Run projection for several iterations and subset abundance ----
-
-nimData1 <- nimData2
-#Nmat.all.sc4.1 <- Rmat.all.sc4.1 <- matrix(NA, length(itera), 1+t.new2)
-
-sxy.proj.all.sc4.1 <- array(NA, c(length(itera), M.new2, 2, t.new2+1)) # To store as simlist
-z.proj.all.sc4.1 <- age.cat.proj.all.sc4.1 <- array(NA, c(length(itera), M.new2, t.new2+1))
-sex.proj.all.sc4.1 <- matrix(NA, length(itera), M.new2)
-
-
-for(ite in 1:length(itera)){
-  # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
-  # USE NA FOR THE years to predict#
-  
-  ## We first replace the sex. We need to replace because for the augmented individuals it changes each iteration
-  
-  sex.start2[1:M.aug2] <- sex.proj.all.sc2[ite,] # itera[ite] when I have the full projection from sc2, and the same in whole code
-  nimData1$sex <- sex.start2
-  values(cmodelSims2, sexNodes2) <- sex.start2
-  
-  # WE SET SXY (We do it first to know if the females that we turn alive fall within the sampling buffer)
-  sxy.start2[1:M.aug2,,1] <- sxy.proj.all.sc2[ite,,,4]
-  nimData1$sxy <- sxy.start2
-  
-  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
-  sNodes2 <- sNodes2[grep( ", 1]",sNodes2)]
-  for(i in 1:length(sNodes2)){
-    values(cmodelSims2, sNodes2[i]) <-sxy.start2[i,,1]
-  }
-  
-  # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  
-  z.start2[1:M.aug2, 1] <- z.proj.all.sc2[ite,,4] # Year 2024 as starting point, which is the 4th time point of scenario 2
-  z.start2[(M.aug2+1):M.new2, 1] <- 0 # ASP: Augmented as not yet recruited
-  
-  ## APPLY SCENARIO 4: We turn 5 of the females death (z=0) to alive (z = 1)
-  ## WARNING: We turn any of the previous/new augmented individuals. I think it doesn't matter, but keep in mind in case it doesn't work
-  
-  which.females <- which(sex.start2[1:M.aug2] == 0) 
-  fem.alive <- sum(z.start2[which.females, 1]) # How many females are alive? Just to check, not useful in this scenario
-  turnAlive <- 5 # How many do we turn alive?
-  
-  # Activate females only that fall in ss: Unscale ss
-  dimnames(sxy.start2)[[2]] <- c('x','y') 
-  sxy.start2.uns <- scaleCoordsToHabitatGrid(coordsData = sxy.start2,## this are your sxy
-                                             coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
-                                             scaleToGrid = FALSE)$coordsDataScaled
-  allwhich.turnAlive <- list()
-  for (a in 1:turnAlive){ # Sample points until they fall in the buffer
-    repeat{
-      which.turnAlive <- sample(which(z.start2[which.females, 1] == 0),1)
-      which.turnAliveSXY <- sxy.start2.uns[which.turnAlive,,1]
-      which.turnAliveSXY <- data.frame(x = which.turnAliveSXY[1], y = which.turnAliveSXY[2])
-      sp <- SpatialPoints(which.turnAliveSXY, proj4string=CRS(proj4string(Xbuf2)))
-      ovr <- is.na(over(sp, Xbuf3)) # ovr is TRUE when there is NA (not overlap)
-      previously.alive <- unlist(allwhich.turnAlive) # To make a condition in line below that ensures not resampling the same individual
-      if(ovr == FALSE & (which.turnAlive %in% previously.alive == FALSE)) break
-    }
-    allwhich.turnAlive[[a]] <- which.turnAlive
-  }
-  
-  which.turnAliveIn <- unlist(allwhich.turnAlive)
-  
-  z.start2[which.females[which.turnAliveIn],1] <- 1 # Set to 1 the females that we wanted to turn alive
-  
-  #fem.alive + turnAlive == sum(z.start2[which.females, 1]) # Check I did it right
-  
-  nimData1$z <- z.start2
-  nimData1$u <- z.start2
-  
-  # we set the values in the model - yr 1 aren't nodes in model (only data)
-  values(cmodelSims2, zNodes2) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  values(cmodelSims2, uNodes2) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  
-  # AGE
-  ## I need to join all z from previous years to know the ind that have never been alive 
-  # from 2017 - 2024, to modify the age variable
-  
-  zAUGM <- matrix(0,nrow = 400, ncol = Tt)
-  z.est2.0 <- matrix(sampmat[ite, z.which], M.aug, Tt)  # Take years 2017 - 2021 from data
-  z.est2.0 <- rbind(z.est2.0, zAUGM)
-  
-  z.est2.1 <- matrix(z.proj.all.sc2[ite,,c(2,3)], M.aug2, 2) # Take years 2022, 2023 from predictions
-  z.est2.2 <- matrix(z.start2[1:M.aug2,1], M.aug2, 1) # Take year 2024 from modified reintroduced individuals (otherwise age can turn 0 and dead again!)
-  
-  z.est2 <- cbind(z.est2.0, z.est2.1, z.est2.2)
-  
-  age.est2 <- age.cat.proj.all.sc2[ite,,4] # ASP: Ages last year (year 2024)
-  
-  ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
-  ##model (they were never part of the superpopulation -> ASP: because of how the model is formulated z=u*w)
-  z.nosuper2 <- which(apply(z.est2,1,sum)==0)
-  age.est2[z.nosuper2] <- 0
-  
-  age.start2[1:M.aug2, 1] <- age.est2 # ASP: Starting AGE for projection: AGE of year 5 
-  age.start2[(M.aug2+1):M.new2, 1] <- 0 # ASP: Augmented as not yet recruited
-  
-  nimData1$age <- age.start2 
-  values(cmodelSims2, ageNodes2) <- age.start2 #[,2:(Tt+t.new)] 
-  
-  ##also replace age.cat and agePlusOne
-  nimData1$agePlusOne <- age.start2[,1]+1 
-  values(cmodelSims2, agePO.Nodes2) <- age.start2[,1]+1
-  
-  nimData1$age.cat <- age.start2 
-  values(cmodelSims2, age.cat.Nodes2) <- age.start2
-  
-  
-  ##set pcr, phi, sigD, beta.dens
-  ##not sure if needed to set in data and cmodelSims...
-  ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.all[itera[ite]]
-  values(cmodelSims2,"pcr") <- nimData1$pcr
-  
-  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
-  values(cmodelSims2,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
-  values(cmodelSims2,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
-  values(cmodelSims2,"phi.sub") <- nimData1$phi.sub
-  
-  nimData1$sigD <- sampmat[itera[ite],'sigD']
-  values(cmodelSims2,"sigD") <- nimData1$sigD
-  
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  values(cmodelSims2,"beta.dens") <- nimData1$beta.dens
-  
-  #now we simulate 
-  cmodelSims2$simulate(nodes = nodesToSim2,#c(zNodes,sNodes,yNodes),
-                       includeData = F)#---if TRUE: want to simulate new values also for nodes considered as data
-  
-  # Store results from iteration
-  
-  #Nmat.all.sc4.1[ite,] <- apply(cmodelSims2$z,2,sum)
-  #Rmat.all.sc4.1[ite,] <- cmodelSims2$R
-  
-  sxy.proj.all.sc4.1[ite,,,] <- c(cmodelSims2$sxy)
-  z.proj.all.sc4.1[ite,,] <- cmodelSims2$z
-  age.cat.proj.all.sc4.1[ite,,] <- cmodelSims2$age.cat
-  sex.proj.all.sc4.1[ite,] <- cmodelSims2$sex
-  
-}
-
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
-save(sxy.proj.all.sc4.1, z.proj.all.sc4.1, age.cat.proj.all.sc4.1,sex.proj.all.sc4.1, file = "proj_pcr.all.fem.sc4.1.RData")
-
-## ---- 2.4.2. Scenario 4.2: Death of 20% of the females in year 2021 (sc3) + reintroduction of 5 females in 2024 ----
-
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
-load("proj_pcr.all.fem.sc3.RData")
-
-# Dimensions of this model already set up, so I just need to run the iterations using starting year from scenarion 3
-
-pcr.all <- pcr2_all 
-nimData1 <- nimData2
-#Nmat.all.sc4.2 <- Rmat.all.sc4.2 <- matrix(NA, length(itera), 1+t.new2)
-
-sxy.proj.all.sc4.2 <- array(NA, c(length(itera), M.new2, 2, t.new2+1)) # To store as simlist
-z.proj.all.sc4.2 <- age.cat.proj.all.sc4.2 <- array(NA, c(length(itera), M.new2, t.new2+1))
-sex.proj.all.sc4.2 <- matrix(NA, length(itera), M.new2)
-
-
-for(ite in 1:length(itera)){
-  # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
-  # USE NA FOR THE years to predict#
-  
-  ## We first replace the sex. We need to replace because for the augmented individuals it changes each iteration
-  
-  sex.start2[1:M.aug2] <- sex.proj.all.sc3[ite,] # itera[ite] when I have the full projection from sc3, and the same in whole code
-  nimData1$sex <- sex.start2
-  values(cmodelSims2, sexNodes2) <- sex.start2
-  
-  # WE SET SXY (We do it first to know if the females that we turn alive fall within the sampling buffer)
-  sxy.start2[1:M.aug2,,1] <- sxy.proj.all.sc3[ite,,,4]
-  nimData1$sxy <- sxy.start2
-  
-  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
-  sNodes2 <- sNodes2[grep( ", 1]",sNodes2)]
-  for(i in 1:length(sNodes2)){
-    values(cmodelSims2, sNodes2[i]) <-sxy.start2[i,,1]
-  }
-  
-  # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  
-  z.start2[1:M.aug2, 1] <- z.proj.all.sc3[ite,,4] # Year 2024 as starting point, which is the 4th time point of scenario 2
-  z.start2[(M.aug2+1):M.new2, 1] <- 0 # ASP: Augmented as not yet recruited
-  
-  ## APPLY SCENARIO 4: We turn 5 of the females death (z=0) to alive (z = 1)
-  ## WARNING: We turn any of the previous/new augmented individuals. I think it doesn't matter, but keep in mind in case it doesn't work
-  
-  which.females <- which(sex.start2[1:M.aug2] == 0) 
-  fem.alive <- sum(z.start2[which.females, 1]) # How many females are alive? Just to check, not useful in this scenario
-  turnAlive <- 5 # How many do we turn alive?
-  
-  # Activate females only that fall in ss: Unscale ss
-  dimnames(sxy.start2)[[2]] <- c('x','y') 
-  sxy.start2.uns <- scaleCoordsToHabitatGrid(coordsData = sxy.start2,## this are your sxy
-                                             coordsHabitatGridCenter = G,# this is your unscaled habitat (as you used when scaling the habitat/detector to the habitat. G?
-                                             scaleToGrid = FALSE)$coordsDataScaled
-  allwhich.turnAlive <- list()
-  for (a in 1:turnAlive){ # Sample points until they fall in the buffer
-    repeat{
-      which.turnAlive <- sample(which(z.start2[which.females, 1] == 0),1)
-      which.turnAliveSXY <- sxy.start2.uns[which.turnAlive,,1]
-      which.turnAliveSXY <- data.frame(x = which.turnAliveSXY[1], y = which.turnAliveSXY[2])
-      sp <- SpatialPoints(which.turnAliveSXY, proj4string=CRS(proj4string(Xbuf2)))
-      ovr <- is.na(over(sp, Xbuf3)) # ovr is TRUE when there is NA (not overlap)
-      previously.alive <- unlist(allwhich.turnAlive) # To make a condition in line below that ensures not resampling the same individual
-      if(ovr == FALSE & (which.turnAlive %in% previously.alive == FALSE)) break
-    }
-    allwhich.turnAlive[[a]] <- which.turnAlive
-  }
-  
-  which.turnAliveIn <- unlist(allwhich.turnAlive)
-  
-  z.start2[which.females[which.turnAliveIn],1] <- 1 # Set to 1 the females that we wanted to turn alive
-  
-  #fem.alive + turnAlive == sum(z.start2[which.females, 1]) # Check I did it right
-  
-  nimData1$z <- z.start2
-  nimData1$u <- z.start2
-  
-  # we set the values in the model - yr 1 aren't nodes in model (only data)
-  values(cmodelSims2, zNodes2) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  values(cmodelSims2, uNodes2) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  
-  # AGE
-  ## I need to join all z from previous years to know the ind that have never been alive 
-  # from 2017 - 2024, to modify the age variable
-  
-  zAUGM <- matrix(0,nrow = 400, ncol = Tt)
-  z.est2.0 <- matrix(sampmat[ite, z.which], M.aug, Tt)  # Take years 2017 - 2021 from data
-  z.est2.0 <- rbind(z.est2.0, zAUGM)
-  
-  z.est2.1 <- matrix(z.proj.all.sc3[ite,,c(2,3)], M.aug2, 2) # Take years 2022, 2023 from predictions
-  z.est2.2 <- matrix(z.start2[1:M.aug2,1], M.aug2, 1) # Take year 2024 from modified reintroduced individuals (otherwise age can turn 0 and dead again!)
-  
-  z.est2 <- cbind(z.est2.0, z.est2.1, z.est2.2)
-  
-  age.est2 <- age.cat.proj.all.sc3[ite,,4] # ASP: Ages last year (year 2024)
-  
-  ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
-  ##model (they were never part of the superpopulation -> ASP: because of how the model is formulated z=u*w)
-  z.nosuper2 <- which(apply(z.est2,1,sum)==0)
-  age.est2[z.nosuper2] <- 0
-  
-  age.start2[1:M.aug2, 1] <- age.est2 # ASP: Starting AGE for projection: AGE of year 5 
-  age.start2[(M.aug2+1):M.new2, 1] <- 0 # ASP: Augmented as not yet recruited
-  
-  nimData1$age <- age.start2 
-  values(cmodelSims2, ageNodes2) <- age.start2 #[,2:(Tt+t.new)] 
-  
-  ##also replace age.cat and agePlusOne
-  nimData1$agePlusOne <- age.start2[,1]+1 
-  values(cmodelSims2, agePO.Nodes2) <- age.start2[,1]+1
-  
-  nimData1$age.cat <- age.start2 
-  values(cmodelSims2, age.cat.Nodes2) <- age.start2
-  
-  
-  ##set pcr, phi, sigD, beta.dens
-  ##not sure if needed to set in data and cmodelSims...
-  ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.all[itera[ite]]
-  values(cmodelSims2,"pcr") <- nimData1$pcr
-  
-  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
-  values(cmodelSims2,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
-  values(cmodelSims2,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
-  values(cmodelSims2,"phi.sub") <- nimData1$phi.sub
-  
-  nimData1$sigD <- sampmat[itera[ite],'sigD']
-  values(cmodelSims2,"sigD") <- nimData1$sigD
-  
-  nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  values(cmodelSims2,"beta.dens") <- nimData1$beta.dens
-  
-  #now we simulate 
-  cmodelSims2$simulate(nodes = nodesToSim2,#c(zNodes,sNodes,yNodes),
-                       includeData = F)#---if TRUE: want to simulate new values also for nodes considered as data
-  
-  # Store results from iteration
-  
-  #Nmat.all.sc4.2[ite,] <- apply(cmodelSims2$z,2,sum)
-  #Rmat.all.sc4.2[ite,] <- cmodelSims2$R
-  
-  sxy.proj.all.sc4.2[ite,,,] <- c(cmodelSims2$sxy)
-  z.proj.all.sc4.2[ite,,] <- cmodelSims2$z
-  age.cat.proj.all.sc4.2[ite,,] <- cmodelSims2$age.cat
-  sex.proj.all.sc4.2[ite,] <- cmodelSims2$sex
-  
-}
-
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter_sc3in")
-setwd("~/Model_results/Oso/ALLiter_allscin")
-save(sxy.proj.all.sc4.2, z.proj.all.sc4.2, age.cat.proj.all.sc4.2,sex.proj.all.sc4.2, file = "proj_pcr.all.fem.sc4.2.RData")

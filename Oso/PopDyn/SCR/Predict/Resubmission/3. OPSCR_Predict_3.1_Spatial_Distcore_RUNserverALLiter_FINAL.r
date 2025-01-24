@@ -58,16 +58,16 @@ Xbuf2 <- readOGR("Buffer_8500_traps.shp")
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Run_Data/Nimble/3.openSCR_Age/Data_server")
 #setwd("~/Data_server/Oso/Data_for_Prediction")
-load("Data_Model3-3.1_CYRIL_allparams.RData")
+load("Data_Model3-3.4_CYRIL_allparams.RData")
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams")
 #setwd("~/Data_server/Oso/Data_for_Prediction")
-load("myResults_3-3.1_param.RData")
+load("myResults_RESUB_3-3.4_param.RData")
 sampmat1 <- do.call(rbind, nimOutput)
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams")
 #setwd("~/Data_server/Oso/Data_for_Prediction")
-load("myResults_3-3.1_sxy.RData")
+load("myResults_RESUB_3-3.4_sxy.RData")
 sampmat2 <- do.call(rbind, nimOutputSXY)
 
 sampmat <- cbind(sampmat1, sampmat2)
@@ -134,15 +134,13 @@ sxy.start[1:M.aug,,1] <- matrix(sampmat[ 1, s.which[indx] ], M.aug, 2) # ASP: St
 sex.start <- rep(NA, M.new)
 sex.which <- grep('sex', colnames(sampmat))
 sex.start[1:M.aug] <- sampmat[1,sex.which] 
+sex.start[(M.aug+1):M.new] <- rbinom(400, 1, 0.5) # To avoid warning in dynamic index (resubmission)
 
 ## ---- 1.2. Per capita recruitment ----
 
 # Load results from function in script 0.PCR_all_core.r
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-#load("pcr_corebuf.RData")
-#load("pcr_all.RData")
-#load("pcr_range.RData")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams")
 #setwd("~/Data_server/Oso/Data_for_Prediction")
 load("pcr_corebuf_fem.RData")
 load("pcr_all_fem.RData")
@@ -167,7 +165,13 @@ omega <- sampmat[1,'omega']
 sigD <- sampmat[1,'sigD']
 
 # Increasing beta dens
-beta.dens <- c(sampmat[1,'beta.dens'], -0.30, -0.25, -0.20, -0.10, 0)
+mean(sampmat[,'beta.dens[1]'])
+mean(sampmat[,'beta.dens[2]'])
+
+# Question: SHould I put different decreasing rhtyms?
+# I could play with this and set it up as decreasing faster for males, but males are limited by females as well
+beta.dens1 <- c(sampmat[1,'beta.dens[1]'], -0.30, -0.25, -0.20, -0.10, 0)
+beta.dens2 <- c(sampmat[1,'beta.dens[2]'], -0.30, -0.25, -0.20, -0.10, 0)
 
 
 ##calculate psi and unconditional age structure at t=1, which don't really matter 
@@ -209,7 +213,8 @@ nimData<-list(habDens = nimData$habDens,
               phi.ad = phi.ad,
               phi.cub = phi.cub,
               phi.sub = phi.sub,
-              beta.dens = beta.dens,
+              beta.dens1 = beta.dens1,
+              beta.dens2 = beta.dens2,
               sigD = sigD,
               psi = psi,
               pi.uncond = pi.uncond,
@@ -219,21 +224,55 @@ nimData<-list(habDens = nimData$habDens,
 
 setwd("D:/MargSalas/Scripts_MS/Oso/PopDyn/SCR/Model")
 #setwd("~/Scripts_MS/Oso/PopDyn/SCR/Model")
-source('3.7.SCRopen_PREDICT in Nimble RS.r')
+source('3.7.3.SCRopen_PREDICT_resub in Nimble.r')
 
 # Create model using projection code (per capita recruitment, no observations)
-model <- nimbleModel( code = SCROpen.PR.distcore.t.pcrFem,
+model <- nimbleModel( code = SCROpen.DOsexage.PR.distcore.t.pcrFem,
                       constants = nimConstants,
                       data = nimData,
                       #inits = nimInits,
                       check = F,       
-                      calculate = T)  
+                      calculate = F)  
 
-nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
-                                      "pcr", "beta.dens", 'pi.uncond', 'psi', 'omega'),
-                                    self = F,
-                                    downstream = T,
-                                    returnScalarComponents = TRUE)
+#nodesToSim <- model$getDependencies(c("sigD","phi.ad","phi.cub","phi.sub",
+#                                      "pcr", "beta.dens", 'pi.uncond', 'psi', 'omega'),
+#                                    self = F,
+#                                    downstream = T,
+#                                    returnScalarComponents = TRUE)
+
+nde <- c("R", #per capita recruitment times number adults in previous year=expected recruits
+         "gamma", #individual recruitment probability: expected recruits/number available for recruitment
+         "phi",  #not recruited yet, placeholder to make indexing work
+         "mu1",
+         "sumHabIntensity",
+         "logHabIntensity",
+         "logSumHabIntensity",
+         "sxy",
+         # State process
+         "u", #
+         "z", 
+         # Age process
+         "age",
+         "age.cat",
+         "sex.age",
+         # derived stuff
+         "avail",    
+         "recruit",
+         "N",               # Annual abundance
+         "B",
+         "N.age",
+         "N.age.fem",
+         "N.cub",
+         "N.sub",
+         "N.ad",
+         "N.ad.fem",
+         "sex")
+
+nodesToSim <-model$getDependencies(nde,
+                                   self = T,
+                                   downstream = F,
+                                   returnScalarComponents = TRUE)
+
 model$simulate(nodesToSim, includeData = FALSE)
 N <- apply(model$z,2,sum)
 
@@ -259,247 +298,14 @@ uNodes <- samplerConfList[grep("u\\[",samplerConfList)]
 ageNodes <- samplerConfList[grep("age\\[",samplerConfList)]
 age.cat.Nodes <- samplerConfList[grep("age.cat\\[",samplerConfList)]
 agePO.Nodes <-samplerConfList[grep("agePlusOne",samplerConfList)]
-betaDensNodes <- samplerConfList[grep("beta.dens\\[",samplerConfList)]
+betaDens1Nodes <- samplerConfList[grep("beta.dens1\\[",samplerConfList)]
+betaDens2Nodes <- samplerConfList[grep("beta.dens2\\[",samplerConfList)]
 sexNodes <- samplerConfList[grep("sex\\[",samplerConfList)]
 
 ##get some random iterations from posterior and save 
 #itera <- sample(1:nrow(sampmat), 5000)
-setwd("~/Model_results/Oso/ALLiter")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
 load("itera.RData")
-
-
-## ---- 2.1. PCR inside core buffer ----
-## ------ 2.1.1. Projection ----
-
-pcr.core <- pcr1_corebuf
-
-## ---- SCENARIO 1: CONSTANT DISTCORE ----
-
-beta.dens.predict1 <- rep(mean(sampmat[,'beta.dens']),6)
-
-nimData1 <- nimData
-#Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
-
-# To store as simlist
-sxy.proj.core.consDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.core.consDist <- age.cat.proj.core.consDist <- array(NA, c(length(itera), M.new, t.new+1))
-sex.proj.core.consDist <- matrix(NA, length(itera), M.new)
-
-
-detachAllPackages()
-library(nimbleSCR)
-
-for(ite in 1:length(itera)){
-  # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
-  # USE NA FOR THE years to predict#
-  
-  # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  z.est <- matrix(sampmat[itera[ite],z.which], M.aug, Tt)
-  z.start[1:M.aug, 1] <- sampmat[itera[ite],z.which1]
-  z.start[(M.aug+1):M.new, 1]<-0
-  
-  nimData1$z <- z.start
-  nimData1$u <- z.start
-  
-  # we set the values in the model - yr 1 aren't nodes in model (only data)
-  values(cmodelSims, zNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  values(cmodelSims, uNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  
-  # WE SET SXY
-  sxy.start[1:M.aug,,1] <- matrix(sampmat[ itera[ite], s.which[indx] ], M.aug, 2)
-  
-  nimData1$sxy <- sxy.start
-  #length(c(t(sxy.start[1:M.aug,,1])))
-  
-  # we set the values in the model
-  #values(cmodelSims, sNodes) <- nimData1$sxy
-  
-  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
-  sNodes <- sNodes[grep( ", 1]",sNodes)]
-  for(i in 1:length(sNodes)){
-    values(cmodelSims, sNodes[i]) <-sxy.start[i,,1]
-  }
-  
-  ###set age
-  age.est <- sampmat[itera[ite],age.which]
-  ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
-  ##model (they were never part of the superpopulation)
-  z.nosuper <- which(apply(z.est,1,sum)==0)
-  age.est[z.nosuper] <- 0
-  #age.est[age.est>5] <- 5 #set to max age category
-  age.start[1:M.aug, 1] <- age.est
-  age.start[(M.aug+1):M.new, 1] <- 0
-  
-  nimData1$age <- age.start 
-  values(cmodelSims, ageNodes) <- age.start #[,2:(Tt+t.new)] 
-  
-  ##also replace age.cat and agePlusOne
-  nimData1$agePlusOne <- age.start[,1]+1 
-  values(cmodelSims, agePO.Nodes) <- age.start[,1]+1
-  
-  nimData1$age.cat <- age.start 
-  values(cmodelSims, age.cat.Nodes) <- age.start
-  
-  ## Also replace sex, because for the augmented individuals it changes each iteration
-  
-  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
-  nimData1$sex <- sex.start
-  values(cmodelSims, sexNodes) <- sex.start
-  
-  ##set pcr, phi, sigD, beta.dens
-  ##not sure if needed to set in data and cmodelSims...
-  ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.core[itera[ite]]
-  values(cmodelSims,"pcr") <- nimData1$pcr
-  
-  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
-  values(cmodelSims,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
-  values(cmodelSims,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
-  values(cmodelSims,"phi.sub") <- nimData1$phi.sub
-  
-  nimData1$sigD<-sampmat[itera[ite],'sigD']
-  values(cmodelSims,"sigD") <- nimData1$sigD
-  
-  #nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  # Beta dens: Always the same incresing values: -0.3538166 -0.3000000 -0.2500000 -0.2000000 -0.1000000  0.0000000 
-  values(cmodelSims,"beta.dens") <- beta.dens.predict1
-  
-  #now we simulate 
-  cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
-                      includeData = F)#---if TRUE: want to simulate new values also for nodes considered as data
-  
-  #Nmat.core[ite,] <- apply(cmodelSims$z,2,sum)
-  #Rmat.core[ite,] <- cmodelSims$R
-  
-  sxy.proj.core.consDist[ite,,,] <- c(cmodelSims$sxy)
-  z.proj.core.consDist[ite,,] <- cmodelSims$z
-  age.cat.proj.core.consDist[ite,,] <- cmodelSims$age.cat
-  
-  sex.proj.core.consDist[ite,] <- cmodelSims$sex
-  
-}
-
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
-setwd("~/Model_results/Oso/ALLiter")
-save(sxy.proj.core.consDist, z.proj.core.consDist, age.cat.proj.core.consDist,sex.proj.core.consDist, file = "proj_pcr.core.fem.consDist.RData")
-
-## ---- SCENARIO 2: DISTCORE DECREASES PROGRESSIVELY ----
-
-#beta.dens.predict2 <- c(mean(sampmat[,'beta.dens']), -0.30, -0.25, -0.20, -0.10, 0)
-beta.dens.predict2 <- c(sampmat[1,'beta.dens'], -0.27, -0.24, -0.21, -0.18, -0.15) # More proggresive than before
-
-
-nimData1 <- nimData
-#Nmat.core <- Rmat.core <- matrix(NA, length(itera), 1+t.new)
-
-# To store as simlist
-sxy.proj.core.decDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
-z.proj.core.decDist <- age.cat.proj.core.decDist <- array(NA, c(length(itera), M.new, t.new+1))
-sex.proj.core.decDist <- matrix(NA, length(itera), M.new)
-
-
-detachAllPackages()
-library(nimbleSCR)
-
-for(ite in 1:length(itera)){
-  # WE UPDATE THE Z VALUES USING THE POSTERIORS PREDICTED Z FOR THE FIVE FIRST YEARS AND THEN 
-  # USE NA FOR THE years to predict#
-  
-  # WE SET NA FOR Z FOR YEARS TO PREDICT - from posterior
-  z.est <- matrix(sampmat[itera[ite],z.which], M.aug, Tt)
-  z.start[1:M.aug, 1] <- sampmat[itera[ite],z.which1]
-  z.start[(M.aug+1):M.new, 1]<-0
-  
-  nimData1$z <- z.start
-  nimData1$u <- z.start
-  
-  # we set the values in the model - yr 1 aren't nodes in model (only data)
-  values(cmodelSims, zNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  values(cmodelSims, uNodes) <- nimData1$z#[,2:10] # Fill the values predicted by the model by new values where the extra years are NA
-  
-  # WE SET SXY
-  sxy.start[1:M.aug,,1] <- matrix(sampmat[ itera[ite], s.which[indx] ], M.aug, 2)
-  
-  nimData1$sxy <- sxy.start
-  #length(c(t(sxy.start[1:M.aug,,1])))
-  
-  # we set the values in the model
-  #values(cmodelSims, sNodes) <- nimData1$sxy
-  
-  ## FIND s NODES FROM THE FIRST YEAR (SHOULD BE REPLACED)
-  sNodes <- sNodes[grep( ", 1]",sNodes)]
-  for(i in 1:length(sNodes)){
-    values(cmodelSims, sNodes[i]) <-sxy.start[i,,1]
-  }
-  
-  ###set age
-  age.est <- sampmat[itera[ite],age.which]
-  ##set everyone not alive at all to all-0, ie, can be recruited in the NEW recruitment 
-  ##model (they were never part of the superpopulation)
-  z.nosuper <- which(apply(z.est,1,sum)==0)
-  age.est[z.nosuper] <- 0
-  #age.est[age.est>5] <- 5 #set to max age category
-  age.start[1:M.aug, 1] <- age.est
-  age.start[(M.aug+1):M.new, 1] <- 0
-  
-  nimData1$age <- age.start 
-  values(cmodelSims, ageNodes) <- age.start #[,2:(Tt+t.new)] 
-  
-  ##also replace age.cat and agePlusOne
-  nimData1$agePlusOne <- age.start[,1]+1 
-  values(cmodelSims, agePO.Nodes) <- age.start[,1]+1
-  
-  nimData1$age.cat <- age.start 
-  values(cmodelSims, age.cat.Nodes) <- age.start
-  
-  ## Also replace sex, because for the augmented individuals it changes each iteration
-  
-  sex.start[1:M.aug] <- sampmat[itera[ite],sex.which]
-  nimData1$sex <- sex.start
-  values(cmodelSims, sexNodes) <- sex.start
-  
-  ##set pcr, phi, sigD, beta.dens
-  ##not sure if needed to set in data and cmodelSims...
-  ##simplified since we calculated pcr for all iterations above
-  nimData1$pcr <- pcr.core[itera[ite]]
-  values(cmodelSims,"pcr") <- nimData1$pcr
-  
-  nimData1$phi.ad<-sampmat[itera[ite],'phi.ad']
-  values(cmodelSims,"phi.ad") <- nimData1$phi.ad
-  nimData1$phi.cub<-sampmat[itera[ite],'phi.cub']
-  values(cmodelSims,"phi.cub") <- nimData1$phi.cub  
-  nimData1$phi.sub<-sampmat[itera[ite],'phi.sub']
-  values(cmodelSims,"phi.sub") <- nimData1$phi.sub
-  
-  nimData1$sigD<-sampmat[itera[ite],'sigD']
-  values(cmodelSims,"sigD") <- nimData1$sigD
-  
-  #nimData1$beta.dens<-sampmat[itera[ite],'beta.dens']
-  # Beta dens: Always the same incresing values: -0.3538166 -0.3000000 -0.2500000 -0.2000000 -0.1000000  0.0000000 
-  values(cmodelSims,"beta.dens") <- beta.dens.predict2
-  
-  #now we simulate 
-  cmodelSims$simulate(nodes = nodesToSim,#c(zNodes,sNodes,yNodes),
-                      includeData = F)#---if TRUE: want to simulate new values also for nodes considered as data
-  
-  # Nmat.core[ite,] <- apply(cmodelSims$z,2,sum)
-  # Rmat.core[ite,] <- cmodelSims$R
-  
-  sxy.proj.core.decDist[ite,,,] <- c(cmodelSims$sxy)
-  z.proj.core.decDist[ite,,] <- cmodelSims$z
-  age.cat.proj.core.decDist[ite,,] <- cmodelSims$age.cat
-  
-  sex.proj.core.decDist[ite,] <- cmodelSims$sex
-  
-  
-}
-
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
-setwd("~/Model_results/Oso/ALLiter")
-save(sxy.proj.core.decDist, z.proj.core.decDist, age.cat.proj.core.decDist, sex.proj.core.decDist, file = "proj_pcr.core.fem.decDist.RData")
-
 
 ## ---- 2.2. PCR in whole state space ----
 ## ------ 2.2.1. Projection ----
@@ -508,10 +314,12 @@ pcr.all <- pcr2_all
 
 ## ---- SCENARIO 1: CONSTANT DISTCORE ----
 
-beta.dens.predict1 <- rep(mean(sampmat[,'beta.dens']),6)
+beta.dens.predict1 <- rep(mean(sampmat[,'beta.dens[1]']),6)
+beta.dens.predict2 <- rep(mean(sampmat[,'beta.dens[2]']),6)
+
 
 nimData1 <- nimData
-#Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
+Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
 
 # To store as simlist
 sxy.proj.all.consDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
@@ -590,9 +398,13 @@ for(ite in 1:length(itera)){
   nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-beta.dens.predict1
+  nimData1$beta.dens1<-beta.dens.predict1
   #values(cmodelSims,"beta.dens") <- nimData1$beta.dens
-  values(cmodelSims,"beta.dens") <- beta.dens.predict1
+  values(cmodelSims,"beta.dens1") <- beta.dens.predict1
+  
+  nimData1$beta.dens2<-beta.dens.predict2
+  #values(cmodelSims,"beta.dens") <- nimData1$beta.dens
+  values(cmodelSims,"beta.dens2") <- beta.dens.predict2
   
   
   #now we simulate 
@@ -609,22 +421,22 @@ for(ite in 1:length(itera)){
   age.cat.proj.all.consDist[ite,,] <- cmodelSims$age.cat
   
   sex.proj.all.consDist[ite,] <- cmodelSims$sex
-  
 }
 
 # Save
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
-setwd("~/Model_results/Oso/ALLiter")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
+#setwd("~/Model_results/Oso/ALLiter")
 save(z.proj.all.consDist, age.cat.proj.all.consDist, sxy.proj.all.consDist, sex.proj.all.consDist, file = "proj_pcr.all.fem.consDist.RData")
 
 ## ---- SCENARIO 2: DISTCORE DECREASES PROGRESSIVELY ----
 
 #beta.dens.predict2 <- c(mean(sampmat[,'beta.dens']), -0.30, -0.25, -0.20, -0.10, 0)
-beta.dens.predict2 <- c(sampmat[1,'beta.dens'], -0.27, -0.24, -0.21, -0.18, -0.15) # More proggresive than before
+beta.dens.predict3 <- c(mean(sampmat[,'beta.dens[1]']), -0.27, -0.24, -0.21, -0.18, -0.15) # More proggresive than before
+beta.dens.predict4 <- c(mean(sampmat[,'beta.dens[2]']), -0.27, -0.24, -0.21, -0.18, -0.15) # More proggresive than before
 
 
 nimData1 <- nimData
-#Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
+Nmat.all <- Rmat.all <- matrix(NA, length(itera), 1+t.new)
 
 # To store as simlist
 sxy.proj.all.decDist <- array(NA, c(length(itera), M.new, 2, t.new+1))
@@ -703,9 +515,14 @@ for(ite in 1:length(itera)){
   nimData1$sigD<-sampmat[itera[ite],'sigD']
   values(cmodelSims,"sigD") <- nimData1$sigD
   
-  nimData1$beta.dens<-beta.dens.predict1
+
+  nimData1$beta.dens1<-beta.dens.predict3
   #values(cmodelSims,"beta.dens") <- nimData1$beta.dens
-  values(cmodelSims,"beta.dens") <- beta.dens.predict2
+  values(cmodelSims,"beta.dens1") <- beta.dens.predict3
+  
+  nimData1$beta.dens2<-beta.dens.predict4
+  #values(cmodelSims,"beta.dens") <- nimData1$beta.dens
+  values(cmodelSims,"beta.dens2") <- beta.dens.predict4
   
   
   #now we simulate 
@@ -727,7 +544,7 @@ for(ite in 1:length(itera)){
 }
 
 # Save
-#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL/Predictions/20iter")
-setwd("~/Model_results/Oso/ALLiter")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.4_allparams/Predictions/ALLiter_sc3in")
+#setwd("~/Model_results/Oso/ALLiter")
 save(z.proj.all.decDist, age.cat.proj.all.decDist, sxy.proj.all.decDist, sex.proj.all.decDist, file = "proj_pcr.all.fem.decDist.RData")
 

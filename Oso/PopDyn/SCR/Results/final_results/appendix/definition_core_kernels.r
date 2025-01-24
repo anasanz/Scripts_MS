@@ -132,3 +132,48 @@ plot(core_area_kernelpol_n1, pch = 19, col = adjustcolor("yellow", alpha.f = 0.7
 plot(core_area_kernelpol_n2, pch = 19, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
 
 dev.off()
+
+# RESUBMISSION: ADDING A GRID
+
+## Create a 5x5 km grid
+# Define grid size in meters
+grid_size <- 5000  # 5 km x 5 km grid
+
+# Get the extent of the points shapefile
+extent <- st_bbox(cam)
+
+# Create a grid using st_make_grid
+grid <- st_make_grid(
+  st_geometry(sa),
+  cellsize = grid_size,  # Grid cell size (5 km)
+  square = TRUE          # Make square grids
+)
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Results_section/Plots")
+pdf("SI_core_kernel_95n1_80n2_zoom_resub.pdf",5,5)
+
+plot(st_geometry(sa), col = "beige", border = "beige",  xlim = c(st_bbox(sa)[1] + 10000, st_bbox(sa)[3] - 10000),  ylim = c(st_bbox(sa)[2] + 50000, st_bbox(sa)[4] - 50000)) # To add andorra with same color (not present in eur)
+plot(st_geometry(eur), col = "beige", border = "beige",  xlim = c(st_bbox(sa)[1]+10000, st_bbox(sa)[3]-10000),  ylim = c(st_bbox(sa)[2] + 50000 , st_bbox(sa)[4] - 50000), add = TRUE)
+plot(st_geometry(esp), col = "beige", border = "white",  xlim = c(st_bbox(sa)[1]+10000, st_bbox(sa)[3]-10000),  ylim = c(st_bbox(sa)[2] + 50000 , st_bbox(sa)[4] - 50000), add = TRUE)
+plot(st_geometry(fr), col = "beige", border = "white",  xlim = c(st_bbox(sa)[1]+10000, st_bbox(sa)[3]-10000),  ylim = c(st_bbox(sa)[2] + 50000 , st_bbox(sa)[4] - 50000), add = TRUE)
+plot(grid, border = adjustcolor("grey", alpha.f = 0.6), lwd = 0.3, add = TRUE)
+plot(core, pch = 19, cex = 0.1, col = "brown", add = TRUE)
+plot(core_area_kernelpol_n1, pch = 19, cex = 0.2, col = adjustcolor("yellow", alpha.f = 0.7), add = TRUE)
+plot(core_area_kernelpol_n2, pch = 19, cex = 0.2, col = adjustcolor("yellow", alpha.f = 0.6), add = TRUE)
+
+dev.off()
+
+# Plot DC: IMP PANT plot, added as Figure S1b, SI 1.
+
+setwd("D:/MargSalas/Oso/Datos/GIS/Variables/Europe/Variables_hrscale")
+#setwd("~/Data_server/Variables_hrscale")
+distcore <- raster("logDistcore_hrbear.tif")
+
+
+plot(st_geometry(sa), col = "beige", border = "beige",  xlim = c(st_bbox(sa)[1] + 10000, st_bbox(sa)[3] - 10000),  ylim = c(st_bbox(sa)[2] + 50000, st_bbox(sa)[4] - 50000)) # To add andorra with same color (not present in eur)
+plot(st_geometry(eur), col = "beige", border = "beige",  xlim = c(st_bbox(sa)[1]+10000, st_bbox(sa)[3]-10000),  ylim = c(st_bbox(sa)[2] + 50000 , st_bbox(sa)[4] - 50000), add = TRUE)
+plot(st_geometry(esp), col = "beige", border = "white",  xlim = c(st_bbox(sa)[1]+10000, st_bbox(sa)[3]-10000),  ylim = c(st_bbox(sa)[2] + 50000 , st_bbox(sa)[4] - 50000), add = TRUE)
+plot(st_geometry(fr), col = "beige", border = "white",  xlim = c(st_bbox(sa)[1]+10000, st_bbox(sa)[3]-10000),  ylim = c(st_bbox(sa)[2] + 50000 , st_bbox(sa)[4] - 50000), add = TRUE)
+plot(distcore, add = TRUE)
+
+mapview(sa) + mapview(distcore)

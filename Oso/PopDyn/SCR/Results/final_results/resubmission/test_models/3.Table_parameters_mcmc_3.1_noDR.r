@@ -8,12 +8,20 @@ rm(list = ls())
 library(MCMCvis)
 library(nimbleSCR)
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/3-3.1_allparams_FINAL")
-load("myResults_3-3.1_param.RData")
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.1_noDR_allparams_FINAL")
+load("myResults_RESUB_3-3.1_noDR_param.RData")
 sum <- summary(nimOutput)
+
 
 param <- c("psi", "omega", "phi.cub", "phi.sub", "phi.ad", "beta.dens", "sigD", "sigma[1]", "sigma[2]", 
            "p.cub", "p.sub", "p.ad", "b.bh", "trapBetas[1]", "trapBetas[2]", "trapBetas[3]")
+
+setwd("D:/MargSalas/Oso/OPSCR_project/Results/Models/3.openSCRdenscov_Age/2021/Cyril/RESUBMISSION/3-3.1_noDR_allparams_FINAL")
+MCMCtrace(nimOutput, 
+          params = param,
+          ind = TRUE,
+          pdf = TRUE,
+          filename = "mcmc_m1")
 
 res <- as.data.frame(matrix(nrow = length(param), ncol = 6))
 colnames(res) <- c("Parameters", "Mean", "SD", "2.5%", "50%", "9.7%")
@@ -39,10 +47,11 @@ res$Parameters[res$Parameters %in% "beta.dens"] <- "b.DistCore"
 # Transform sigma and tau to the scale of the state space: Do it by multiplying by the resolution, 5
 
 res[which(res$Parameters %in% c("sigmaF", "sigmaM", "sigD")), c(2:6)] <- res[which(res$Parameters %in% c("sigmaF", "sigmaM", "sigD")), c(2:6)] * 5
-res0 <- res
 
-setwd("D:/MargSalas/Oso/OPSCR_project/Results/Results_section/Tables")
-openxlsx::write.xlsx(res, 'params.xlsx')
+res1 <- res
+
+#setwd("D:/MargSalas/Oso/OPSCR_project/Results/Results_section/Tables")
+#openxlsx::write.xlsx(res, 'params.xlsx')
 
 ## ---- Recruitment ----
 
