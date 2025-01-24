@@ -1,10 +1,16 @@
-model{
+## ---- JAGS model ----
+
+#setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/SpecificPTS/Model")
+cat("model{
     
     # PRIORS
     
     # Priors for lambda
     alpha ~ dnorm(0, 0.001)
-    bHQ ~ dnorm(mu.bHQ, sig.bHQ) # Informative prior on habitat quality
+    bHQ1 ~ dnorm(mu.bHQ1, sig.bHQ1) # Informative prior on habitat quality
+    bHQ2 ~ dnorm(mu.bHQ2, sig.bHQ2) # Informative prior on habitat quality
+    bHQ3 ~ dnorm(mu.bHQ3, sig.bHQ3) # Informative prior on habitat quality
+
     
     
     #### RS: removed Vebro
@@ -44,10 +50,10 @@ model{
     }
     
     N[j] ~ dpois(lambda[j]) 
-    lambda[j] <- exp(alpha + bHQ*hq[j])
+    lambda[j] <- exp(alpha + bHQ1*hqCov1[j] + bHQ2*hqCov2[j] + bHQ3*hqCov3[j])
     }
     
     # Derived parameters
     Ntotal <- sum(N) 
     
-    }
+    }",fill=TRUE, file = "5.HDS_2Survey_sig[HR_inf_fullModel]_lam[hq[inf]_CAT].txt")

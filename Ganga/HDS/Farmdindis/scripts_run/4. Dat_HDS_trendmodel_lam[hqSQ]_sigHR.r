@@ -259,6 +259,7 @@ hq_area <- read.csv(file = "HQ_area.csv", sep = ";")
 
 area_transect <- 500*1000 # m2
 average_clus2022 <- 2.5
+median_clust <- 2
 
 ## ---- 1. Predictions from posterior distribution ----
 
@@ -306,12 +307,12 @@ for (i in 1:length(hqzones)) {
   
   dens <- lambda/area_transect
   abundance <- dens*hq_area$x[i]
-  total_abundance <- abundance*average_clus2022
+  total_abundance <- abundance*median_clust
   ab[,i] <- total_abundance
   
   densHA <- lambda/(area_transect/10000)
   
-  de[,i] <- densHA*average_clus2022
+  de[,i] <- densHA*median_clust
   
 }
 

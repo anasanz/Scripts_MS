@@ -43,7 +43,7 @@ model{
     y[j] ~ dbin(pcap[j], N[j]) 
     N[j] ~ dpois(lambda[j]) 
     
-    lambda[j] <- exp(alpha + bHQ*hq[j])
+    lambda[j] <- exp(alpha +  bHQ1*hqCov1[j] + bHQ2*hqCov2[j] + bHQ3*hqCov3[j])
     }
     
     # Derived parameters

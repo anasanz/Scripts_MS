@@ -1,21 +1,21 @@
-## ---- JAGS model ----
-
-setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/SpecificPTS/Model")
-cat("model{
+model{
     
     # PRIORS
     
     # Priors for lambda
     alpha ~ dnorm(0, 0.001)
-    bHQ ~ dnorm(mu.bHQ, sig.bHQ) # Informative prior on habitat quality
+    bHQ1 ~ dnorm(mu.bHQ1, sig.bHQ1) # Informative prior on habitat quality
+    bHQ2 ~ dnorm(mu.bHQ2, sig.bHQ2) # Informative prior on habitat quality
+    bHQ3 ~ dnorm(mu.bHQ3, sig.bHQ3) # Informative prior on habitat quality
+
     
     
+    #### RS: removed Vebro
     # Priors for sigma (all informative)
     alpha.sig ~ dnorm(mu.alpha, sig.alpha)
     b.hSquare ~ dnorm(mu.hSquare, sig.hSquare)
     b.jd ~ dnorm(mu.jd, sig.jd)
     b.jdSquare ~ dnorm(mu.jdSquare, sig.jdSquare)
-    log.Vebro ~ dnorm(mu.Vebro, sig.Vebro)
     
     # Prior for beta
     log.b ~ dnorm(mu.b, sig.b)
@@ -28,9 +28,10 @@ cat("model{
     for(j in 1:nSites){ 
     for(s in 1:nSurveys){
     
+    ###RS: removed Vebro
+    
     sigma[j,s] <- exp(alpha.sig + b.hSquare * hSquare[j,s] +
-                b.jd * jd[j,s] + b.jdSquare * jdSquare[j,s] +
-                log.Vebro)
+                b.jd * jd[j,s] + b.jdSquare * jdSquare[j,s])
 
   
     for(k in 1:nG){ 
@@ -46,10 +47,10 @@ cat("model{
     }
     
     N[j] ~ dpois(lambda[j]) 
-    lambda[j] <- exp(alpha + bHQ*hq[j])
+    lambda[j] <- exp(alpha + bHQ1*hqCov1[j] + bHQ2*hqCov2[j] + bHQ3*hqCov3[j])
     }
     
     # Derived parameters
     Ntotal <- sum(N) 
     
-    }",fill=TRUE, file = "4.HDS_2Survey_sig[HR_inf_fullModel]_lam[hq[inf]].txt")
+    }

@@ -94,7 +94,7 @@ all_pol2 <- do.call(rbind, pol_list2)
 # Not perfect but I keep all_pol2. I save it to improve it manually
 #writeOGR(all_pol2, "Buffer_Farmdindis", dsn = "D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", driver = "ESRI Shapefile")
 
-all_pol2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "BufferImproved_Farmdindis") 
+all_pol2 <- readOGR("D:/MargSalas/Ganga/Data/GIS", "BufferImproved_Farmdindis") 
 
 ## -------------------------------------------------
 ##                  SDM 2011
@@ -103,6 +103,10 @@ all_pol2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "BufferImproved_
 
 pa1 <- readOGR("D:/MargSalas/Ganga/Data/GIS", "zonesGanga2011")
 pa1$ZONA <- as.numeric(pa1$ZONA)
+# Zonas optimas = 1 (high); Buenas = 2 (medium); Adecuadas: 3 (low)
+
+mapview(all_pol2) + mapview(pa1, zcol = "ZONA")
+mapview(raster_pa1)
 
 ## ---- 1 Rasterize and extract % habitat quality in buffers ----
 # Rasterize
@@ -135,7 +139,7 @@ mapview(raster_pa1) +
   mapview(tr) + 
   mapview(all_pol2)
 
-
+df_habBuf2011 <- df_habBuf
 ## ---- 2. Estimate TRANSECT HABITAT QUALITY variable ----
 
 # Do it from the buffer, it is more realistic about the area sampled by the transect
@@ -169,6 +173,7 @@ dat2 <- dat2[-which(dat2$Count < 1), ]
 
 # Relation detections - hab.quality
 par(mfrow = c(1,1))
+hist(dat2$WeightedQuality2011[which(dat2$Year %in% c(2010:2015))], main = "Detections - HQ (2010-2015)")
 hist(dat2$WeightedQuality2011, main = "Detections - HQ (all years)")
 
 lowhq10_15 <- dat2[which(dat2$Year %in% c(2010:2015) & dat2$WeightedQuality2011 < 0.5), ]
@@ -216,7 +221,7 @@ area_zona_HA1 <- arrange(area_zona_HA1, Group.1)
 ##   Extract habitat quality of transects 2016-2021
 ## -------------------------------------------------
 
-pa2 <- readOGR("D:/MargSalas/Ganga/Data/FarmdindisDS/GIS", "zonesGanga2021") 
+pa2 <- readOGR("D:/MargSalas/Ganga/Data/GIS", "zonesGanga2021") 
 
 ## ---- 1. Rasterize and extract % habitat quality in buffers ----
 
@@ -277,7 +282,9 @@ summary(df_habBuf2$WeightedQuality2021)
 
 # Join with observation data
 dat2 <- left_join(dat, df_habBuf2, by = "transectID")
+#dat2 <- left_join(dat2, df_habBuf2, by = "transectID")
 
+dat2$WeightedQuality2011 == dat2$WeightedQuality2021
 ## ---- 3. Explore how observations are related to habitat quality ----
 
 dat2 <- dat2[-which(dat2$Count < 1), ]
@@ -286,15 +293,15 @@ dat2 <- dat2[-which(dat2$Count < 1), ]
 
 hist(dat2$WeightedQuality2021, main = "Detections - HQ (all years)")
 
-hist(dat2$WeightedQuality2021[which(dat2$Year %in% c(2015:2022))], main = "Detections - HQ (all years)")
+hist(dat2$WeightedQuality2021[which(dat2$Year %in% c(2015:2022))], main = "Detections - HQ (2015-2022)")
 lowhq15_20 <- dat2[which(dat2$Year %in% c(2015:2022) & dat2$WeightedQuality2021 < 0.5), ]
 
 
 # Last 6 years (more fitted to updated SDM)
 
-year <- 2017:2022
+year <- 2016:2022
 
-par(mfrow = c(2,3))
+par(mfrow = c(2,4))
 for (t in 1:length(year)){
   dy <- dat2[which(dat2$Year %in% year[t]), ]
   hist(dy$WeightedQuality, main = paste("Detections - HQ (", year[t], ")", sep = ""), breaks = 10)

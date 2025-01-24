@@ -215,3 +215,61 @@ lines(plot_cv_oc$group, plot_cv_oc$means, col = "#35978f")
 mtext("Removed occasions (nº)", side = 1, line = 3)
 
 dev.off()
+
+## ---- FINAL PLOT (Results section --> CONGRESO SEO, ESPAÑOL) ----
+
+setwd("D:/MargSalas/Ganga/Results/Plots/Optimize")
+pdf(file = "Optimize_plot_SEO.pdf", 7,6)
+
+par(mfrow = c(2,2),
+    mar = c(3, 2.5, 1, 1),
+    par(oma = c(2, 2, 2, 3) + 0.1))
+
+#Abundance sub
+plot(1, xlim = c(0.8,6), ylim = c(60, 145), axes = FALSE, xlab = " ", ylab = "")
+axis(side = 1, at = c(1:6), labels = colnames(ab_sub))
+axis(side = 2)
+points(plot_sum_ab_sub$means, pch = 19)
+arrows(plot_sum_ab_sub$group, plot_sum_ab_sub$cilo, plot_sum_ab_sub$group, plot_sum_ab_sub$cihi, 
+       length=0.1, angle=90, code=3)
+abline(h = mean_ab_original, col = "grey")
+abline(h = mean_ab_original_5Up, col = "grey", lty = 2)
+abline(h = mean_ab_original_5Low, col = "grey", lty = 2)
+mtext("Abundancia (N)", side = 2, line = 3)
+
+
+# Abundance oc
+plot(1, xlim = c(0.8,4), ylim = c(60, 145), axes = FALSE, xlab = " ", ylab = "")
+axis(side = 1, at = c(1:4), labels = c("0", colnames(ab_oc)))
+axis(side = 2)
+points(plot_sum_ab_oc$means, pch = 19)
+arrows(plot_sum_ab_oc$group, plot_sum_ab_oc$cilo, plot_sum_ab_oc$group, plot_sum_ab_oc$cihi, 
+       length=0.1, angle=90, code=3)
+abline(h = mean_ab_original, col = "grey")
+abline(h = mean_ab_original_5Up, col = "grey", lty = 2)
+abline(h = mean_ab_original_5Low, col = "grey", lty = 2)
+
+# CV sub
+plot(1, xlim = c(0.8,6), ylim = c(10, 35), axes = FALSE, xlab = " ", ylab = "")
+axis(side = 1, at = c(1:6), labels = colnames(ab_sub))
+axis(side = 2)
+points(plot_cv_sub$means, pch = 19)
+arrows(plot_cv_sub$group, plot_cv_sub$cilo, plot_cv_sub$group, plot_cv_sub$cihi, 
+       length=0.1, angle=90, code=3)
+lines(plot_cv_sub$group, plot_cv_sub$means, col = "#35978f")
+mtext("Muestras disminuidas (%)", side = 1, line = 3)
+mtext("Coeficiente de Variación (CV)", side = 2, line = 3)
+
+
+#CV oc
+plot(1, xlim = c(0.8,4), ylim = c(10, 35), axes = FALSE, xlab = " ", ylab = " ")
+axis(side = 1, at = c(1:4), labels = c("0", colnames(ab_oc)))
+axis(side = 2)
+points(plot_cv_oc$means, pch = 19)
+arrows(plot_cv_oc$group, plot_cv_oc$cilo, plot_cv_oc$group, plot_cv_oc$cihi, 
+       length=0.1, angle=90, code=3)
+lines(plot_cv_oc$group, plot_cv_oc$means, col = "#35978f")
+mtext("Visitas disminuidas (nº)", side = 1, line = 3)
+
+dev.off()
+

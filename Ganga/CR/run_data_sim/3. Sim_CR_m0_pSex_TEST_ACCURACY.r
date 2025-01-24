@@ -130,6 +130,9 @@ save(Ndf, file = "ResultsNdf_Simulation_accuracy_100iter.RData")
 
 # Plot
 
+setwd("D:/MargSalas/Scripts_MS/Ganga/CR/model_results")
+load("ResultsNdf_Simulation_accuracy_100iter.RData")
+
 setwd("D:/MargSalas/Ganga/Results/CR/Plots")
 pdf("Simulation_accuracy.pdf", 7,5)
 

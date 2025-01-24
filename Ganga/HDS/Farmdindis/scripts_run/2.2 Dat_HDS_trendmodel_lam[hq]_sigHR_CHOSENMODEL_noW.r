@@ -247,6 +247,8 @@ print(out)
 setwd("D:/MargSalas/Ganga/Results/HDS/Farmdindis/Model_results")
 save(out, file = "2.2.Dat_HDS_trendmodel_lam[hq]_sigHR_noW.RData") # 60000 iter, 4 thining
 
+library(MCMCvis)
+MCMCtrace(out, params = params, pdf = FALSE)
 ## ---- Results ----
 
 setwd("D:/MargSalas/Ganga/Results/HDS/Farmdindis/Model_results")

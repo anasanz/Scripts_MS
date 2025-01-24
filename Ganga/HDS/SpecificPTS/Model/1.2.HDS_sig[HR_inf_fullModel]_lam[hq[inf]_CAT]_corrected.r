@@ -1,4 +1,7 @@
-model{
+## ---- JAGS model ----
+
+setwd("D:/MargSalas/Scripts_MS/Ganga/HDS/Farmdindis/Model")
+cat("model{
     
     # PRIORS
     
@@ -43,10 +46,10 @@ model{
     y[j] ~ dbin(pcap[j], N[j]) 
     N[j] ~ dpois(lambda[j]) 
     
-    lambda[j] <- exp(alpha + bHQ*hq[j])
+    lambda[j] <- exp(alpha +  bHQ1*hqCov1[j] + bHQ2*hqCov2[j] + bHQ3*hqCov3[j])
     }
     
     # Derived parameters
     Ntotal <- sum(N) 
     
-    }
+    }",fill=TRUE, file = "1.2.HDS_sig[HR_inf_fullModel]_lam[hq[inf]_CAT]_corrected.txt")
